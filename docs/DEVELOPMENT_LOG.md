@@ -34,3 +34,9 @@
 - ✅ 多目标脚本同步：crowd_test.py / crowd_test_enhanced.py 加 `--classes` 参数（逗号分隔 COCO id），mock 检测器签名同步，134 测试全过（commit 2a53577）
 - ✅ Codex P1 C++ 优化完成并推送（commit 3b44cf9）：消除 RiskEngine/EnhancedDecision 重复计算（config 加 enable_risk_engine_fallback:false 默认关）、统一 IPM 变换（新增 ipm_transform.h）、VLA 改 std::vector+校验、关键初始化错误检查、统一 RiskLevel 枚举；修复 yolov5.cc vector 传参 .data()；134 测试全过 + 交叉编译通过
 - ⏳ 下一步：把最新版部署到开发板真机验证；论文 agent 后台补充网页观看/多目标章节
+
+## 后续推进（心跳第 3 轮，响应 review2 安全报告）
+- ✅ 处理第 2 批后台评测（algorithm_config/test_coverage/security_robustness）高优项：COCO注释（已修）、risk_fsm（已修）、sprintf栈溢出（已修）、初始化检查（已修）、脚本多目标（已修）均在前面 commit
+- ✅ 新增 main.cc 信号处理（SIGINT/SIGTERM → g_stop → while(!g_stop) 优雅 cleanup 退出，配合 systemd Restart=always 自愈）；memset(text,sizeof text) 修正；commit a13371d
+- ✅ 信号处理版已部署开发板真机运行（RTSP 554 + 网页 1984 + 增强决策正常）
+- ⏳ 待办：T3 黄金回归测试（Python/C++ 一致性）、按类别差异化阈值、最终验收报告 docs/FINAL_REPORT.md
