@@ -17,6 +17,7 @@
 #include "luckfox_mpi.h"
 #include "yolov5.h"
 #include "risk_engine.h"
+#include "enhanced_decision.h"
 
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
@@ -79,6 +80,7 @@ int main(int argc, char *argv[]) {
   cv::Mat H = cv::getPerspectiveTransform(srcPts, dstPts);
   RiskEngine riskEngine;
   riskEngine.setHomography(H);
+  pedestrian::EnhancedDecision enhancedDecision;   // 增强决策模块（旁路）
 	RK_S32 s32Ret = 0; 
 	int sX,sY,eX,eY; 
 		
@@ -180,6 +182,7 @@ int main(int argc, char *argv[]) {
 
 			// ---- 行人空间网络：只取 person 类，提取脚点 ----
 			riskEngine.clear();
+			std::vector<std::pair<float,float>> groundPts;
 			for(int i = 0; i < od_results.count; i++) {
 				object_detect_result *dres = &(od_results.results[i]);
 				if (dres->cls_id == 0) { // COCO person = 0
@@ -187,10 +190,18 @@ int main(int argc, char *argv[]) {
 					int py = (int)dres->box.bottom;
 					mapCoordinates(&px, &py);
 					riskEngine.addPedestrian(px, py);
+					groundPts.push_back(std::make_pair((float)px, (float)py));
 				}
 			}
 			riskEngine.computeFeatures();
 			CrowdLevel crowd = riskEngine.evaluate();
+
+			// ---- 增强决策（旁路）：谱特征 + Kalman 平滑 + FSM 时序 ----
+			pedestrian::EnhancedResult er = enhancedDecision.processFrame(groundPts);
+			static const char* eNames[3] = {"SAFE","WARNING","DANGER"};
+			printf("[EnhancedDecision] level=%s n=%d rho=%.2f r_gcc=%.2f fiedler=%.3f\n",
+			       (er.level>=0 && er.level<3) ? eNames[er.level] : "?",
+			       er.n, er.density, er.r_gcc, er.fiedler);
 
 			for(int i = 0; i < od_results.count; i++)
 			{					
