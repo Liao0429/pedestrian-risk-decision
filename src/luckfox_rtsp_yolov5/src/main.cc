@@ -166,8 +166,13 @@ int main(int argc, char *argv[]) {
   PoolCfg.enAllocType = MB_ALLOC_TYPE_DMA;
   //PoolCfg.bPreAlloc = RK_FALSE;
   src_Pool = RK_MPI_MB_CreatePool(&PoolCfg);
+  for (int attempt = 0; src_Pool == NULL && attempt < 3; ++attempt) {
+    fprintf(stderr, "[WARN] RK_MPI_MB_CreatePool 第 %d 次失败，重试...\n", attempt + 1);
+    usleep(200 * 1000);
+    src_Pool = RK_MPI_MB_CreatePool(&PoolCfg);
+  }
   if (src_Pool == NULL) {
-    fprintf(stderr, "[FATAL] RK_MPI_MB_CreatePool 失败\n");
+    fprintf(stderr, "[FATAL] RK_MPI_MB_CreatePool 重试后仍失败\n");
     cleanup();
     return -1;
   }
