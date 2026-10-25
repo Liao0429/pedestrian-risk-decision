@@ -100,8 +100,8 @@ def get_homography(img_w, img_h):
     """
     ref_w, ref_h = 720, 480
     src = np.array([[0, 480], [720, 480], [560, 300], [160, 300]],
-                    dtype=np.float64)
-    dst = np.array([[-3, 3], [3, 3], [3, -1], [-3, -1]], dtype=np.float64)
+                    dtype=np.float32).reshape(-1, 1, 2)
+    dst = np.array([[-3, 3], [3, 3], [3, -1], [-3, -1]], dtype=np.float32).reshape(-1, 1, 2)
 
     if (img_w, img_h) != (ref_w, ref_h):
         sx = img_w / float(ref_w)
