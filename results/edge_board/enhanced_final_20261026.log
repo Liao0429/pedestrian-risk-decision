@@ -1,0 +1,681 @@
+sh: 1: RkLunch-stop.sh: not found
+  index=0, name=images, n_dims=4, dims=[1, 640, 640, 3], n_elems=1228800, size=1228800, fmt=NHWC, type=INT8, qnt_type=AFFINE, zp=-128, scale=0.003922
+  index=0, name=output0, n_dims=4, dims=[1, 80, 80, 255], n_elems=1632000, size=1632000, fmt=NHWC, type=INT8, qnt_type=AFFINE, zp=-128, scale=0.003922
+  index=1, name=286, n_dims=4, dims=[1, 40, 40, 255], n_elems=408000, size=408000, fmt=NHWC, type=INT8, qnt_type=AFFINE, zp=-128, scale=0.003922
+  index=2, name=288, n_dims=4, dims=[1, 20, 20, 255], n_elems=102000, size=102000, fmt=NHWC, type=INT8, qnt_type=AFFINE, zp=-128, scale=0.003922
+model is NHWC input fmt
+model input height=640, width=640, channel=3
+init rknn model success!
+load lable ./model/coco_80_labels_list.txt
+Create Pool success !
+rkaiq log level ff1
+XCORE:K:rk_aiq_init_lib, ISP HW ver: 32
+XCORE:K:
+************************** VERSION INFOS **************************
+version release date: 2024-2-18
+         AIQ:       AIQ v5.0x5.0
+
+git logs:
+null
+************************ VERSION INFOS END ************************
+
+ID: 0, sensor_name is m00_b_sc3336 4-0030, iqfiles is /etc/iqfiles
+XCORE:K:rk_aiq_uapi_sysctl_preInit_devBufCnt: dev_ent:rkraw_rx, buf_cnt:2
+XCORE:E:invalid main scene len!
+
+IPCSERVER:K:cid[0] Process path:/tmp/UNIX.domain0, sockfd:22
+XCORE:K:cid[0] rk_aiq_uapi_sysctl_init success. iq:/etc/iqfiles/sc3336_CMK-OT2119-PC1_30IRC-F16.json
+XCORE:K:cid[0] rk_aiq_uapi_sysctl_prepare success. mode:0 
+rk_aiq_uapi2_sysctl_init/prepare succeed
+CAMHW:K:cid[0] start success. isGroup:0, isOnline:1, isMultiIsp:0, init_ens:0x1bfc0ffc4729
+XCORE:K:cid[0] rk_aiq_uapi_sysctl_start success.
+rk_aiq_uapi2_sysctl_start succeed
+[32m[1mrockit log path (null), log_size = 0, can use export rt_log_path=, export rt_log_size= change[0m
+log_file = (nil) 
+RTVersion        17:56:32-772 {dump              :064} ---------------------------------------------------------
+RTVersion        17:56:32-772 {dump              :065} rockit version: git-4720dc10a Tue Apr 30 15:47:55 2024 +0800
+RTVersion        17:56:32-772 {dump              :066} rockit building: built- 2024-04-30 15:53:43
+RTVersion        17:56:32-772 {dump              :067} ---------------------------------------------------------
+[32m[1mrockit default level 4, can use export rt_log_level=x, x=0,1,2,3,4,5,6 change[0m
+(null)           17:56:32-773 {read_log_level    :098} text is all=4
+(null)           17:56:32-773 {read_log_level    :100} module is all, log_level is 4
+[INFO  rtsp_demo.c:280:rtsp_new_demo] rtsp server demo starting on port 554
+[DEBUG rtsp_demo.c:480:rtsp_new_session] add session path: /live/0
+rtsp streamq_alloc size is 1753484
+vi_dev_init
+RKViDev          17:56:32-777 {vi_set_dev_attr   :612} [33m[1mVI_DEV_ATTR_S all parameter reserved[0m
+(null)           17:56:32-780 {monitor_log_level :149} #Start monitor_log_level thread, arg:(nil)
+RTIsp3x          17:56:32-781 {ispInitDevice     :591} [32m[1msensor name = m00_b_sc3336 4-0030[0m
+RTDeviceSensorV4 17:56:32-782 {ispOpenDevice     :502} [32m[1mv4l2_open(/dev/video0), handler=55[0m
+RTDeviceSensorV4 17:56:32-783 {ispOpenDevice     :502} [32m[1mv4l2_open(/dev/v4l-subdev2), handler=57[0m
+RTDeviceSensorV4 17:56:32-783 {close             :112} [32m[1mdo RTDeviceSensorV4L2 close[0m
+RTDeviceSensorV4 17:56:32-783 {close             :112} [32m[1mdo RTDeviceSensorV4L2 close[0m
+RKViChn          17:56:32-783 {prepareRuntime    :354} ---------------------------------------------------------
+RKViChn          17:56:32-783 {prepareRuntime    :356} vi version: 1.22, name:vvi
+RKViChn          17:56:32-783 {prepareRuntime    :357} rockit-ko version: vmpi:28ee389dbc33
+RKViChn          17:56:32-783 {prepareRuntime    :358} rockit-ko building: -2024-05-24-18:15:06
+RKViChn          17:56:32-783 {prepareRuntime    :359} ---------------------------------------------------------
+cmpi             17:56:32-783 {prepareRuntime    :378} [32m[1mmb pool create success, MBCnt= 2[0m
+RTIsp3x          17:56:32-784 {ispInitDevice     :591} [32m[1msensor name = m00_b_sc3336 4-0030[0m
+cmpi             17:56:32-786 {createRuntime     :634} [32m[1m>>>>>>>>> Sensor link info dump: <<<<<<<<<[0m
+cmpi             17:56:32-786 {createRuntime     :636} [32m[1m	 vicap media name           : /dev/media0[0m
+cmpi             17:56:32-786 {createRuntime     :637} [32m[1m	 vicap model name           : rkcif-mipi-lvds[0m
+cmpi             17:56:32-786 {createRuntime     :638} [32m[1m	 camera id                  : 0[0m
+cmpi             17:56:32-786 {createRuntime     :639} [32m[1m	 sensor name                : m00_b_sc3336 4-0030[0m
+cmpi             17:56:32-786 {createRuntime     :641} [32m[1m	 stream_cif_mipi_id0 video name: /dev/video0[0m
+cmpi             17:56:32-786 {createRuntime     :642} [32m[1m	 stream_cif_mipi_id1 video name: /dev/video1[0m
+cmpi             17:56:32-786 {createRuntime     :643} [32m[1m	 stream_cif_mipi_id2 video name: /dev/video2[0m
+cmpi             17:56:32-786 {createRuntime     :644} [32m[1m	 stream_cif_mipi_id3 video name: /dev/video3[0m
+cmpi             17:56:32-786 {createRuntime     :646} [32m[1m	 sensor raw width           : 2304[0m
+cmpi             17:56:32-786 {createRuntime     :647} [32m[1m	 sensor raw height          : 1296[0m
+cmpi             17:56:32-786 {createRuntime     :648} [32m[1m---------------------------------------------------------[0m
+cmpi             17:56:32-786 {createRuntime     :654} [32m[1m	 isp media name           : /dev/media1[0m
+cmpi             17:56:32-786 {createRuntime     :655} [32m[1m	 isp model name           : rkisp0[0m
+cmpi             17:56:32-786 {createRuntime     :656} [32m[1m	 isp driver name          : rkisp-vir0[0m
+cmpi             17:56:32-786 {createRuntime     :657} [32m[1m	 isp dev name             : /dev/v4l-subdev3[0m
+cmpi             17:56:32-786 {createRuntime     :659} [32m[1m	 isp rawrd0_m_path        : /dev/video17[0m
+cmpi             17:56:32-786 {createRuntime     :660} [32m[1m	 isp rawrd1_l_path        : [0m
+cmpi             17:56:32-786 {createRuntime     :661} [32m[1m	 isp rawrd2_s_path        : /dev/video18[0m
+cmpi             17:56:32-786 {createRuntime     :664} [32m[1m	 mainpath video name      : /dev/video11[0m
+cmpi             17:56:32-786 {createRuntime     :665} [32m[1m	 selfpath video name      : /dev/video12[0m
+cmpi             17:56:32-786 {createRuntime     :666} [32m[1m	 bypasspath video name    : /dev/video13[0m
+cmpi             17:56:32-786 {createRuntime     :667} [32m[1m	 sensor link type         : 2[0m
+cmpi             17:56:32-786 {createRuntime     :668} [32m[1m	 sensor is united         : 0[0m
+cmpi             17:56:32-786 {createRuntime     :672} [32m[1m---------------------------------------------------------[0m
+cmpi             17:56:32-786 {createRuntime     :711} [32m[1m[non-WRAP MODE]: buff size = 518400[0m
+RTIsp3x          17:56:32-792 {ispInitDevice     :591} [32m[1msensor name = m00_b_sc3336 4-0030[0m
+RTDeviceV4L2     17:56:32-794 {open              :137} [32m[1mcameraIndex:0, entityName:rkisp_mainpath[0m
+RTDeviceV4L2     17:56:32-794 {open              :143} [32m[1mopen video name(/dev/video11)[0m
+RKViChn          17:56:32-794 {setFrameRate      :1469} [33m[1m[vi] dev(0) ch(0) illegal param s32SrcFrameRate(0) s32DstFrameRate(0)[0m
+RTDeviceV4L2     17:56:32-794 {ispCameraInfo     :567} [33m[1mcurrent device:/dev/video11 isn't compatible(cap:0x84201000) device,memoryType:4, retry:0[0m
+RTDeviceV4L2     17:56:32-794 {ispInitFormat     :767} [32m[1mioctl VIDIOC_S_FMT OK[0m
+cmpi             17:56:32-794 {start             :1093} [32m[1m=========== vi Start startRuntime ===========[0m
+RTDeviceV4L2     17:56:32-794 {ispStreamOn       :458} [32m[1mdo ispStreamOn start[0m
+CAMHW:K:camId:0, notify_isp_stream_status on
+RTDeviceV4L2     17:56:32-823 {ispStreamOn       :511} [32m[1mdo ispStreamOn done[0m
+venc_init
+MpiAdapterEncode 17:56:32-824 {ma_encode_create  :1743} [32m[1mringbuf buf_size 520192[0m
+=== 0 ===
+MpiAdapterEncode 17:56:32-828 {ma_encode_create  :1782} [32m[1mmem_fd = 61[0m
+venc init success
+cmpi             17:56:32-860 {mb_get_buffer_by_i:433} [32m[1mallocated buffer(this=0x5a4d18, data=(nil), size=0, id=-1)[0m
+cmpi             17:56:32-860 {getFrameRuntime   :1347} [32m[1m-------------------------------vviBuf->buf_size: 520192[0m
+=== 1 ===
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+MpiAdapterEncode 17:56:33-063 {ma_encode_get_pack:2079} [32m[1mmap ptr: 0x9f902000, fd 63[0m
+[DEBUG utils.c:134:rtsp_codec_data_parse_from_user_h264] sps 29
+[DEBUG utils.c:142:rtsp_codec_data_parse_from_user_h264] pps 4
+cmpi             17:56:33-064 {mb_get_buffer_by_i:433} [32m[1mallocated buffer(this=0x679680, data=(nil), size=0, id=-1)[0m
+cmpi             17:56:33-064 {getFrameRuntime   :1347} [32m[1m-------------------------------vviBuf->buf_size: 520192[0m
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000
+[EnhancedDecision] level=SAFE n=0 rho=0.00 r_gcc=0.00 fiedler=0.000

@@ -25,3 +25,6 @@ mixkit_ids.json
 # 中间测试结果目录
 results/diag*
 
+# 开发板真机运行日志（真实数据证据，允许上传）
+!results/edge_board/*.log
+
