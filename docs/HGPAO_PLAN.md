@@ -40,7 +40,7 @@
 - [x] **P0：增强算法 C++ 板端移植**（EnhancedDecision 模块交叉编译 → 开发板真机运行，输出增强决策日志）
 - [x] P1：真机增强版实测（增强版运行中，RTSP 正常，EnhancedDecision 每帧输出；帧率/内存量化待补）
 - [x] P1：真机日志已保存（results/edge_board/enhanced_final_20261026.log，573 条增强决策输出）
-- [ ] P1：真机截图补充（论文证据）
+- [x] P1：真机截图 + 量化测试完成（见 results/edge_board/EDGE_TEST_REPORT.md：内存12.5MB/CPU42.5%/RTSP6.9FPS/4张真实截图）
 - [ ] P2：毕业论文撰写（本地保存）
 - [ ] P2：硬件扩展实施（舵机/语音/大屏/开关，需用户采购硬件）
 - [ ] P2：PCB 打样（嘉立创，需用户按规格书下单）
