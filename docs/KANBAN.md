@@ -7,14 +7,14 @@
 
 | ID | 任务 | 状态 | 备注 |
 |---|---|---|---|
-| T0 | 汇总第2轮评测报告（6份）→ 优化清单 | 🔄 进行中 | 已返回 code_quality/demo_readiness，待 fix_recheck/algorithm_config/test_coverage/security_robustness |
-| T1 | P0答辩就绪：start_demo.sh + README/架构图补新功能 + 预录DANGER视频 + WIFI_SETUP标注 | ⏳ 待办 | 答辩关键 |
-| T2 | P1软件优化：消除重复计算/统一透视变换/VLA改vector/初始化检查/统一枚举 | ⏳ 待办 | 板端性能与健壮性 |
-| T3 | P2质量：黄金回归测试/全局状态封装/魔法数字进配置 | ⏳ 待办 | |
-| T4 | 全量测试 + 交叉编译 + 部署 + 推送GitHub | ⏳ 待办 | 每轮留痕 |
-| T5 | 论文初稿：补网页观看/多目标章节，完善实验/结论（H:\毕设论文） | ⏳ 待办 | |
-| T6 | 答辩演示打磨：美观/截图/预录视频/演示脚本 | ⏳ 待办 | |
-| T7 | 心跳自检 + 看板更新 + 最终验收报告 | ⏳ 待办 | docs/FINAL_REPORT.md |
+| T0 | 汇总第2轮评测报告（6份）→ 优化清单 | ✅ 完成 | docs/review2/ 6份 + REVIEW2_SUMMARY |
+| T1 | P0答辩就绪：start_demo.sh + README/架构图补新功能 + 演示视频 + WIFI_SETUP标注 | ✅ 完成 | 已推送 ea39d12；待USB WiFi模块实测 |
+| T2 | P1软件优化：重复计算/VLA/初始化检查/枚举统一/IPM统一 | ✅ 完成 | Codex完成，推送 3b44cf9；CreatePool重试 90df382 |
+| T3 | P2质量：黄金回归测试/全局状态封装/魔法数字进配置 | 🔄 进行中 | 黄金回归测试待做 |
+| T4 | 全量测试 + 交叉编译 + 部署 + 推送GitHub | ✅ 完成 | 134测试过，交叉编译过，新版已部署开发板 |
+| T5 | 论文初稿推进：补网页观看/多目标章节 | 🔄 进行中 | 论文agent后台补充（H:\毕设论文\thesis_agent_draft\） |
+| T6 | 答辩演示打磨：美观/截图/预录视频/演示脚本 | 🔄 进行中 | DEMO_VIDEO.md已整理；美观待打磨 |
+| T7 | 心跳cron自检 + 看板更新 + 最终验收报告 | 🔄 进行中 | 心跳cron 9cb3159e30dc已建；FINAL_REPORT待写 |
 
 ## 进度日志
 
