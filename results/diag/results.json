@@ -1,0 +1,37 @@
+{
+  "generated_at": "2026-10-25 21:38:45",
+  "weights": "yolov8n.pt",
+  "conf": 0.25,
+  "edge_dist_m": 2.0,
+  "total_images": 1,
+  "processed": 1,
+  "failed": [],
+  "results": [
+    {
+      "image": "H:\\PedestrianRiskDecision\\dataset\\images\\000000122672_1.jpg",
+      "filename": "000000122672_1",
+      "size": [
+        640,
+        480
+      ],
+      "level": "SAFE",
+      "n": 1,
+      "m": 0,
+      "density": 0.0,
+      "r_gcc": 1.0,
+      "clustering": 0.0,
+      "detections": [
+        {
+          "bbox": [
+            224.8926544189453,
+            105.97775268554688,
+            529.6040649414062,
+            323.39501953125
+          ],
+          "conf": 0.9267265200614929
+        }
+      ],
+      "visualization": "H:\\PedestrianRiskDecision\\results\\diag\\vis\\000000122672_1_crowd.jpg"
+    }
+  ]
+}
