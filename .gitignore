@@ -16,3 +16,8 @@ cache/
 # 运行时下载的大权重（按需再决定是否上传）
 *.pt
 *.engine
+
+# 视频抓取临时文件
+*.html
+mixkit_*.txt
+mixkit_ids.json
