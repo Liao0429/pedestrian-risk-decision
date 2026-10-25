@@ -307,6 +307,11 @@ int main(int argc, char *argv[]) {
 				for(int i = 0; i < od_results.count; i++) {
 					object_detect_result *dres = &(od_results.results[i]);
 					if (std::find(riskCfg.target_classes.begin(), riskCfg.target_classes.end(), dres->cls_id) == riskCfg.target_classes.end()) continue; // 非目标类别跳过
+					// 按类别差异化置信度阈值（可选）：若该类配置了更高阈值且当前置信度不足，精筛跳过
+					{
+						const std::map<int,float>::const_iterator cit = riskCfg.class_conf_thresholds.find(dres->cls_id);
+						if (cit != riskCfg.class_conf_thresholds.end() && dres->prop < cit->second) continue;
+					}
 					int px = (int)((dres->box.left + dres->box.right) / 2);
 					int py = (int)dres->box.bottom;
 					mapCoordinates(&px, &py);

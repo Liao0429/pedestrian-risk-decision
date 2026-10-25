@@ -55,3 +55,16 @@
 - 🐛 **顺带发现并修复 minijson 布尔解析 bug**：`parseLiteral()` 忽略 value 参数恒返回 `true`，导致 JSON 里 `false` 被解析为 `true`。影响 `config/default_config.json` 的 `enable_risk_engine_fallback: false` —— 会被读成 true，**板端会静默启用 RiskEngine 重复计算旁路**（抵消 3b44cf9 的 P1 优化）。已修复并新增 `test_minijson.cc::test_boolean_false`（32/32 过，含回归用例）。
 - ✅ 全量 Python 测试 137 passed；C++ 黄金回归 + minijson 均在旧电脑编译运行通过
 - 📌 待办：T6 答辩演示打磨（美观/预录视频最终确认）、最终验收报告 docs/FINAL_REPORT.md 已存在，本次提交后更新
+
+## 后续推进（心跳第 5 轮，落地按类别差异化置信度阈值）
+
+- ✅ **实现「按类别差异化置信度阈值」**（响应 review2 algorithm_config 建议，车辆/动物语义不同）：
+  - `config/default_config.json` 新增可选字段 `class_conf_thresholds`（COCO id -> 最低置信度 0~1，空对象默认不区分）
+  - `risk_config.h` 解析该映射并校验（键 0~79 整数、值 [0,1]、对象类型），非法配置抛异常
+  - `main.cc` 增强决策循环：目标类别过滤后，若该类配置了更高阈值且当前置信度不足则精筛跳过（不送入空间网络），未配置类别行为不变
+  - `test_risk_config.cc` 新增 `test_class_conf_thresholds()`：正常读取/补零键/非法键/越界/非法值/非法类型 共 6 组断言
+- ✅ **验证**：
+  - Python 全量测试 **137 passed**
+  - C++ 主机测试（旧电脑 192.168.0.68 `make test`）：enhanced_decision 26/26、minijson 28/28、risk_config **27/27**（含新增差异化阈值用例）全过
+  - 交叉编译器（arm-none-linux-gnueabihf-g++）对 main.cc 做 `-fsyntax-only`：本次修改无新增错误；剩余 `rknn_app_context_t.input_mems` 报错为旧电脑 SDK include 环境差异（该行是既有代码，真实交叉编译以 SDK example CMake 构建为准，待真机部署最终验证）
+- 📌 待办：T6 答辩演示打磨（美观/预录视频最终确认）、单应矩阵外部标定文件加载、USB WiFi 采购实测

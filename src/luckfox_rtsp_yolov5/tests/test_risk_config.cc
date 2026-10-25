@@ -94,6 +94,55 @@ void test_missing_fields_use_defaults() {
     CHECK_EQ(cfg.danger.n, 10.0);
     CHECK_EQ(cfg.warning.n, 5.0);
     CHECK_EQ(cfg.warning.rho, 0.28);
+    // class_conf_thresholds 缺失 -> 空映射（不区分类别）
+    CHECK(cfg.class_conf_thresholds.empty());
+    std::remove(kTmpPath);
+}
+
+void test_class_conf_thresholds() {
+    // 正常读取：字符串键 + 数值
+    writeFile(R"({"class_conf_thresholds": {"0": 0.50, "2": 0.60}})");
+    pedestrian::RiskConfig cfg = pedestrian::loadRiskConfig(kTmpPath);
+    CHECK_EQ(cfg.class_conf_thresholds.size(), 2u);
+    CHECK(cfg.class_conf_thresholds.find(0) != cfg.class_conf_thresholds.end());
+    CHECK(cfg.class_conf_thresholds.find(2) != cfg.class_conf_thresholds.end());
+    CHECK_EQ(static_cast<double>(cfg.class_conf_thresholds[0]), 0.50);
+    CHECK(std::fabs(static_cast<double>(cfg.class_conf_thresholds[2]) - 0.60) < 1e-6);
+    std::remove(kTmpPath);
+
+    // 键为 COCO id 整数字符串，允许补齐写法
+    writeFile(R"({"class_conf_thresholds": {"07": 0.4}})");
+    cfg = pedestrian::loadRiskConfig(kTmpPath);
+    CHECK(cfg.class_conf_thresholds.find(7) != cfg.class_conf_thresholds.end());
+    CHECK(std::fabs(static_cast<double>(cfg.class_conf_thresholds[7]) - 0.4) < 1e-6);
+    std::remove(kTmpPath);
+
+    // 非法键：非数字
+    writeFile(R"({"class_conf_thresholds": {"person": 0.5}})");
+    bool threw = false;
+    try { pedestrian::loadRiskConfig(kTmpPath); } catch (const std::runtime_error&) { threw = true; }
+    CHECK(threw);
+    std::remove(kTmpPath);
+
+    // 非法键：越界（>79）
+    writeFile(R"({"class_conf_thresholds": {"80": 0.5}})");
+    threw = false;
+    try { pedestrian::loadRiskConfig(kTmpPath); } catch (const std::runtime_error&) { threw = true; }
+    CHECK(threw);
+    std::remove(kTmpPath);
+
+    // 非法值：>1
+    writeFile(R"({"class_conf_thresholds": {"0": 1.5}})");
+    threw = false;
+    try { pedestrian::loadRiskConfig(kTmpPath); } catch (const std::runtime_error&) { threw = true; }
+    CHECK(threw);
+    std::remove(kTmpPath);
+
+    // 非法类型：数组
+    writeFile(R"({"class_conf_thresholds": [0.5]})");
+    threw = false;
+    try { pedestrian::loadRiskConfig(kTmpPath); } catch (const std::runtime_error&) { threw = true; }
+    CHECK(threw);
     std::remove(kTmpPath);
 }
 
@@ -173,6 +222,7 @@ void test_risk_engine_config() {
 int main() {
     test_load_valid();
     test_missing_fields_use_defaults();
+    test_class_conf_thresholds();
     test_invalid_throws();
     test_load_or_fallback();
     test_risk_engine_config();

@@ -27,6 +27,8 @@
 // =============================================================================
 
 #include <fstream>
+#include <cstdlib>
+#include <map>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -52,6 +54,7 @@ struct RiskConfig {
     double   edge_dist_m = 2.0;
     bool     enable_risk_engine_fallback = false;  // 增强决策默认启用时，是否仍跑 RiskEngine 旁路（重复 computeFeatures）
     std::vector<int> target_classes{0};  // 检测目标类别集合（COCO id），默认 [0]=person；可切换 [2,5,7,3]=车辆等
+    std::map<int,float> class_conf_thresholds;  // 按类别差异化置信度阈值（COCO id -> 最低置信度 0~1）。空=不区分（仅用全局 BOX_THRESH）
     RiskRule danger;                // DANGER 阈值（默认 10 / 0.55 / 0.80）
     RiskRule warning{5.0, 0.28, 0.55};  // WARNING 阈值（默认 5 / 0.28 / 0.55）
 
@@ -117,6 +120,30 @@ inline RiskConfig loadRiskConfig(const std::string& path) {
             throw std::runtime_error("enable_risk_engine_fallback 必须是布尔值");
         }
         cfg.enable_risk_engine_fallback = v->asBool();
+    }
+
+    // 按类别差异化置信度阈值（可选）：{"class_conf_thresholds": {"0":0.50, "2":0.60}}
+    // 键=COCO id(0~79)，值=该类最低置信度(0~1)。未配置的类别不额外过滤（仍用全局检测阈值）。
+    if (const minijson::Value* clsObj = root.find("class_conf_thresholds")) {
+        if (!clsObj->isObject()) throw std::runtime_error("class_conf_thresholds 必须是对象");
+        cfg.class_conf_thresholds.clear();
+        const minijson::Object& entries = clsObj->asObject();
+        for (minijson::Object::const_iterator it = entries.begin(); it != entries.end(); ++it) {
+            const std::string& keyStr = it->first;
+            const minijson::Value& val = it->second;
+            char* end = nullptr;
+            long cls = std::strtol(keyStr.c_str(), &end, 10);
+            if (end == keyStr.c_str() || *end != '\0') {
+                throw std::runtime_error("class_conf_thresholds 的键必须是 COCO id（0~79）: \"" + keyStr + "\"");
+            }
+            if (cls < 0 || cls > 79) {
+                throw std::runtime_error("class_conf_thresholds 的键必须是 0~79 整数（COCO id）: \"" + keyStr + "\"");
+            }
+            if (!val.isNumber() || val.asDouble() < 0.0 || val.asDouble() > 1.0) {
+                throw std::runtime_error("class_conf_thresholds 的值必须在 [0,1]: \"" + keyStr + "\"");
+            }
+            cfg.class_conf_thresholds[static_cast<int>(cls)] = static_cast<float>(val.asDouble());
+        }
     }
 
     // 读取 danger / warning 子对象（允许部分配置，缺失项用默认值）

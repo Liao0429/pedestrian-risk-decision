@@ -2,6 +2,7 @@
   "edge_dist_m": 2.0,
   "enable_risk_engine_fallback": false,
   "target_classes": [0],
+  "class_conf_thresholds": {},
   "danger": {
     "n": 10,
     "rho": 0.55,
@@ -12,5 +13,5 @@
     "rho": 0.28,
     "gcc": 0.55
   },
-  "_comment": "规则阈值配置。target_classes=检测目标类别集合（COCO id，默认[0]=person；车辆[2,5,7,3]、狗[16]、猫[15]、动物[14,18,19,20,21]）。danger/warning 的 n=人数阈值, rho=网络密度, gcc=最大连通分量占比。"
+  "_comment": "规则阈值配置。target_classes=检测目标类别集合（COCO id，默认[0]=person；车辆[2,5,7,3]、狗[16]、猫[15]、动物[14,18,19,20,21]）。class_conf_thresholds=按类别差异化置信度阈值（COCO id -> 最低置信度0~1，可选；空对象=不区分，仅用全局检测阈值）。danger/warning 的 n=人数阈值, rho=网络密度, gcc=最大连通分量占比。"
 }
