@@ -17,7 +17,7 @@ graph TD
     V4L2 --> PP["图像预处理<br/>letterbox → 640×640"]
     PP --> NPU["RKNN NPU<br/>YOLOv5n · INT8"]
     NPU --> POST["后处理<br/>NMS · 置信度过滤"]
-    POST --> PERSON["仅取 person 类<br/>(COCO id=0)"]
+    POST --> PERSON["按 target_classes 过滤<br/>(默认 person，可切车辆/动物)"]
     PERSON --> IPM["IPM 逆透视映射<br/>像素脚点 → 地面米制 (x,y)"]
     IPM --> TOPO["复杂网络拓扑<br/>邻接矩阵 + 图拉普拉斯谱<br/>DBSCAN 人群聚类"]
     TOPO --> RE["RiskEngine<br/>规则评估<br/>SAFE/WARNING/DANGER"]
@@ -36,7 +36,7 @@ graph TD
 
 ### 3.1 感知层（轻量化检测）
 - 模型：YOLOv5n + INT8 量化，约 7.5MB，部署于 RV1106 NPU。
-- 后处理：NMS 去重，置信度过滤，仅保留 `cls_id==0`（person）。
+- 后处理：NMS 去重，置信度过滤，按 `target_classes` 过滤目标类别（默认 `[0]`=person，可切车辆/狗/猫/动物，见 `config/default_config.json`）。
 - 关键代码：`src/luckfox_rtsp_yolov5/`（`yolov5.cc`、`postprocess.cc`、`luckfox_mpi.cc`）。
 
 ### 3.2 几何层（IPM 逆透视映射）

@@ -12,14 +12,16 @@
 - **复杂网络拓扑**：邻接矩阵 + 图拉普拉斯谱分析（Fiedler 值/谱半径/代数连通度）+ DBSCAN 人群聚类
 - **时序决策**：Kalman/ByteTrack 多目标跟踪 + EMA 平滑 + FSM 有限状态机（滞回防抖）
 - **风险分级**：实时输出 **SAFE / WARNING / DANGER** 三级风险
-- **可配置**：规则阈值通过 JSON 配置文件加载（`config/default_config.json`）
+- **多目标可切换**：通过 `target_classes` 配置检测目标类别（人[0]/车辆[2,5,7,3]/狗[17]/猫[16]/动物[18,19,20]），一键切换危险目标聚集报警
+- **网页免安装观看**：开发板 go2rtc 转 WebRTC/HLS，手机/电脑浏览器直接打开网页看监控（`docs/WEB_VIEWER.md`）
+- **可配置**：规则阈值与目标类别通过 JSON 配置文件加载（`config/default_config.json`）
 - **可扩展硬件**：支持双舵机云台、语音告警、彩色触控屏、物理开关（`docs/hardware/`）
 
 ## 🏗️ 系统架构
 
 ```mermaid
 graph TD
-    A[摄像头<br/>720×480] --> B["YOLOv5n 行人检测<br/>RKNN · INT8 · NPU"]
+    A[摄像头<br/>720×480] --> B["YOLOv5n 目标检测<br/>RKNN · INT8 · NPU<br/>target_classes 过滤（默认人）"]
     B --> C["IPM 逆透视映射<br/>像素脚点 → 地面米制坐标"]
     C --> D["复杂网络拓扑分析<br/>邻接矩阵 + 图拉普拉斯谱<br/>DBSCAN 人群聚类"]
     C --> E["增强决策模块 EnhancedDecision<br/>Kalman 平滑 + 谱特征 + FSM 时序"]
@@ -27,6 +29,7 @@ graph TD
     E --> F
     F --> G["画面叠加 + RTSP 推流"]
     G --> H[监控终端]
+    G --> I["go2rtc 网页观看<br/>WebRTC/HLS · 浏览器直接看"]
 ```
 
 **流水线**：前端轻量化感知（YOLOv5n+INT8）→ 几何空间校正（IPM）→ 图论拓扑分析（图拉普拉斯/DBSCAN）→ 时序风险决策（Kalman/FSM）→ 输出三级风险并 RTSP 推流。详细架构见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)。
@@ -40,7 +43,8 @@ pedestrian-risk-decision/
 │   └── videos50/       #   111 条真实行人/人群视频（Mixkit，已校验）
 ├── scripts/            # 测试脚本
 │   ├── crowd_test.py           # 图片模式（基线）
-│   └── crowd_test_enhanced.py  # 视频模式（Kalman+谱特征+FSM 增强）
+│   ├── crowd_test_enhanced.py  # 视频模式（Kalman+谱特征+FSM 增强）
+│   └── start_demo.sh         # 开发板一键启动（RTSP + 网页观看，答辩用）
 ├── src/
 │   ├── algorithms/     # 算法模块（图拉普拉斯/Kalman/ByteTrack/DBSCAN/FSM/IPM/EMA，含 Python+C++ 接口）
 │   ├── hardware/       # 硬件驱动（servo/pan_tilt/voice_alert）
@@ -90,6 +94,7 @@ python scripts/crowd_test_enhanced.py --input <video.mp4> --output results/video
 2. 产物 scp 到开发板，`sudo ./luckfox_pico_rtsp_yolov5` 运行
 3. RTSP 推流：`rtsp://<板子IP>:554/live/0`
 4. 增强算法（谱特征/ByteTrack/FSM）的 C++ 头文件在 `src/algorithms/*.h`，可交叉编译集成
+5. **答辩一键启动**：`sudo bash scripts/start_demo.sh` 自动拉起 RTSP + 网页观看并打印访问地址（见 `docs/WEB_VIEWER.md`）
 
 ### C++ 算法主机测试与构建（无需开发板）
 ```bash
@@ -110,6 +115,9 @@ make test        # 编译并运行增强决策/JSON 配置/阈值引擎单元测
 | `docs/ALGORITHM_OPTIMIZATION.md` | 算法效率/准确度分析与升级建议 |
 | `docs/ALGORITHM_UPGRADE.md` | ByteTrack/DBSCAN/IPM标定/EMA 升级说明 |
 | `docs/INTEGRATION_PLAN.md` | 算法集成方案（Python+C++，四线程架构） |
+| `docs/WEB_VIEWER.md` | 网页免安装观看监控（go2rtc，手机/电脑浏览器） |
+| `docs/WIFI_SETUP.md` | 答辩现场无线连接方案（USB WiFi 自动连手机热点） |
+| `docs/KANBAN.md` | 项目任务看板（自主推进状态） |
 | `docs/PERFORMANCE_COMPARISON.md` | 性能对比实验报告 |
 | `docs/hardware/` | 硬件扩展（舵机/语音/大屏/开关/PCB） |
 | `docs/experiment_results.md` | 30 张图基线实验报告（早期） |
