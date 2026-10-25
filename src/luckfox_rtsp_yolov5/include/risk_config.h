@@ -50,6 +50,7 @@ struct RiskRule {
 // 完整风险决策配置
 struct RiskConfig {
     double   edge_dist_m = 2.0;
+    bool     enable_risk_engine_fallback = false;  // 增强决策默认启用时，是否仍跑 RiskEngine 旁路（重复 computeFeatures）
     std::vector<int> target_classes{0};  // 检测目标类别集合（COCO id），默认 [0]=person；可切换 [2,5,7,3]=车辆等
     RiskRule danger;                // DANGER 阈值（默认 10 / 0.55 / 0.80）
     RiskRule warning{5.0, 0.28, 0.55};  // WARNING 阈值（默认 5 / 0.28 / 0.55）
@@ -109,6 +110,13 @@ inline RiskConfig loadRiskConfig(const std::string& path) {
             throw std::runtime_error("target_class 必须是非负整数（0~79，COCO 类别 id）");
         }
         cfg.target_classes = {static_cast<int>(v->asDouble())};
+    }
+
+    if (const minijson::Value* v = root.find("enable_risk_engine_fallback")) {
+        if (!v->isBool()) {
+            throw std::runtime_error("enable_risk_engine_fallback 必须是布尔值");
+        }
+        cfg.enable_risk_engine_fallback = v->asBool();
     }
 
     // 读取 danger / warning 子对象（允许部分配置，缺失项用默认值）

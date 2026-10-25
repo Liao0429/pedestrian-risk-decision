@@ -1,5 +1,6 @@
 {
   "edge_dist_m": 2.0,
+  "enable_risk_engine_fallback": false,
   "target_classes": [0],
   "danger": {
     "n": 10,

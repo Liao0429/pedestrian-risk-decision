@@ -20,6 +20,7 @@
 #include "risk_engine.h"
 #include "risk_config.h"
 #include "enhanced_decision.h"
+#include "ipm_transform.h"
 
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
@@ -69,17 +70,6 @@ void mapCoordinates(int *x, int *y) {
     *y = (int)((float)my / scale);
 }
 
-// 将原图像素坐标经 IPM 单应矩阵 H 映射到地面米制坐标（与 RiskEngine::mapToGround 一致）
-void mapToGroundPixel(const cv::Mat& H, float& x, float& y) {
-    double wx = H.at<double>(0,0) * x + H.at<double>(0,1) * y + H.at<double>(0,2);
-    double wy = H.at<double>(1,0) * x + H.at<double>(1,1) * y + H.at<double>(1,2);
-    double w  = H.at<double>(2,0) * x + H.at<double>(2,1) * y + H.at<double>(2,2);
-    if (std::fabs(w) > 1e-6) {
-        x = (float)(wx / w);
-        y = (float)(wy / w);
-    }
-}
-
 
 int main(int argc, char *argv[]) {
   system("RkLunch-stop.sh");
@@ -101,84 +91,179 @@ int main(int argc, char *argv[]) {
   pedestrian::EnhancedConfig enhancedCfg;
   enhancedCfg.edge_dist_m = riskCfg.edge_dist_m;
   pedestrian::EnhancedDecision enhancedDecision(enhancedCfg);
-	RK_S32 s32Ret = 0; 
-	int sX,sY,eX,eY; 
-		
-	// Rknn model
-	char text[16];
-	rknn_app_context_t rknn_app_ctx;	
-	object_detect_result_list od_results;
-    int ret;
-	const char *model_path = "./model/yolov5.rknn";
-    memset(&rknn_app_ctx, 0, sizeof(rknn_app_context_t));	
-	init_yolov5_model(model_path, &rknn_app_ctx);
-	printf("init rknn model success!\n");
-	init_post_process();
 
-	//h264_frame	
-	VENC_STREAM_S stFrame;	
-	stFrame.pstPack = (VENC_PACK_S *)malloc(sizeof(VENC_PACK_S));
-	RK_U64 H264_PTS = 0;
-	RK_U32 H264_TimeRef = 0; 
-	VIDEO_FRAME_INFO_S stViFrame;
-	
-	// Create Pool
-	MB_POOL_CONFIG_S PoolCfg;
-	memset(&PoolCfg, 0, sizeof(MB_POOL_CONFIG_S));
-	PoolCfg.u64MBSize = width * height * 3 ;
-	PoolCfg.u32MBCnt = 1;
-	PoolCfg.enAllocType = MB_ALLOC_TYPE_DMA;
-	//PoolCfg.bPreAlloc = RK_FALSE;
-	MB_POOL src_Pool = RK_MPI_MB_CreatePool(&PoolCfg);
-	printf("Create Pool success !\n");	
+  // ---- 资源句柄与初始化状态（任一关键初始化失败时安全清理） ----
+  RK_S32 s32Ret = 0;
+  int sX, sY, eX, eY;
+  int ret = 0;
+  char text[32];
+  rknn_app_context_t rknn_app_ctx;
+  object_detect_result_list od_results;
+  memset(&rknn_app_ctx, 0, sizeof(rknn_app_context_t));
 
-	// Get MB from Pool 
-	MB_BLK src_Blk = RK_MPI_MB_GetMB(src_Pool, width * height * 3, RK_TRUE);
-	
-	// Build h264_frame
-	VIDEO_FRAME_INFO_S h264_frame;
-	h264_frame.stVFrame.u32Width = width;
-	h264_frame.stVFrame.u32Height = height;
-	h264_frame.stVFrame.u32VirWidth = width;
-	h264_frame.stVFrame.u32VirHeight = height;
-	h264_frame.stVFrame.enPixelFormat =  RK_FMT_RGB888; 
-	h264_frame.stVFrame.u32FrameFlag = 160;
-	h264_frame.stVFrame.pMbBlk = src_Blk;
-	unsigned char *data = (unsigned char *)RK_MPI_MB_Handle2VirAddr(src_Blk);
-	cv::Mat frame(cv::Size(width,height),CV_8UC3,data);
+  VENC_STREAM_S stFrame;
+  memset(&stFrame, 0, sizeof(stFrame));
+  stFrame.pstPack = (VENC_PACK_S *)malloc(sizeof(VENC_PACK_S));
+  RK_U64 H264_PTS = 0;
+  RK_U32 H264_TimeRef = 0;
+  VIDEO_FRAME_INFO_S stViFrame;
 
-	// rkaiq init
-	RK_BOOL multi_sensor = RK_FALSE;	
-	const char *iq_dir = "/etc/iqfiles";
-	rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
-	//hdr_mode = RK_AIQ_WORKING_MODE_ISP_HDR2;
-	SAMPLE_COMM_ISP_Init(0, hdr_mode, multi_sensor, iq_dir);
-	SAMPLE_COMM_ISP_Run(0);
+  MB_POOL_CONFIG_S PoolCfg;
+  memset(&PoolCfg, 0, sizeof(MB_POOL_CONFIG_S));
+  MB_POOL src_Pool = 0;
+  MB_BLK src_Blk = 0;
 
-	// rkmpi init
-	if (RK_MPI_SYS_Init() != RK_SUCCESS) {
-		RK_LOGE("rk mpi sys init fail!");
-		return -1;
-	}
+  const char *model_path = "./model/yolov5.rknn";
 
-	// rtsp init	
-	rtsp_demo_handle g_rtsplive = NULL;
-	rtsp_session_handle g_rtsp_session;
-	g_rtsplive = create_rtsp_demo(554);
-	g_rtsp_session = rtsp_new_session(g_rtsplive, "/live/0");
-	rtsp_set_video(g_rtsp_session, RTSP_CODEC_ID_VIDEO_H264, NULL, 0);
-	rtsp_sync_video_ts(g_rtsp_session, rtsp_get_reltime(), rtsp_get_ntptime());
-	
-	// vi init
-	vi_dev_init();
-	vi_chn_init(0, width, height);
+  bool rknn_ready = false;
+  bool postproc_ready = false;
+  bool frame_pack_ready = (stFrame.pstPack != NULL);
+  bool pool_ready = false;
+  bool blk_ready = false;
+  bool isp_ready = false;
+  bool sys_ready = false;
+  bool rtsp_ready = false;
+  bool vi_ready = false;
+  bool venc_ready = false;
+  rtsp_demo_handle g_rtsplive = NULL;
+  rtsp_session_handle g_rtsp_session = NULL;
 
-	// venc init
-	RK_CODEC_ID_E enCodecType = RK_VIDEO_ID_AVC;
-	venc_init(0, width, height, enCodecType);
+  // ---- 安全清理（正常退出 / 初始化失败共用） ----
+  auto cleanup = [&]() {
+    if (blk_ready)       RK_MPI_MB_ReleaseMB(src_Blk);
+    if (pool_ready)      RK_MPI_MB_DestroyPool(src_Pool);
+    if (vi_ready) {      RK_MPI_VI_DisableChn(0, 0); RK_MPI_VI_DisableDev(0); }
+    if (isp_ready)       SAMPLE_COMM_ISP_Stop(0);
+    if (venc_ready) {    RK_MPI_VENC_StopRecvFrame(0); RK_MPI_VENC_DestroyChn(0); }
+    if (frame_pack_ready) free(stFrame.pstPack);
+    if (rtsp_ready && g_rtsplive) rtsp_del_demo(g_rtsplive);
+    if (sys_ready)       RK_MPI_SYS_Exit();
+    if (rknn_ready)      release_yolov5_model(&rknn_app_ctx);
+    if (postproc_ready)  deinit_post_process();
+  };
 
-	printf("venc init success\n");	
-	
+  // ==== 初始化序列：任一关键初始化失败即打印明确错误并安全退出 ====
+  ret = init_yolov5_model(model_path, &rknn_app_ctx);
+  if (ret != 0) {
+    fprintf(stderr, "[FATAL] init_yolov5_model 失败 (ret=%d)\n", ret);
+    cleanup();
+    return -1;
+  }
+  rknn_ready = true;
+  printf("init rknn model success!\n");
+
+  ret = init_post_process();
+  if (ret != 0) {
+    fprintf(stderr, "[FATAL] init_post_process 失败 (ret=%d)\n", ret);
+    cleanup();
+    return -1;
+  }
+  postproc_ready = true;
+
+  // Create Pool
+  PoolCfg.u64MBSize = width * height * 3;
+  PoolCfg.u32MBCnt = 1;
+  PoolCfg.enAllocType = MB_ALLOC_TYPE_DMA;
+  //PoolCfg.bPreAlloc = RK_FALSE;
+  src_Pool = RK_MPI_MB_CreatePool(&PoolCfg);
+  if (src_Pool == NULL) {
+    fprintf(stderr, "[FATAL] RK_MPI_MB_CreatePool 失败\n");
+    cleanup();
+    return -1;
+  }
+  pool_ready = true;
+  printf("Create Pool success !\n");
+
+  // Get MB from Pool
+  src_Blk = RK_MPI_MB_GetMB(src_Pool, width * height * 3, RK_TRUE);
+  if (src_Blk == NULL) {
+    fprintf(stderr, "[FATAL] RK_MPI_MB_GetMB 失败\n");
+    cleanup();
+    return -1;
+  }
+  blk_ready = true;
+
+  // Build h264_frame
+  VIDEO_FRAME_INFO_S h264_frame;
+  h264_frame.stVFrame.u32Width = width;
+  h264_frame.stVFrame.u32Height = height;
+  h264_frame.stVFrame.u32VirWidth = width;
+  h264_frame.stVFrame.u32VirHeight = height;
+  h264_frame.stVFrame.enPixelFormat =  RK_FMT_RGB888;
+  h264_frame.stVFrame.u32FrameFlag = 160;
+  h264_frame.stVFrame.pMbBlk = src_Blk;
+  unsigned char *data = (unsigned char *)RK_MPI_MB_Handle2VirAddr(src_Blk);
+  cv::Mat frame(cv::Size(width,height),CV_8UC3,data);
+
+  // rkaiq init
+  RK_BOOL multi_sensor = RK_FALSE;
+  const char *iq_dir = "/etc/iqfiles";
+  rk_aiq_working_mode_t hdr_mode = RK_AIQ_WORKING_MODE_NORMAL;
+  //hdr_mode = RK_AIQ_WORKING_MODE_ISP_HDR2;
+  ret = SAMPLE_COMM_ISP_Init(0, hdr_mode, multi_sensor, iq_dir);
+  if (ret != RK_SUCCESS) {
+    fprintf(stderr, "[FATAL] SAMPLE_COMM_ISP_Init 失败 (ret=%d)\n", ret);
+    cleanup();
+    return -1;
+  }
+  ret = SAMPLE_COMM_ISP_Run(0);
+  if (ret != RK_SUCCESS) {
+    fprintf(stderr, "[FATAL] SAMPLE_COMM_ISP_Run 失败 (ret=%d)\n", ret);
+    cleanup();
+    return -1;
+  }
+  isp_ready = true;
+
+  // rkmpi init
+  if (RK_MPI_SYS_Init() != RK_SUCCESS) {
+    RK_LOGE("rk mpi sys init fail!");
+    cleanup();
+    return -1;
+  }
+  sys_ready = true;
+
+  // rtsp init
+  g_rtsplive = create_rtsp_demo(554);
+  if (g_rtsplive == NULL) {
+    fprintf(stderr, "[FATAL] create_rtsp_demo 失败\n");
+    cleanup();
+    return -1;
+  }
+  g_rtsp_session = rtsp_new_session(g_rtsplive, "/live/0");
+  if (g_rtsp_session == NULL) {
+    fprintf(stderr, "[FATAL] rtsp_new_session 失败\n");
+    cleanup();
+    return -1;
+  }
+  rtsp_set_video(g_rtsp_session, RTSP_CODEC_ID_VIDEO_H264, NULL, 0);
+  rtsp_sync_video_ts(g_rtsp_session, rtsp_get_reltime(), rtsp_get_ntptime());
+  rtsp_ready = true;
+
+  // vi init
+  ret = vi_dev_init();
+  if (ret != 0) {
+    fprintf(stderr, "[FATAL] vi_dev_init 失败 (ret=%d)\n", ret);
+    cleanup();
+    return -1;
+  }
+  ret = vi_chn_init(0, width, height);
+  if (ret != 0) {
+    fprintf(stderr, "[FATAL] vi_chn_init 失败 (ret=%d)\n", ret);
+    cleanup();
+    return -1;
+  }
+  vi_ready = true;
+
+  // venc init
+  RK_CODEC_ID_E enCodecType = RK_VIDEO_ID_AVC;
+  ret = venc_init(0, width, height, enCodecType);
+  if (ret != 0) {
+    fprintf(stderr, "[FATAL] venc_init 失败 (ret=%d)\n", ret);
+    cleanup();
+    return -1;
+  }
+  venc_ready = true;
+  printf("venc init success\n");
   	while(1)
 	{	
 		// get vi frame
@@ -201,7 +286,7 @@ int main(int argc, char *argv[]) {
 			inference_yolov5_model(&rknn_app_ctx, &od_results);
 
 			// ---- 行人空间网络：只取 person 类，提取脚点 ----
-			CrowdLevel crowd = CROWD_SAFE;
+			pedestrian::RiskLevel crowd = pedestrian::RISK_SAFE;
 			int featN = 0;
 			double featRho = 0.0, featGcc = 0.0, featFiedler = 0.0;
 			// 增强决策（默认启用）：IPM 地面米制脚点 -> Kalman 平滑 -> 谱特征 -> FSM 稳定等级
@@ -215,11 +300,11 @@ int main(int argc, char *argv[]) {
 					int py = (int)dres->box.bottom;
 					mapCoordinates(&px, &py);
 					float gx = (float)px, gy = (float)py;
-					mapToGroundPixel(H, gx, gy);   // 像素 -> 地面米
+					pedestrian::mapToGround(H, gx, gy);   // 像素 -> 地面米（与 RiskEngine 同一 IPM 实现）
 					groundPts.push_back(std::make_pair(gx, gy));
 				}
 				const pedestrian::EnhancedResult er = enhancedDecision.processFrame(groundPts);
-				crowd     = (CrowdLevel)er.level;
+				crowd     = static_cast<pedestrian::RiskLevel>(er.level);
 				featN     = er.n;
 				featRho   = er.density;
 				featGcc   = er.r_gcc;
@@ -228,20 +313,24 @@ int main(int argc, char *argv[]) {
 				       RiskEngine::levelName(crowd), featN, featRho, featGcc, featFiedler);
 			}
 
-			// 经典决策：RiskEngine 固定阈值规则（旁路保留，作为对比参考，不覆盖增强决策）
-			riskEngine.clear();
-			for(int i = 0; i < od_results.count; i++) {
-				object_detect_result *dres = &(od_results.results[i]);
-				if (std::find(riskCfg.target_classes.begin(), riskCfg.target_classes.end(), dres->cls_id) != riskCfg.target_classes.end()) { // 目标类别
-					int px = (int)((dres->box.left + dres->box.right) / 2);
-					int py = (int)dres->box.bottom;
-					mapCoordinates(&px, &py);
-					riskEngine.addPedestrian(px, py);
+			// 经典决策旁路：默认关闭（enable_risk_engine_fallback=false）。
+			// 增强决策已计算网络特征，RiskEngine 旁路会重复 computeFeatures，
+			// 仅在显式开启回退时才运行，作为对比参考，不覆盖增强决策输出。
+			if (riskCfg.enable_risk_engine_fallback) {
+				riskEngine.clear();
+				for(int i = 0; i < od_results.count; i++) {
+					object_detect_result *dres = &(od_results.results[i]);
+					if (std::find(riskCfg.target_classes.begin(), riskCfg.target_classes.end(), dres->cls_id) != riskCfg.target_classes.end()) { // 目标类别
+						int px = (int)((dres->box.left + dres->box.right) / 2);
+						int py = (int)dres->box.bottom;
+						mapCoordinates(&px, &py);
+						riskEngine.addPedestrian(px, py);
+					}
 				}
+				riskEngine.computeFeatures();
+				// 旁路保留：经典 RiskEngine 仅作为对比/回退参考，不覆盖增强决策输出
+				riskEngine.evaluate();
 			}
-			riskEngine.computeFeatures();
-			// 旁路保留：经典 RiskEngine 仅作为对比/回退参考，不覆盖增强决策输出
-			riskEngine.evaluate();
 
 			for(int i = 0; i < od_results.count; i++)
 			{					
@@ -262,7 +351,7 @@ int main(int argc, char *argv[]) {
 					cv::rectangle(frame,cv::Point(sX ,sY),
 								        cv::Point(eX ,eY),
 										cv::Scalar(0,255,0),3);
-					sprintf(text, "%s %.1f%%", coco_cls_to_name(det_result->cls_id), det_result->prop * 100);
+					snprintf(text, sizeof text, "%s %.1f%%", coco_cls_to_name(det_result->cls_id), det_result->prop * 100);
 					cv::putText(frame,text,cv::Point(sX, sY - 8),
 										   cv::FONT_HERSHEY_SIMPLEX,1,
 										   cv::Scalar(0,255,0),2);
@@ -273,10 +362,10 @@ int main(int argc, char *argv[]) {
 			{
 				cv::Scalar color(0,255,0);
 				const char* lvl = RiskEngine::levelName(crowd);
-				if (crowd == CROWD_WARNING)      color = cv::Scalar(0,255,255);
-				else if (crowd == CROWD_DANGER)  color = cv::Scalar(0,0,255);
+				if (crowd == pedestrian::RISK_WARNING)      color = cv::Scalar(0,255,255);
+				else if (crowd == pedestrian::RISK_DANGER)  color = cv::Scalar(0,0,255);
 				char info[128];
-				sprintf(info, "CROWD:%s n=%d rho=%.2f r_gcc=%.2f lambda2=%.3f",
+				snprintf(info, sizeof info, "CROWD:%s n=%d rho=%.2f r_gcc=%.2f lambda2=%.3f",
 				        lvl, featN, featRho, featGcc, featFiedler);
 				cv::rectangle(frame, cv::Point(0,0), cv::Point(width, 60), color, -1);
 				cv::putText(frame, info, cv::Point(10, 42),
@@ -314,31 +403,7 @@ int main(int argc, char *argv[]) {
 		}
 		memset(text,0,8);
 	}
-
-
-	// Destory MB
-	RK_MPI_MB_ReleaseMB(src_Blk);
-	// Destory Pool
-	RK_MPI_MB_DestroyPool(src_Pool);
-	
-	RK_MPI_VI_DisableChn(0, 0);
-	RK_MPI_VI_DisableDev(0);
-
-	SAMPLE_COMM_ISP_Stop(0);
-	
-	RK_MPI_VENC_StopRecvFrame(0);
-	RK_MPI_VENC_DestroyChn(0);
-
-	free(stFrame.pstPack);
-
-	if (g_rtsplive)
-		rtsp_del_demo(g_rtsplive);
-	
-	RK_MPI_SYS_Exit();
-
-	// Release rknn model
-    release_yolov5_model(&rknn_app_ctx);		
-	deinit_post_process();
-	
+	// ---- 正常退出：安全清理所有已初始化资源 ----
+	cleanup();
 	return 0;
 }

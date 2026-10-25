@@ -37,19 +37,8 @@ void RiskEngine::clear() {
 void RiskEngine::addPedestrian(int footX, int footY) {
     float x = (float)footX;
     float y = (float)footY;
-    mapToGround(x, y);
+    pedestrian::mapToGround(m_H, x, y);
     m_pts.push_back(std::make_pair(x, y));
-}
-
-void RiskEngine::mapToGround(float &x, float &y) const {
-    if (m_H.empty()) return;
-    double wx = m_H.at<double>(0,0)*x + m_H.at<double>(0,1)*y + m_H.at<double>(0,2);
-    double wy = m_H.at<double>(1,0)*x + m_H.at<double>(1,1)*y + m_H.at<double>(1,2);
-    double w  = m_H.at<double>(2,0)*x + m_H.at<double>(2,1)*y + m_H.at<double>(2,2);
-    if (std::fabs(w) > 1e-6) {
-        x = (float)(wx / w);
-        y = (float)(wy / w);
-    }
 }
 
 void RiskEngine::computeFeatures() {

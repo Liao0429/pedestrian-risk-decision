@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <vector>
 
 #include "yolov5.h"
 
@@ -52,11 +53,18 @@ int init_yolov5_model(const char *model_path, rknn_app_context_t *app_ctx)
     }
     //printf("model input num: %d, output num: %d\n", io_num.n_input, io_num.n_output);
 
+    // VLA 改 std::vector：io_num 可能为 0，先校验再分配，避免 C99 VLA 越界
+    if (io_num.n_input == 0 || io_num.n_output == 0) {
+        printf("rknn_query invalid io num! n_input=%u, n_output=%u\n",
+               (unsigned)io_num.n_input, (unsigned)io_num.n_output);
+        return -1;
+    }
+
     // Get Model Input Info
     //printf("input tensors:\n");
-    rknn_tensor_attr input_attrs[io_num.n_input];
-    memset(input_attrs, 0, sizeof(input_attrs));
-    for (int i = 0; i < io_num.n_input; i++)
+    std::vector<rknn_tensor_attr> input_attrs(io_num.n_input);
+    memset(input_attrs.data(), 0, sizeof(rknn_tensor_attr) * input_attrs.size());
+    for (uint32_t i = 0; i < io_num.n_input; i++)
     {
         input_attrs[i].index = i;
         ret = rknn_query(ctx, RKNN_QUERY_NATIVE_INPUT_ATTR, &(input_attrs[i]), sizeof(rknn_tensor_attr));
@@ -70,9 +78,9 @@ int init_yolov5_model(const char *model_path, rknn_app_context_t *app_ctx)
 
     // Get Model Output Info
     //printf("output tensors:\n");
-    rknn_tensor_attr output_attrs[io_num.n_output];
-    memset(output_attrs, 0, sizeof(output_attrs));
-    for (int i = 0; i < io_num.n_output; i++)
+    std::vector<rknn_tensor_attr> output_attrs(io_num.n_output);
+    memset(output_attrs.data(), 0, sizeof(rknn_tensor_attr) * output_attrs.size());
+    for (uint32_t i = 0; i < io_num.n_output; i++)
     {
         output_attrs[i].index = i;
         //When using the zero-copy API interface, query the native output tensor attribute
@@ -125,9 +133,9 @@ int init_yolov5_model(const char *model_path, rknn_app_context_t *app_ctx)
 
     app_ctx->io_num = io_num;
     app_ctx->input_attrs = (rknn_tensor_attr *)malloc(io_num.n_input * sizeof(rknn_tensor_attr));
-    memcpy(app_ctx->input_attrs, input_attrs, io_num.n_input * sizeof(rknn_tensor_attr));
+    memcpy(app_ctx->input_attrs, input_attrs.data(), io_num.n_input * sizeof(rknn_tensor_attr));
     app_ctx->output_attrs = (rknn_tensor_attr *)malloc(io_num.n_output * sizeof(rknn_tensor_attr));
-    memcpy(app_ctx->output_attrs, output_attrs, io_num.n_output * sizeof(rknn_tensor_attr));
+    memcpy(app_ctx->output_attrs, output_attrs.data(), io_num.n_output * sizeof(rknn_tensor_attr));
 
     if (input_attrs[0].fmt == RKNN_TENSOR_NCHW) 
     {

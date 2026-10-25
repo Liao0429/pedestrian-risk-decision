@@ -7,13 +7,19 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
 #include "risk_config.h"
+#include "ipm_transform.h"
+#include "../../algorithms/risk_fsm.h"
 
-// 拥挤风险等级
-typedef enum {
-    CROWD_SAFE = 0,
-    CROWD_WARNING = 1,
-    CROWD_DANGER = 2
-} CrowdLevel;
+// 统一风险等级：CrowdLevel 作为 pedestrian::RiskLevel 的兼容别名（C++11），
+// 数值与增强决策的 RISK_* 完全一致（0=SAFE 1=WARNING 2=DANGER），
+// 消除两套枚举与 C 风格强转。
+typedef pedestrian::RiskLevel CrowdLevel;
+
+namespace {
+const CrowdLevel CROWD_SAFE    = pedestrian::RISK_SAFE;
+const CrowdLevel CROWD_WARNING = pedestrian::RISK_WARNING;
+const CrowdLevel CROWD_DANGER  = pedestrian::RISK_DANGER;
+}
 
 // 复杂网络特征
 typedef struct {
@@ -49,8 +55,6 @@ public:
     static const char* levelName(CrowdLevel lvl);
 
 private:
-    void mapToGround(float &x, float &y) const;
-
     cv::Mat m_H;
     std::vector<std::pair<float,float>> m_pts; // 地面坐标(米)
     pedestrian::RiskConfig m_cfg;
