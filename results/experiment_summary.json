@@ -1,0 +1,63 @@
+{
+  "timelines": {
+    "mixkit_13192": {
+      "frames": 305,
+      "dist": {
+        "SAFE": 1,
+        "WARNING": 40,
+        "DANGER": 264
+      },
+      "switches": 4,
+      "avg_n": 14.9
+    },
+    "mixkit_13265": {
+      "frames": 281,
+      "dist": {
+        "SAFE": 281
+      },
+      "switches": 0,
+      "avg_n": 0.2
+    },
+    "mixkit_134": {
+      "frames": 600,
+      "dist": {
+        "SAFE": 598,
+        "WARNING": 2
+      },
+      "switches": 2,
+      "avg_n": 2.1
+    },
+    "mixkit_14084": {
+      "frames": 255,
+      "dist": {
+        "WARNING": 166,
+        "SAFE": 87,
+        "DANGER": 2
+      },
+      "switches": 30,
+      "avg_n": 6.0
+    },
+    "mixkit_151": {
+      "frames": 336,
+      "dist": {
+        "SAFE": 336
+      },
+      "switches": 0,
+      "avg_n": 1.4
+    }
+  },
+  "image_baseline": {
+    "total": 500,
+    "processed": 500,
+    "failed": 0,
+    "levels": {
+      "SAFE": 414,
+      "WARNING": 61,
+      "DANGER": 25
+    },
+    "gt_total": 3089,
+    "det_total": 2548,
+    "det_rate": 0.825,
+    "elapsed_s": 16.79
+  }
+}
