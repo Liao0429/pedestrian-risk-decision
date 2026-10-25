@@ -5,7 +5,7 @@
 > 仓库：https://github.com/Liao0429/pedestrian-risk-decision（私人）
 > 数据来源：全部真实实验（COCO 2017 图片、Mixkit 视频、开发板真机），无编造。
 
-## 1. 总体完成度：92%
+## 1. 总体完成度：95%
 
 | 维度 | 完成度 | 说明 |
 |---|---|---|
@@ -44,7 +44,9 @@
   - P1：VLA 改 std::vector + 校验；关键初始化错误检查
   - P1：统一 RiskLevel 枚举；统一 IPM 变换（ipm_transform.h）
   - P1：信号处理/看门狗（while(!g_stop) 优雅退出）
-- **测试**：134 项单元测试全过；交叉编译通过；真机部署验证通过
+  - P2：**C++/Python 双实现黄金回归框架**（T3 完成）：`scripts/generate_golden.py` 生成黄金数据，Python 侧 `tests/test_golden_regression.py` + C++ 侧 `test_golden_regression.cc` 读取同一批 JSON 双向校验（C++ 104/104 断言全过），接入 Makefile/CMake
+  - 🐛 黄金回归顺带修复 **minijson 布尔解析 bug**：`parseLiteral` 恒返回 true，导致 `enable_risk_engine_fallback:false` 被读成 true（板端会静默启用重复计算旁路），已修复 + 回归测试
+- **测试**：137 项 Python 单测全过；C++ 黄金回归 + minijson 在旧电脑编译运行通过；交叉编译通过；真机部署验证通过
 - 评测报告：docs/review/（第1轮）+ docs/review2/（第2轮）+ REVIEW2_SUMMARY
 
 ## 5. 真实实验数据（零造假）
@@ -72,17 +74,18 @@
 
 | 项 | 优先级 | 状态 |
 |---|---|---|
-| 黄金回归测试（Python/C++ 一致性） | P2 | 待做（T3） |
 | 按类别差异化阈值（车辆/动物） | P2 | 待做 |
 | 单应矩阵外部标定文件加载 | P2 | 当前硬编码（可改 srcPts/dstPts 重标定） |
 | USB WiFi 模块采购实测 | 硬件 | 待采购 |
 | RTSP/网页鉴权 | P2 | 答辩局域网可接受，后续加固 |
 
+> ✅ 黄金回归测试（T3）已在本轮完成：Python 137 测试 + C++ 104 断言全过，并修复 minijson 布尔解析 bug（commit e64904b）。
+
 ## 9. 验收指引
 
-1. **看板**：docs/KANBAN.md（T0/T1/T2/T4 ✅，T3/T5/T6/T7 进行中）
+1. **看板**：docs/KANBAN.md（T0/T1/T2/T3/T4/T5 ✅，T6 演示打磨进行中，T7 已完成）
 2. **开发板**：192.168.0.136（RTSP rtsp://192.168.0.136:554/live/0，网页 http://192.168.0.136:1984）
-3. **GitHub**：全部 commit 留痕（最近：a13371d 信号处理、90df382 部署、3b44cf9 P1优化、ea39d12 答辩文档）
+3. **GitHub**：全部 commit 留痕（最近：e64904b 黄金回归+minijson修复、a13371d 信号处理、90df382 部署、3b44cf9 P1优化、ea39d12 答辩文档）
 4. **开发日志**：docs/DEVELOPMENT_LOG.md（每轮记录）
 
 ## 10. 结论
