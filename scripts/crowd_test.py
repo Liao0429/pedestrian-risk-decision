@@ -219,11 +219,31 @@ def compute_features(pts, edge_dist=EDGE_DIST_M):
     return n, m, density, r_gcc, clustering
 
 
-def evaluate_level(n, density, r_gcc):
-    """按规则判断风险等级(与 C++ RiskEngine::evaluate() 一致)。"""
-    if n >= DANGER_N and (density >= DANGER_RHO or r_gcc >= DANGER_GCC):
+
+def load_config(path):
+    """加载规则阈值配置 JSON，返回 dict。文件不存在/解析失败时返回空 dict(用内置默认)。"""
+    if not path:
+        return {}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        print("[WARN] 配置加载失败 %s: %s，使用内置默认" % (path, e), file=sys.stderr)
+        return {}
+
+def evaluate_level(n, density, r_gcc, cfg=None):
+    """按规则判断风险等级。cfg 为配置 dict(可选)，缺省用内置常量(与 C++ 默认一致)。"""
+    if cfg is None:
+        cfg = {}
+    dn   = cfg.get("danger", {}).get("n",   DANGER_N)
+    drho = cfg.get("danger", {}).get("rho", DANGER_RHO)
+    dgcc = cfg.get("danger", {}).get("gcc", DANGER_GCC)
+    wn   = cfg.get("warning", {}).get("n",   WARN_N)
+    wrho = cfg.get("warning", {}).get("rho", WARN_RHO)
+    wgcc = cfg.get("warning", {}).get("gcc", WARN_GCC)
+    if n >= dn and (density >= drho or r_gcc >= dgcc):
         return "DANGER"
-    if n >= WARN_N and (density >= WARN_RHO or r_gcc >= WARN_GCC):
+    if n >= wn and (density >= wrho or r_gcc >= wgcc):
         return "WARNING"
     return "SAFE"
 
@@ -272,7 +292,7 @@ def draw_annotation(img, boxes, level, feat):
 
 
 def process_image(model, img_path, out_dir, conf, imgsz, H, scale_mpp, device,
-                  edge_dist):
+                  edge_dist, cfg=None):
     """处理单张图片，返回统计 dict(失败返回 None 并打印错误)。"""
     basename = os.path.splitext(os.path.basename(img_path))[0]
 
@@ -328,7 +348,7 @@ def process_image(model, img_path, out_dir, conf, imgsz, H, scale_mpp, device,
 
     # ---- 网络特征与等级 ----
     n, m, density, r_gcc, clustering = compute_features(pts, edge_dist)
-    level = evaluate_level(n, density, r_gcc)
+    level = evaluate_level(n, density, r_gcc, cfg)
     feat = {
         "n": n,
         "m": m,
@@ -406,9 +426,12 @@ def main():
                         help="推理设备，如 'cpu'/'0'(默认自动选择)")
     parser.add_argument("--edge-dist", type=float, default=EDGE_DIST_M,
                         help="建边距离阈值(米，默认 2.0)")
+    parser.add_argument("--config", default=None,
+                        help="规则阈值配置文件(JSON)，不提供则用内置默认(与 C++ 一致)")
     args = parser.parse_args()
 
-    edge_dist = args.edge_dist
+    cfg = load_config(args.config)
+    edge_dist = cfg.get("edge_dist_m", args.edge_dist)
 
     out_dir = os.path.abspath(args.output)
     os.makedirs(out_dir, exist_ok=True)
@@ -443,7 +466,7 @@ def main():
         try:
             rec = process_image(model, img_path, out_dir,
                                 args.conf, args.imgsz, H, args.scale,
-                                args.device, edge_dist)
+                                args.device, edge_dist, cfg)
         except Exception as e:
             print("[ERROR] 处理失败 %s: %s" % (img_path, e), file=sys.stderr)
             rec = None
