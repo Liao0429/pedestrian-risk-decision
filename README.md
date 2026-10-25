@@ -67,10 +67,11 @@ pedestrian-risk-decision/
 | 高密度图（14+人）检出率 | **79.4%** |
 | 等级分布 | SAFE 414 / WARNING 61 / DANGER 25 |
 
-### 视频增强（5 条真实视频，Kalman+谱特征+FSM）
-- 密集人群（平均 14.9 人）：**持续输出 DANGER**（264/305 帧），等级切换仅 4 次 → 稳定
-- 稀疏/无人场景：全程 SAFE，**零误报**
+### 视频增强（真实视频，Kalman+谱特征+FSM）
+- 密集人群（`mixkit_13192`，平均 14.9 人）：FSM 生效后输出 **DANGER 179 / WARNING 120 / SAFE 6**（305 帧），等级切换仅 4 次 → 稳定（修复前为逐帧规则判定 264/305 帧 DANGER，见 `docs/DATA_INTEGRITY.md`）
+- 稀疏/无人场景（`mixkit_13265`）：281 帧全程 SAFE，**零误报**
 - 瞬时聚集：被 FSM 滞回正确抑制，不闪跳
+- 修复后结果见 `results/video_enhanced_fsm/`
 
 详见 `docs/PERFORMANCE_COMPARISON.md`。
 

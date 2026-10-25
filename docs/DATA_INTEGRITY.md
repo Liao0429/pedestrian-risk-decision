@@ -206,8 +206,22 @@ lv = fsm.level   # 属性，返回 'SAFE'/'WARNING'/'DANGER'
 
 ### 5.4 真实视频复跑（修复后 FSM 生效）
 
-（若 ultralytics 安装完成，将用 `yolov8n.pt` 在 GPU 上复跑 `dataset/videos50/mixkit_13192.mp4`，
-生成 `results/video_enhanced_fsm/`，对比修复前后等级切换次数，见 README 备注。）
+用 `yolov8n.pt`（CPU 推理，本机无 CUDA）复跑 `dataset/videos50/` 中两条真实视频
+（含 573 条真机日志之外的真实数据集视频），输出到 `results/video_enhanced_fsm/`：
+
+| 视频 | 场景 | 修复前（`results/video_enhanced/`，FSM 死代码=逐帧规则） | 修复后（`results/video_enhanced_fsm/`，FSM 生效） |
+|---|---|---|---|
+| `mixkit_13192.mp4`（305 帧，密集人群 avg_n≈14.9） | 密集 | SAFE 1 / WARNING 40 / DANGER 264，切换 4 | SAFE 6 / WARNING 120 / DANGER 179，**切换 4** |
+| `mixkit_13265.mp4`（281 帧，稀疏/无人） | 稀疏 | SAFE 281 | **SAFE 281（零误报）** |
+
+修复后密集视频的 FSM 输出切换仍为 4 次，但等级分布更保守（更多 WARNING）：
+这是 FSM 滞回/确认帧/保持期按设计生效的表现——从 SAFE 升 WARNING 需连续确认，
+升 DANGER 需 score≥0.65 且连续 3 帧；人群密度在阈值附近波动时 FSM 会稳定在
+WARNING 而不是逐帧闪跳。稀疏视频全程 SAFE，零误报。
+
+> **注意**：README 中"密集人群持续输出 DANGER（264/305帧）"是修复前（FSM 死代码、
+> 逐帧规则判定）的历史结果。修复后 FSM 生效，结果更保守（见上表）。论文引用增强
+> 实验结果时，建议以 `results/video_enhanced_fsm/`（FSM 实际生效）为准。
 
 ---
 
@@ -215,8 +229,8 @@ lv = fsm.level   # 属性，返回 'SAFE'/'WARNING'/'DANGER'
 
 | 项 | 状态 |
 |---|---|
-| `results/video_enhanced/*` 为修复前输出（FSM 未生效） | 保留历史；可重新生成（见 5.4） |
-| README 对增强实验的描述（"FSM 滞回"）在修复后成立 | 已核实 |
+| `results/video_enhanced/*` 为修复前输出（FSM 未生效） | 保留历史；修复后已生成 `results/video_enhanced_fsm/`（FSM 生效） |
+| README 对增强实验的描述（"密集 264/305 帧 DANGER"）为修复前数据 | 建议以 `results/video_enhanced_fsm/` 为准（见 5.4） |
 | 论文中使用增强结果时，建议引用复跑后的 FSM 版本 | 建议 |
 
 ---
