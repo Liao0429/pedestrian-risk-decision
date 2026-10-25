@@ -24,11 +24,14 @@
   - 边缘端：C++ 实现，计算量小，RV1106 可跑
 - 实现：把 `KalmanTracker` 换成 ByteTrack 的多目标关联逻辑，接口不变
 
-### 2. 拓扑分析：补充 DBSCAN 聚类（推荐，P1）
+### 2. 拓扑分析：补充 DBSCAN 聚类（已实现，P1）✅
 - 现状：图拉普拉斯谱特征刻画"聚集结构"
 - **更好/更直观：DBSCAN 聚类**（基于密度聚类，O(n log n)）
   - 直接输出"人群簇"：簇数、每簇人数、簇中心、最大簇占比
   - 与"拥挤度/局部聚集"语义天然吻合，答辩更好讲
+- **已实现**：见 `src/algorithms/crowd_dbscan.py`（Python）、
+  `src/algorithms/crowd_dbscan.h`（C++）、`tests/test_crowd_dbscan.py`（单元测试），
+  详细说明见 `docs/ALGORITHM_UPGRADE.md`
 - 建议：谱特征（图拉普拉斯）保留作理论深度，**加 DBSCAN 作为工程化决策特征**（更快更直观）
 
 ### 3. 几何：IPM 真机标定（P0，准确性关键）
@@ -56,7 +59,7 @@
 ## 四、总结建议（优先级）
 1. **P0：ByteTrack 多目标跟踪**（替代简单 Kalman，鲁棒性大提升）
 2. **P0：IPM 真机标定**（几何准确度根基）
-3. **P1：DBSCAN 人群聚类**（补充/替代拉普拉斯谱，更直观高效）
+3. **P1：DBSCAN 人群聚类**（补充/替代拉普拉斯谱，更直观高效）— ✅ 已实现，见 `ALGORITHM_UPGRADE.md`
 4. **P1：决策特征 EMA 平滑**（时序更稳）
 5. **P2：YOLOv8n 可选**（检测精度余量）
 

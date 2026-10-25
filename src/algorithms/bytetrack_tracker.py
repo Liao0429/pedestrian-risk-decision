@@ -4,7 +4,7 @@
 用于在连续帧中维持行人的检测框轨迹，解决遮挡 / 漏检导致的目标 ID 漂移问题。
 原理（ByteTrack, ECCV 2022）：
 
-    1. 每个目标一个线性匀速 Kalman 滤波器（状态 [cx, cy, s, r, vcx, vcy, vs, vr]），
+    1. 每个目标一个线性匀速 Kalman 滤波器（状态 [cx, cy, a, h, vcx, vcy, va, vh]），
        对检测框做预测，得到预测框；
     2. 检测框与预测框之间按 IoU 代价（1 - IoU）做线性分配（匈牙利算法）关联；
     3. **低分框二次关联**：第一轮用高分检测（conf >= track_thresh）匹配全部轨迹，
@@ -104,6 +104,9 @@ def compute_iou_matrix(boxes_a, boxes_b):
 def linear_sum_assignment(cost):
     """求解方阵最小代价完全匹配（匈牙利算法 / 交替路径增广）。
 
+    采用经典 e-maxx 实现：列索引为 1..n，索引 0 为虚拟哨兵列。
+    代价矩阵必须是方阵。
+
     参数
     ----
     cost : ndarray，shape (n, n)，代价矩阵（必须为方阵）。
@@ -117,41 +120,42 @@ def linear_sum_assignment(cost):
     if n == 0:
         return []
 
-    # 顶标 u（行）/ v（列）；p[col] = 匹配到该列的行；way 记录增广路径
-    u = np.zeros(n, dtype=np.float64)
-    v = np.zeros(n, dtype=np.float64)
-    p = np.full(n, -1, dtype=np.int64)
-    way = np.zeros(n, dtype=np.int64)
+    # u/v 为行/列顶标；p[col] = 匹配到该列的行（1-based，0 表示未匹配）；
+    # way 记录交替路径的前驱列。
+    u = np.zeros(n + 1, dtype=np.float64)
+    v = np.zeros(n + 1, dtype=np.float64)
+    p = np.zeros(n + 1, dtype=np.int64)
+    way = np.zeros(n + 1, dtype=np.int64)
 
-    for i in range(n):
+    for i in range(1, n + 1):
         p[0] = i
         j0 = 0
-        minv = np.full(n, np.inf, dtype=np.float64)
-        used = np.zeros(n, dtype=bool)
+        minv = np.full(n + 1, np.inf, dtype=np.float64)
+        used = np.zeros(n + 1, dtype=bool)
         while True:
             used[j0] = True
             i0 = p[j0]
             delta = np.inf
             j1 = 0
-            for j in range(n):
+            for j in range(1, n + 1):
                 if not used[j]:
-                    cur = cost[i0, j] - u[i0] - v[j]
+                    cur = cost[i0 - 1, j - 1] - u[i0] - v[j]
                     if cur < minv[j]:
                         minv[j] = cur
                         way[j] = j0
                     if minv[j] < delta:
                         delta = minv[j]
                         j1 = j
-            for j in range(n):
+            for j in range(0, n + 1):
                 if used[j]:
                     u[p[j]] += delta
                     v[j] -= delta
                 else:
                     minv[j] -= delta
             j0 = j1
-            if p[j0] == -1:
+            if p[j0] == 0:
                 break
-        # 沿增广路径回溯更新匹配
+        # 沿交替路径回溯，更新匹配
         while True:
             j1 = way[j0]
             p[j0] = p[j1]
@@ -159,7 +163,8 @@ def linear_sum_assignment(cost):
             if j0 == 0:
                 break
 
-    return [(int(p[j]), j) for j in range(n)]
+    # 恢复为 0-based 行/列索引
+    return [(int(p[j]) - 1, j - 1) for j in range(1, n + 1)]
 
 
 # ----------------------------------------------------------------------
@@ -219,22 +224,21 @@ def associate_detections_to_tracks(det_boxes, trk_boxes, thresh):
 # 单目标框 Kalman 滤波器（线性匀速模型）
 # ----------------------------------------------------------------------
 def _xyxy_to_xyah(bbox):
-    """[x1,y1,x2,y2] -> [cx, cy, s(面积), r(宽高比)]。"""
+    """[x1,y1,x2,y2] -> [cx, cy, a(宽高比), h(高度)]。"""
     x1, y1, x2, y2 = (float(v) for v in bbox)
     w = max(x2 - x1, 1e-6)
     h = max(y2 - y1, 1e-6)
     cx = x1 + 0.5 * w
     cy = y1 + 0.5 * h
-    return np.array([cx, cy, w * h, w / h], dtype=np.float64)
+    return np.array([cx, cy, w / h, h], dtype=np.float64)
 
 
 def _xyah_to_xyxy(mean):
-    """状态 [cx, cy, s, r, ...] -> [x1, y1, x2, y2]。"""
-    cx, cy, s, r = mean[:4]
-    if s <= 0.0 or r <= 0.0:
+    """状态 [cx, cy, a, h, ...] -> [x1, y1, x2, y2]。"""
+    cx, cy, a, h = mean[:4]
+    if a <= 0.0 or h <= 0.0:
         return np.array([cx, cy, cx, cy], dtype=np.float64)
-    w = np.sqrt(s * r)
-    h = s / w
+    w = a * h
     return np.array(
         [cx - 0.5 * w, cy - 0.5 * h, cx + 0.5 * w, cy + 0.5 * h],
         dtype=np.float64,
@@ -244,22 +248,22 @@ def _xyah_to_xyxy(mean):
 class _KalmanBoxFilter:
     """单目标框 Kalman 滤波器（线性匀速，状态 8 维）。
 
-    状态向量 ``[cx, cy, s, r, vcx, vcy, vs, vr]``：
+    状态向量 ``[cx, cy, a, h, vcx, vcy, va, vh]``：
     - ``cx, cy``：检测框中心坐标（像素）；
-    - ``s``：检测框面积（宽 x 高）；
-    - ``r``：宽高比 w/h（在帧间视为近似不变，仅位置与面积按匀速演化）；
-    - ``vcx, vcy, vs, vr``：对应分量的速度。
+    - ``a``：宽高比 w/h（帧间近似不变）；
+    - ``h``：检测框高度（像素）；
+    - ``vcx, vcy, va, vh``：对应分量的速度。
 
     运动模型 F = [[I4, dt·I4], [0, I4]]，观测矩阵 H = [I4 | 0]。
-    噪声标准差与当前目标尺度（用宽高比 r 作尺度代理，与原始 ByteTrack 一致）
-    成正比，从而兼顾近大远小的检测精度差异。
+    噪声标准差与目标高度 ``h`` 成正比（与原始 ByteTrack 一致），
+    从而兼顾近大远小的检测精度差异。
 
     参数
     ----
     std_weight_position : float
-        位置噪声相对尺度系数（默认 1/20，与 ByteTrack 原版一致）。
+        位置噪声相对高度系数（默认 1/20，与 ByteTrack 原版一致）。
     std_weight_velocity : float
-        速度噪声相对尺度系数（默认 1/160）。
+        速度噪声相对高度系数（默认 1/160）。
     dt : float
         固定帧间隔（默认 1.0，即逐帧演化）。
     """
@@ -289,13 +293,25 @@ class _KalmanBoxFilter:
 
     # ---------------- 初始化 / 预测 / 更新 ----------------
     def initiate(self, z):
-        """用首个观测 ``[cx, cy, s, r]`` 初始化状态与协方差。"""
+        """用首个观测 ``[cx, cy, a, h]`` 初始化状态与协方差。"""
         z = np.asarray(z, dtype=np.float64).reshape(4)
         self._mean = np.zeros(8, dtype=np.float64)
         self._mean[:4] = z
-        h = max(self._mean[3], 1e-3)  # 宽高比作尺度代理
-        std_pos = [self._std_pos * h, self._std_pos * h, 1e-2, self._std_pos * h]
-        std_vel = [self._std_vel * h, self._std_vel * h, 1e-5, self._std_vel * h]
+        h = max(self._mean[3], 1e-3)  # 目标高度作噪声尺度
+        # 初始速度不确定度取 10 倍，位置取 2 倍（与原始 ByteTrack 一致），
+        # 使滤波器能在前几帧快速估计目标速度。
+        std_pos = [
+            2 * self._std_pos * h,
+            2 * self._std_pos * h,
+            1e-2,
+            2 * self._std_pos * h,
+        ]
+        std_vel = [
+            10 * self._std_vel * h,
+            10 * self._std_vel * h,
+            1e-5,
+            10 * self._std_vel * h,
+        ]
         self._cov = np.diag(np.square(np.array(std_pos + std_vel)))
         self._initialized = True
         return self._mean, self._cov
@@ -312,7 +328,7 @@ class _KalmanBoxFilter:
         self._cov = self._F @ self._cov @ self._F.T + q
 
     def update(self, z):
-        """用观测 ``[cx, cy, s, r]`` 做标准 Kalman 更新。"""
+        """用观测 ``[cx, cy, a, h]`` 做标准 Kalman 更新。"""
         if not self._initialized:
             raise RuntimeError("滤波器尚未初始化，请先调用 initiate()")
         z = np.asarray(z, dtype=np.float64).reshape(4)

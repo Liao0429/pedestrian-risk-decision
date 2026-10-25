@@ -63,6 +63,9 @@ def dbscan_labels(pts, eps, min_samples=2):
     到达它的簇，噪声点可被后续簇吸收为边界点。
     """
     pts = np.asarray(pts, dtype=np.float64)
+    if pts.ndim == 1 and pts.size == 0:
+        # 空点集 -> 空标签、0 簇
+        return np.empty(0, dtype=np.int64), 0
     if pts.ndim != 2 or pts.shape[1] != 2:
         raise ValueError("pts 必须是 (n,2) 的坐标数组，实际形状: %s" % (pts.shape,))
     n = pts.shape[0]
@@ -158,7 +161,7 @@ def dbscan_crowd_features(pts, eps, min_samples=2):
     # 按簇大小降序排序(簇中心同步排序)
     order = np.argsort(sizes)[::-1]
     sizes = [sizes[o] for o in order]
-    centers = [tuple(centers[o]) for o in order]
+    centers = [tuple(float(v) for v in centers[o]) for o in order]
 
     n_noise = int((labels == NOISE).sum())
     largest = sizes[0]
