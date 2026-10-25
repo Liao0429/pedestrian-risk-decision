@@ -109,7 +109,7 @@ inline void GraphLaplacian::buildLaplacian(
         L.assign(n, std::vector<double>(n, 0.0));
         return;
     }
-    // 距离阈值内建边（严格小于，与 risk_engine.cc 的 EDGE_DIST_M 一致）
+    // 距离阈值内建边（严格小于，与 risk_config.h 默认 edge_dist_m=2.0 一致）
     for (int i = 0; i < n; ++i) {
         for (int j = i + 1; j < n; ++j) {
             double dx = (double)pts[i].first - (double)pts[j].first;

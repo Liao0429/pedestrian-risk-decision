@@ -4,13 +4,8 @@
 #include <cmath>
 #include <queue>
 
-#define EDGE_DIST_M  2.0f   // 建边距离阈值(米)，论文取 2.0m
-#define DANGER_N     10     // 危险：行人数阈值
-#define DANGER_RHO   0.55f  // 危险：网络密度阈值
-#define DANGER_GCC   0.80f  // 危险：最大连通分量占比阈值
-#define WARN_N       5      // 预警：行人数阈值
-#define WARN_RHO     0.28f  // 预警：网络密度阈值
-#define WARN_GCC     0.55f  // 预警：最大连通分量占比阈值
+// 默认阈值与 config/default_config.json 保持一致（可在运行时通过
+// RiskEngine::setConfig 覆盖，见 risk_config.h）。
 
 RiskEngine::RiskEngine() : m_level(CROWD_SAFE), m_levelName("SAFE") {
     std::memset(&m_feat, 0, sizeof(m_feat));
@@ -20,6 +15,15 @@ RiskEngine::~RiskEngine() {}
 
 void RiskEngine::setHomography(const cv::Mat &H) {
     m_H = H.clone();
+}
+
+void RiskEngine::setConfig(const pedestrian::RiskConfig &cfg) {
+    m_cfg = cfg;
+    // 若传入非法配置（例如 warning.n > danger.n），回退到默认值，保证引擎始终可用。
+    if (m_cfg.warning.n > m_cfg.danger.n) {
+        m_cfg.warning = pedestrian::RiskRule();
+        m_cfg.danger = pedestrian::RiskRule();
+    }
 }
 
 void RiskEngine::clear() {
@@ -62,7 +66,7 @@ void RiskEngine::computeFeatures() {
             float dy = m_pts[i].second - m_pts[j].second;
             float d = std::sqrt(dx*dx + dy*dy);
             dist[i][j] = dist[j][i] = d;
-            if (d < EDGE_DIST_M) { adj[i][j] = adj[j][i] = true; m_feat.m++; }
+            if (d < m_cfg.edge_dist_m) { adj[i][j] = adj[j][i] = true; m_feat.m++; }
         }
     }
 
@@ -106,10 +110,14 @@ void RiskEngine::computeFeatures() {
 }
 
 CrowdLevel RiskEngine::evaluate() {
-    // 规则判断(参数可配置，论文 4.4 节)
-    if (m_feat.n >= DANGER_N && (m_feat.density >= DANGER_RHO || m_feat.r_gcc >= DANGER_GCC))
+    // 规则判断(参数可配置，论文 4.4 节；默认与 config/default_config.json 一致)
+    const double dangerN = m_cfg.danger.n;
+    const double warnN   = m_cfg.warning.n;
+    if (m_feat.n >= dangerN &&
+        (m_feat.density >= m_cfg.danger.rho || m_feat.r_gcc >= m_cfg.danger.gcc))
         m_level = CROWD_DANGER;
-    else if (m_feat.n >= WARN_N && (m_feat.density >= WARN_RHO || m_feat.r_gcc >= WARN_GCC))
+    else if (m_feat.n >= warnN &&
+             (m_feat.density >= m_cfg.warning.rho || m_feat.r_gcc >= m_cfg.warning.gcc))
         m_level = CROWD_WARNING;
     else
         m_level = CROWD_SAFE;

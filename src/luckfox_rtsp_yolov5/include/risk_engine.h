@@ -6,6 +6,8 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
+#include "risk_config.h"
+
 // 拥挤风险等级
 typedef enum {
     CROWD_SAFE = 0,
@@ -30,6 +32,9 @@ public:
 
     // 设置逆透视变换矩阵(像素 -> 地面米)
     void setHomography(const cv::Mat &H);
+    // 设置运行时阈值配置（默认值见 risk_config.h，启动时调用一次即可）
+    void setConfig(const pedestrian::RiskConfig &cfg);
+    const pedestrian::RiskConfig& config() const { return m_cfg; }
     // 清空本帧状态
     void clear();
     // 添加一个行人脚点(像素坐标，需先经 mapCoordinates 还原到原图)
@@ -48,6 +53,7 @@ private:
 
     cv::Mat m_H;
     std::vector<std::pair<float,float>> m_pts; // 地面坐标(米)
+    pedestrian::RiskConfig m_cfg;
     RiskFeatures m_feat;
     CrowdLevel m_level;
     const char* m_levelName;

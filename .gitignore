@@ -25,6 +25,15 @@ mixkit_ids.json
 # 中间测试结果目录
 results/diag*
 
+# C++ 构建产物（主机测试可执行文件与 CMake 构建目录）
+src/luckfox_rtsp_yolov5/build/
+src/luckfox_rtsp_yolov5/luckfox_pico_rtsp_yolov5
+src/luckfox_rtsp_yolov5/tests/test_enhanced_decision
+src/luckfox_rtsp_yolov5/tests/test_minijson
+src/luckfox_rtsp_yolov5/tests/test_risk_config
+src/luckfox_rtsp_yolov5/tests/test_risk_config_opencv
+src/luckfox_rtsp_yolov5/tests/*.o
+
 # 开发板真机运行日志（真实数据证据，允许上传）
 !results/edge_board/*.log
 

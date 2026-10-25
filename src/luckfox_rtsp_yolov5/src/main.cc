@@ -17,6 +17,7 @@
 #include "luckfox_mpi.h"
 #include "yolov5.h"
 #include "risk_engine.h"
+#include "risk_config.h"
 #include "enhanced_decision.h"
 
 #include "opencv2/core/core.hpp"
@@ -67,6 +68,17 @@ void mapCoordinates(int *x, int *y) {
     *y = (int)((float)my / scale);
 }
 
+// 将原图像素坐标经 IPM 单应矩阵 H 映射到地面米制坐标（与 RiskEngine::mapToGround 一致）
+void mapToGroundPixel(const cv::Mat& H, float& x, float& y) {
+    double wx = H.at<double>(0,0) * x + H.at<double>(0,1) * y + H.at<double>(0,2);
+    double wy = H.at<double>(1,0) * x + H.at<double>(1,1) * y + H.at<double>(1,2);
+    double w  = H.at<double>(2,0) * x + H.at<double>(2,1) * y + H.at<double>(2,2);
+    if (std::fabs(w) > 1e-6) {
+        x = (float)(wx / w);
+        y = (float)(wy / w);
+    }
+}
+
 
 int main(int argc, char *argv[]) {
   system("RkLunch-stop.sh");
@@ -80,7 +92,15 @@ int main(int argc, char *argv[]) {
   cv::Mat H = cv::getPerspectiveTransform(srcPts, dstPts);
   RiskEngine riskEngine;
   riskEngine.setHomography(H);
-  pedestrian::EnhancedDecision enhancedDecision;   // 增强决策模块（旁路）
+  // 运行时加载阈值配置（默认 ./config/default_config.json，缺失时回退到默认值）
+  pedestrian::RiskConfig riskCfg =
+      pedestrian::loadRiskConfigOr("./config/default_config.json", pedestrian::RiskConfig());
+  riskEngine.setConfig(riskCfg);
+#ifdef USE_ENHANCED_DECISION
+  pedestrian::EnhancedConfig enhancedCfg;
+  enhancedCfg.edge_dist_m = riskCfg.edge_dist_m;
+  pedestrian::EnhancedDecision enhancedDecision(enhancedCfg);  // 增强决策模块
+#endif
 	RK_S32 s32Ret = 0; 
 	int sX,sY,eX,eY; 
 		
@@ -181,8 +201,36 @@ int main(int argc, char *argv[]) {
 			inference_yolov5_model(&rknn_app_ctx, &od_results);
 
 			// ---- 行人空间网络：只取 person 类，提取脚点 ----
+			CrowdLevel crowd = CROWD_SAFE;
+			int featN = 0;
+			double featRho = 0.0, featGcc = 0.0, featFiedler = 0.0;
+#ifdef USE_ENHANCED_DECISION
+			// 增强决策：IPM 地面米制脚点 -> Kalman 平滑 -> 谱特征 -> FSM 稳定等级
+			{
+				std::vector<std::pair<float,float>> groundPts;
+				groundPts.reserve((size_t)od_results.count);
+				for(int i = 0; i < od_results.count; i++) {
+					object_detect_result *dres = &(od_results.results[i]);
+					if (dres->cls_id != 0) continue; // COCO person = 0
+					int px = (int)((dres->box.left + dres->box.right) / 2);
+					int py = (int)dres->box.bottom;
+					mapCoordinates(&px, &py);
+					float gx = (float)px, gy = (float)py;
+					mapToGroundPixel(H, gx, gy);   // 像素 -> 地面米
+					groundPts.push_back(std::make_pair(gx, gy));
+				}
+				const pedestrian::EnhancedResult er = enhancedDecision.processFrame(groundPts);
+				crowd     = (CrowdLevel)er.level;
+				featN     = er.n;
+				featRho   = er.density;
+				featGcc   = er.r_gcc;
+				featFiedler = er.fiedler;
+				printf("[EnhancedDecision] level=%s n=%d rho=%.2f r_gcc=%.2f fiedler=%.3f\n",
+				       RiskEngine::levelName(crowd), featN, featRho, featGcc, featFiedler);
+			}
+#else
+			// 经典决策：RiskEngine 固定阈值规则（保留原有逻辑作为默认路径）
 			riskEngine.clear();
-			std::vector<std::pair<float,float>> groundPts;
 			for(int i = 0; i < od_results.count; i++) {
 				object_detect_result *dres = &(od_results.results[i]);
 				if (dres->cls_id == 0) { // COCO person = 0
@@ -190,18 +238,14 @@ int main(int argc, char *argv[]) {
 					int py = (int)dres->box.bottom;
 					mapCoordinates(&px, &py);
 					riskEngine.addPedestrian(px, py);
-					groundPts.push_back(std::make_pair((float)px, (float)py));
 				}
 			}
 			riskEngine.computeFeatures();
-			CrowdLevel crowd = riskEngine.evaluate();
-
-			// ---- 增强决策（旁路）：谱特征 + Kalman 平滑 + FSM 时序 ----
-			pedestrian::EnhancedResult er = enhancedDecision.processFrame(groundPts);
-			static const char* eNames[3] = {"SAFE","WARNING","DANGER"};
-			printf("[EnhancedDecision] level=%s n=%d rho=%.2f r_gcc=%.2f fiedler=%.3f\n",
-			       (er.level>=0 && er.level<3) ? eNames[er.level] : "?",
-			       er.n, er.density, er.r_gcc, er.fiedler);
+			crowd   = riskEngine.evaluate();
+			featN   = riskEngine.features().n;
+			featRho = riskEngine.features().density;
+			featGcc = riskEngine.features().r_gcc;
+#endif
 
 			for(int i = 0; i < od_results.count; i++)
 			{					
@@ -232,14 +276,17 @@ int main(int argc, char *argv[]) {
 			// ---- 叠加风险等级到画面 ----
 			{
 				cv::Scalar color(0,255,0);
-				const char* lvl = riskEngine.levelName();
+				const char* lvl = RiskEngine::levelName(crowd);
 				if (crowd == CROWD_WARNING)      color = cv::Scalar(0,255,255);
 				else if (crowd == CROWD_DANGER)  color = cv::Scalar(0,0,255);
 				char info[128];
+#ifdef USE_ENHANCED_DECISION
+				sprintf(info, "CROWD:%s n=%d rho=%.2f r_gcc=%.2f lambda2=%.3f",
+				        lvl, featN, featRho, featGcc, featFiedler);
+#else
 				sprintf(info, "CROWD:%s n=%d rho=%.2f r_gcc=%.2f",
-						lvl, riskEngine.features().n,
-						riskEngine.features().density,
-						riskEngine.features().r_gcc);
+				        lvl, featN, featRho, featGcc);
+#endif
 				cv::rectangle(frame, cv::Point(0,0), cv::Point(width, 60), color, -1);
 				cv::putText(frame, info, cv::Point(10, 42),
 							cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0,0,0), 2);

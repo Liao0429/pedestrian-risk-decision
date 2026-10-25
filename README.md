@@ -90,6 +90,17 @@ python scripts/crowd_test_enhanced.py --input <video.mp4> --output results/video
 3. RTSP 推流：`rtsp://<板子IP>:554/live/0`
 4. 增强算法（谱特征/ByteTrack/FSM）的 C++ 头文件在 `src/algorithms/*.h`，可交叉编译集成
 
+### C++ 算法主机测试与构建（无需开发板）
+```bash
+cd src/luckfox_rtsp_yolov5
+make test        # 编译并运行增强决策/JSON 配置/阈值引擎单元测试（仅需 g++）
+# 等价 CMake 方式：
+#   cmake -S . -B build && cmake --build build && ctest --test-dir build
+```
+- 测试覆盖：`EnhancedDecision`（Kalman+谱特征+FSM 确定性输出）、`minijson` JSON 解析、`RiskConfig` 运行时阈值读取。
+- 交叉编译完整工程：`make luckfox LUCKFOX_SDK_ROOT=<SDK路径>`（需 Luckfox SDK 库与工具链）。
+- 阈值通过 `config/default_config.json` 运行时加载（`RiskEngine::setConfig`），失败自动回退默认值，论文“可配置”承诺在 C++ 端落地。
+
 ## 📚 文档索引
 
 | 文档 | 内容 |

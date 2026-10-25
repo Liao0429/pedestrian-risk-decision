@@ -115,10 +115,11 @@ std::vector<std::pair<float,float>> EnhancedDecision::smoothPoints(
         out.push_back(pts[j]);
     }
 
-    // 未匹配到的轨迹 miss 计数 +1，超限删除
-    for (size_t i = 0; i < tracks_.size(); ++i) {
+    // 未匹配到的轨迹 miss 计数 +1（只统计本帧之前的轨迹；新建轨迹 miss=0）
+    for (size_t i = 0; i < nt; ++i) {
         if (!trackUsed[i]) ++tracks_[i].miss;
     }
+    // 超限删除（倒序遍历避免下标失效）
     for (int i = static_cast<int>(tracks_.size()) - 1; i >= 0; --i) {
         if (tracks_[static_cast<size_t>(i)].miss > cfg_.kalman_max_miss) {
             tracks_.erase(tracks_.begin() + i);
