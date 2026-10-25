@@ -1,3 +1,5 @@
+**简体中文** | [English](README.en.md)
+
 # 基于 C++ 的边缘端轻量化行人感知与风险决策软件系统
 
 > **毕设项目**：在 Luckfox Pico Max（RV1106，1TOPS NPU，256MB）上实现实时行人检测、人群聚集分析与风险分级预警。
@@ -15,11 +17,19 @@
 
 ## 🏗️ 系统架构
 
+```mermaid
+graph TD
+    A[摄像头<br/>720×480] --> B["YOLOv5n 行人检测<br/>RKNN · INT8 · NPU"]
+    B --> C["IPM 逆透视映射<br/>像素脚点 → 地面米制坐标"]
+    C --> D["复杂网络拓扑分析<br/>邻接矩阵 + 图拉普拉斯谱<br/>DBSCAN 人群聚类"]
+    C --> E["增强决策模块 EnhancedDecision<br/>Kalman 平滑 + 谱特征 + FSM 时序"]
+    D --> F["RiskEngine 规则评估<br/>SAFE / WARNING / DANGER"]
+    E --> F
+    F --> G["画面叠加 + RTSP 推流"]
+    G --> H[监控终端]
 ```
-摄像头 → YOLOv5n(INT8/NPU) → IPM坐标映射 → 复杂网络/聚类
-       → Kalman/ByteTrack 时序平滑 → FSM 风险决策 → SAFE/WARNING/DANGER
-       → RTSP 推流 + 画面叠加 + 告警
-```
+
+**流水线**：前端轻量化感知（YOLOv5n+INT8）→ 几何空间校正（IPM）→ 图论拓扑分析（图拉普拉斯/DBSCAN）→ 时序风险决策（Kalman/FSM）→ 输出三级风险并 RTSP 推流。详细架构见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)。
 
 ## 📁 目录结构
 
