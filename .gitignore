@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# 临时/日志
+*.tmp
+*.part
+*.log
+.DS_Store
+Thumbs.db
+cache/
+
+# 运行时下载的大权重（按需再决定是否上传）
+*.pt
+*.engine
