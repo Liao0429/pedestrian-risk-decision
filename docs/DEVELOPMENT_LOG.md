@@ -45,3 +45,13 @@
 - ✅ 本地论文 `H:\毕设论文\thesis_agent_draft\毕业论文.md` 新增 **6.6 多目标类别可配置** + **6.7 网页监控终端（go2rtc）** 两节，目录/功能需求表（F10/F11）/工作总结同步更新
 - 论文基于真实源码/文档/提交（c043879/ea39d12/0b51d00），未编造；仍只在本地，不上传 GitHub
 - 看板 T5 标记完成；下一步由心跳 cron 推进 T3 黄金回归测试 / T6 演示美观打磨
+
+## 后续推进（心跳第 4 轮，落地 T3 黄金回归测试）
+- ✅ **建立 C++/Python 双实现黄金回归框架**（响应 code_quality/test_coverage 报告）：
+  - 生成器 `scripts/generate_golden.py`：用已验证的 Python 实现生成固定输入/期望输出 JSON 到 `tests/golden/`（graph_laplacian 6 用例 + ema_smoother 3 用例 + risk_fsm 3 用例）
+  - Python 侧回归 `tests/test_golden_regression.py`：读取同一批 JSON 重跑 Python 实现，3 测试全过
+  - C++ 侧主机测试 `src/luckfox_rtsp_yolov5/tests/test_golden_regression.cc`：用 minijson 读取同一批 JSON，在旧电脑（192.168.0.68）g++ 编译运行 **104/104 断言全过**
+  - 已接入 Makefile（`make test-golden`）与 CMakeLists（ctest 新增 test_golden_regression，显式传 golden 绝对路径）
+- 🐛 **顺带发现并修复 minijson 布尔解析 bug**：`parseLiteral()` 忽略 value 参数恒返回 `true`，导致 JSON 里 `false` 被解析为 `true`。影响 `config/default_config.json` 的 `enable_risk_engine_fallback: false` —— 会被读成 true，**板端会静默启用 RiskEngine 重复计算旁路**（抵消 3b44cf9 的 P1 优化）。已修复并新增 `test_minijson.cc::test_boolean_false`（32/32 过，含回归用例）。
+- ✅ 全量 Python 测试 137 passed；C++ 黄金回归 + minijson 均在旧电脑编译运行通过
+- 📌 待办：T6 答辩演示打磨（美观/预录视频最终确认）、最终验收报告 docs/FINAL_REPORT.md 已存在，本次提交后更新

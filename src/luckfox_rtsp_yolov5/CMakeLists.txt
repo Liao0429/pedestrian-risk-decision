@@ -65,6 +65,18 @@ else()
 endif()
 add_test(NAME test_risk_config COMMAND test_risk_config)
 
+# 黄金回归：C++ 实现读取 tests/golden/*.json（scripts/generate_golden.py 用
+# Python 参考实现生成），防止 C++/Python 双实现漂移。显式传入绝对 golden 目录，
+# 因为 ctest 的工作目录是 build 目录。
+add_executable(test_golden_regression
+  tests/test_golden_regression.cc
+)
+target_include_directories(test_golden_regression PRIVATE
+  ${PROJ_INC_DIR} ${ALGO_INC_DIR})
+add_test(NAME test_golden_regression
+  COMMAND test_golden_regression
+          ${CMAKE_CURRENT_SOURCE_DIR}/../../tests/golden)
+
 # ---------------------------------------------------------------------------
 # 2. 开发板完整工程（交叉编译，需 Luckfox SDK）
 # ---------------------------------------------------------------------------

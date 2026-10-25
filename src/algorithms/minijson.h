@@ -374,12 +374,12 @@ private:
         return out;
     }
 
-    bool parseLiteral(const char* lit, bool /*value*/) {
+    bool parseLiteral(const char* lit, bool value) {
         for (const char* p = lit; *p; ++p) {
             if (pos_ >= text_.size() || text_[pos_] != *p) fail("非法字面量");
             advance();
         }
-        return true;
+        return value;
     }
 
     double parseNumber() {

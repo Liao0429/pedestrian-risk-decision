@@ -22,7 +22,7 @@ ALGO_HEADERS = include/enhanced_decision.h include/risk_config.h \
                ../algorithms/graph_laplacian.h ../algorithms/kalman_filter.h \
                ../algorithms/risk_fsm.h ../algorithms/minijson.h
 
-.PHONY: all test test-enhanced test-minijson test-risk-config \
+.PHONY: all test test-enhanced test-minijson test-risk-config test-golden \
         clean help luckfox
 
 all: test
@@ -30,7 +30,7 @@ all: test
 # ---------------------------------------------------------------------------
 # 主机单元测试
 # ---------------------------------------------------------------------------
-test: test-enhanced test-minijson test-risk-config
+test: test-enhanced test-minijson test-risk-config test-golden
 
 test-enhanced: $(TEST_DIR)/test_enhanced_decision.cc $(SRC_DIR)/enhanced_decision.cc $(ALGO_HEADERS)
 	$(CXX) $(CXXFLAGS) $(INC) $(TEST_DIR)/test_enhanced_decision.cc $(SRC_DIR)/enhanced_decision.cc \
@@ -53,6 +53,14 @@ test-risk-config: $(TEST_DIR)/test_risk_config.cc $(SRC_DIR)/risk_engine.cc ../a
 	$(CXX) $(CXXFLAGS) $(INC) $(TEST_DIR)/test_risk_config.cc $(RISK_CONFIG_SRC) $(RISK_CONFIG_LIBS) \
 	    -o $(TEST_DIR)/test_risk_config
 	./$(TEST_DIR)/test_risk_config
+
+# 黄金回归：C++ 实现读取 tests/golden/*.json（由 scripts/generate_golden.py
+# 用 Python 参考实现生成），与期望输出比对，防止 C++/Python 双实现漂移。
+test-golden: $(TEST_DIR)/test_golden_regression.cc ../algorithms/graph_laplacian.h \
+             ../algorithms/ema_smoother.h ../algorithms/risk_fsm.h ../algorithms/minijson.h
+	$(CXX) $(CXXFLAGS) $(INC) $(TEST_DIR)/test_golden_regression.cc \
+	    -o $(TEST_DIR)/test_golden_regression
+	./$(TEST_DIR)/test_golden_regression ../../tests/golden
 
 # ---------------------------------------------------------------------------
 # 开发板交叉编译（需 Luckfox SDK）
@@ -92,6 +100,7 @@ clean:
 	rm -f $(TEST_DIR)/test_enhanced_decision \
 	      $(TEST_DIR)/test_minijson \
 	      $(TEST_DIR)/test_risk_config \
+	      $(TEST_DIR)/test_golden_regression \
 	      luckfox_pico_rtsp_yolov5
 
 help:

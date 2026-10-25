@@ -1,0 +1,290 @@
+{
+  "description": "risk_fsm 双实现黄金回归",
+  "cases": [
+    {
+      "name": "ladder_up_down_with_dual_hold",
+      "config": {
+        "confirm_up": 3,
+        "confirm_down": 2,
+        "danger_hold_frames": 2,
+        "danger_hold_ms": 200
+      },
+      "frames": [
+        {
+          "n": 0,
+          "density": 0.0,
+          "r_gcc": 0.0,
+          "trend": 0.0
+        },
+        {
+          "n": 15,
+          "density": 0.8,
+          "r_gcc": 0.9,
+          "trend": 0.0
+        },
+        {
+          "n": 15,
+          "density": 0.8,
+          "r_gcc": 0.9,
+          "trend": 0.0
+        },
+        {
+          "n": 15,
+          "density": 0.8,
+          "r_gcc": 0.9,
+          "trend": 0.0
+        },
+        {
+          "n": 15,
+          "density": 0.8,
+          "r_gcc": 0.9,
+          "trend": 0.0
+        },
+        {
+          "n": 15,
+          "density": 0.8,
+          "r_gcc": 0.9,
+          "trend": 0.0
+        },
+        {
+          "n": 15,
+          "density": 0.8,
+          "r_gcc": 0.9,
+          "trend": 0.0
+        },
+        {
+          "n": 0,
+          "density": 0.0,
+          "r_gcc": 0.0,
+          "trend": 0.0
+        },
+        {
+          "n": 0,
+          "density": 0.0,
+          "r_gcc": 0.0,
+          "trend": 0.0
+        },
+        {
+          "n": 0,
+          "density": 0.0,
+          "r_gcc": 0.0,
+          "trend": 0.0
+        },
+        {
+          "n": 0,
+          "density": 0.0,
+          "r_gcc": 0.0,
+          "trend": 0.0
+        },
+        {
+          "n": 0,
+          "density": 0.0,
+          "r_gcc": 0.0,
+          "trend": 0.0
+        },
+        {
+          "n": 0,
+          "density": 0.0,
+          "r_gcc": 0.0,
+          "trend": 0.0
+        },
+        {
+          "n": 0,
+          "density": 0.0,
+          "r_gcc": 0.0,
+          "trend": 0.0
+        },
+        {
+          "n": 0,
+          "density": 0.0,
+          "r_gcc": 0.0,
+          "trend": 0.0
+        },
+        {
+          "n": 0,
+          "density": 0.0,
+          "r_gcc": 0.0,
+          "trend": 0.0
+        },
+        {
+          "n": 0,
+          "density": 0.0,
+          "r_gcc": 0.0,
+          "trend": 0.0
+        },
+        {
+          "n": 0,
+          "density": 0.0,
+          "r_gcc": 0.0,
+          "trend": 0.0
+        }
+      ],
+      "timestamps": [
+        0,
+        33,
+        66,
+        99,
+        132,
+        165,
+        198,
+        231,
+        264,
+        297,
+        330,
+        363,
+        396,
+        429,
+        462,
+        495,
+        528,
+        561
+      ],
+      "expected": [
+        "SAFE",
+        "SAFE",
+        "SAFE",
+        "WARNING",
+        "WARNING",
+        "WARNING",
+        "DANGER",
+        "DANGER",
+        "DANGER",
+        "DANGER",
+        "DANGER",
+        "DANGER",
+        "DANGER",
+        "DANGER",
+        "WARNING",
+        "WARNING",
+        "SAFE",
+        "SAFE"
+      ]
+    },
+    {
+      "name": "hold_without_timestamp",
+      "config": {
+        "confirm_up": 1,
+        "confirm_down": 2,
+        "danger_hold_frames": 3,
+        "danger_hold_ms": 1000
+      },
+      "frames": [
+        {
+          "n": 15,
+          "density": 0.8,
+          "r_gcc": 0.9,
+          "trend": 0.0
+        },
+        {
+          "n": 15,
+          "density": 0.8,
+          "r_gcc": 0.9,
+          "trend": 0.0
+        },
+        {
+          "n": 0,
+          "density": 0.0,
+          "r_gcc": 0.0,
+          "trend": 0.0
+        },
+        {
+          "n": 0,
+          "density": 0.0,
+          "r_gcc": 0.0,
+          "trend": 0.0
+        },
+        {
+          "n": 0,
+          "density": 0.0,
+          "r_gcc": 0.0,
+          "trend": 0.0
+        },
+        {
+          "n": 0,
+          "density": 0.0,
+          "r_gcc": 0.0,
+          "trend": 0.0
+        },
+        {
+          "n": 0,
+          "density": 0.0,
+          "r_gcc": 0.0,
+          "trend": 0.0
+        },
+        {
+          "n": 0,
+          "density": 0.0,
+          "r_gcc": 0.0,
+          "trend": 0.0
+        },
+        {
+          "n": 0,
+          "density": 0.0,
+          "r_gcc": 0.0,
+          "trend": 0.0
+        }
+      ],
+      "timestamps": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "expected": [
+        "WARNING",
+        "DANGER",
+        "DANGER",
+        "DANGER",
+        "DANGER",
+        "WARNING",
+        "WARNING",
+        "SAFE",
+        "SAFE"
+      ]
+    },
+    {
+      "name": "hysteresis_band",
+      "config": {
+        "confirm_up": 1,
+        "confirm_down": 1,
+        "danger_hold_frames": 0,
+        "danger_hold_ms": 0
+      },
+      "frames": [
+        {
+          "n": 10,
+          "density": 0.5,
+          "r_gcc": 0.5,
+          "trend": 0.0
+        },
+        {
+          "n": 8,
+          "density": 0.4,
+          "r_gcc": 0.4,
+          "trend": 0.0
+        },
+        {
+          "n": 2,
+          "density": 0.1,
+          "r_gcc": 0.1,
+          "trend": 0.0
+        }
+      ],
+      "timestamps": [
+        0,
+        33,
+        66
+      ],
+      "expected": [
+        "WARNING",
+        "WARNING",
+        "SAFE"
+      ]
+    }
+  ]
+}

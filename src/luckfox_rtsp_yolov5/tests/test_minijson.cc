@@ -122,12 +122,24 @@ void test_errors() {
     }));
 }
 
+void test_boolean_false() {
+    // 回归：parseLiteral 曾忽略 value 参数恒返回 true，导致 JSON 里
+    // false 被解析为 true（黄金回归测试发现）。这里显式验证 true/false 均正确。
+    minijson::Value root = minijson::parse(
+        R"({"enabled": true, "disabled": false, "flagA": false, "flagB": true})");
+    CHECK(root["enabled"].asBool());
+    CHECK(!root["disabled"].asBool());
+    CHECK(!root["flagA"].asBool());
+    CHECK(root["flagB"].asBool());
+}
+
 }  // namespace
 
 int main() {
     test_basic_object();
     test_escapes_and_unicode();
     test_numbers();
+    test_boolean_false();
     test_errors();
 
     std::printf("\n%d/%d tests passed\n", g_passed, g_passed + g_failed);

@@ -1,0 +1,180 @@
+{
+  "description": "graph_laplacian 双实现黄金回归",
+  "cases": [
+    {
+      "name": "empty",
+      "points": [],
+      "edge_dist": 2.0,
+      "expected": {
+        "n": 0,
+        "m": 0,
+        "density": 0.0,
+        "r_gcc": 0.0,
+        "clustering": 0.0,
+        "fiedler": 0.0,
+        "spectral_radius": 0.0,
+        "eig_entropy": 0.0
+      }
+    },
+    {
+      "name": "single",
+      "points": [
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "edge_dist": 2.0,
+      "expected": {
+        "n": 1,
+        "m": 0,
+        "density": 0.0,
+        "r_gcc": 1.0,
+        "clustering": 0.0,
+        "fiedler": 0.0,
+        "spectral_radius": 0.0,
+        "eig_entropy": 0.0
+      }
+    },
+    {
+      "name": "dispersed_4",
+      "points": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          5.0,
+          0.0
+        ],
+        [
+          10.0,
+          0.0
+        ],
+        [
+          15.0,
+          0.0
+        ]
+      ],
+      "edge_dist": 2.0,
+      "expected": {
+        "n": 4,
+        "m": 0,
+        "density": 0.0,
+        "r_gcc": 0.25,
+        "clustering": 0.0,
+        "fiedler": 0.0,
+        "spectral_radius": 0.0,
+        "eig_entropy": 0.0
+      }
+    },
+    {
+      "name": "path_p5",
+      "points": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          1.5,
+          0.0
+        ],
+        [
+          3.0,
+          0.0
+        ],
+        [
+          4.5,
+          0.0
+        ],
+        [
+          6.0,
+          0.0
+        ]
+      ],
+      "edge_dist": 2.0,
+      "expected": {
+        "n": 5,
+        "m": 4,
+        "density": 0.4,
+        "r_gcc": 1.0,
+        "clustering": 0.0,
+        "fiedler": 0.3819660113,
+        "spectral_radius": 3.6180339887,
+        "eig_entropy": 1.1729838119
+      }
+    },
+    {
+      "name": "complete_k4",
+      "points": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          1.0,
+          0.0
+        ],
+        [
+          1.0,
+          1.0
+        ],
+        [
+          0.0,
+          1.0
+        ]
+      ],
+      "edge_dist": 2.0,
+      "expected": {
+        "n": 4,
+        "m": 6,
+        "density": 1.0,
+        "r_gcc": 1.0,
+        "clustering": 1.0,
+        "fiedler": 4.0,
+        "spectral_radius": 4.0,
+        "eig_entropy": 1.0986122887
+      }
+    },
+    {
+      "name": "two_clusters",
+      "points": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.5,
+          0.0
+        ],
+        [
+          0.0,
+          0.5
+        ],
+        [
+          10.0,
+          10.0
+        ],
+        [
+          10.5,
+          10.0
+        ],
+        [
+          10.0,
+          10.5
+        ]
+      ],
+      "edge_dist": 2.0,
+      "expected": {
+        "n": 6,
+        "m": 6,
+        "density": 0.4,
+        "r_gcc": 0.5,
+        "clustering": 1.0,
+        "fiedler": 0.0,
+        "spectral_radius": 3.0,
+        "eig_entropy": 1.3862943611
+      }
+    }
+  ]
+}
