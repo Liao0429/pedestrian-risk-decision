@@ -523,7 +523,7 @@ class ByteTrack:
                 [trk.get_box() for trk in self._tracks.values()], dtype=np.float64
             )
             matches1, unmatched_high, unmatched_trk = associate_detections_to_tracks(
-                high_boxes, trk_boxes, thresh=1.0 - self.match_thresh
+                high_boxes, trk_boxes, thresh=self.match_thresh
             )
             for det_idx, trk_idx in matches1:
                 trk = self._tracks[trk_ids[trk_idx]]
@@ -546,7 +546,7 @@ class ByteTrack:
                 dtype=np.float64,
             )
             matches2, _, _ = associate_detections_to_tracks(
-                low_boxes, conf_boxes, thresh=1.0 - self.match_thresh
+                low_boxes, conf_boxes, thresh=self.match_thresh
             )
             for det_idx, trk_pos in matches2:
                 trk = self._tracks[unmatched_confirmed[trk_pos]]

@@ -144,8 +144,9 @@ private:
         }
     };
 
-    // 多目标平滑：最近邻贪心关联，匹配到的轨迹 predict+correct，
-    // 未匹配的点新建轨迹，长期未匹配的轨迹被删除。
+    // 多目标平滑：每帧先对所有轨迹做一步 predict（预测位置作为门限中心），
+    // 再最近邻贪心关联；匹配到的轨迹 correct，未匹配的点新建轨迹，
+    // 长期未匹配的轨迹被删除。
     std::vector<std::pair<float,float>> smoothPoints(
         const std::vector<std::pair<float,float>>& pts);
 

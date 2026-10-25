@@ -63,6 +63,13 @@ std::vector<std::pair<float,float>> EnhancedDecision::smoothPoints(
 
     const size_t nt = tracks_.size();
     const size_t np = pts.size();
+
+    // 先对所有轨迹做一步 Kalman 预测，使关联门限中心使用预测位置
+    // （而非上一帧修正后的陈旧位置），降低交叉/遮挡场景的误关联。
+    for (size_t i = 0; i < nt; ++i) {
+        tracks_[i].kf.predict();
+    }
+
     std::vector<bool> trackUsed(nt, false);
     std::vector<bool> ptUsed(np, false);
 
@@ -96,8 +103,9 @@ std::vector<std::pair<float,float>> EnhancedDecision::smoothPoints(
         ptUsed[j]   = true;
 
         KalmanTrack& t = tracks_[i];
-        t.kf.update(static_cast<double>(pts[j].first),
-                    static_cast<double>(pts[j].second));
+        // 轨迹已在关联前 predict 过，这里只做修正，避免二次预测
+        t.kf.correct(static_cast<double>(pts[j].first),
+                     static_cast<double>(pts[j].second));
         t.miss = 0;
         out.push_back(std::make_pair(static_cast<float>(t.kf.x()),
                                      static_cast<float>(t.kf.y())));

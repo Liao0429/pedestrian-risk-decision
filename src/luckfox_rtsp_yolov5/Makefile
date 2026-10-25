@@ -71,6 +71,7 @@ LUCKFOX_SDK_ROOT ?=
 OPENCV_ROOT      ?=
 CROSS_CXX         = $(CROSS_COMPILE)g++
 
+# main.cc 已默认启用增强决策路径（无需额外编译宏开关）
 luckfox:
 	@test -n "$(LUCKFOX_SDK_ROOT)" || { echo "错误: 请设置 LUCKFOX_SDK_ROOT"; exit 1; }
 	$(CROSS_CXX) -std=c++11 -O2 \

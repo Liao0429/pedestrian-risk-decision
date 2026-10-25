@@ -62,7 +62,7 @@ private:
     int    m_minSamples;
     std::vector<std::pair<float,float>> m_pts;
 
-    // 核心 DBSCAN 算法：输出 labels(-1=噪声) 与 nClusters(簇数)
+    // 核心 DBSCAN 算法：输出 labels（簇编号>=1，噪声=-1）与 nClusters(簇数)
     static void dbscan(const std::vector<std::pair<float,float>>& pts,
                        double eps, int minSamples,
                        std::vector<int>& labels, int& nClusters);
@@ -73,11 +73,20 @@ private:
 // ----------------------------------------------------------------------
 
 inline CrowdDBSCAN::CrowdDBSCAN(double eps, int min_samples)
-    : m_eps(eps), m_minSamples(min_samples) {}
+    : m_eps(1.5), m_minSamples(2) {
+    setEps(eps);
+    setMinSamples(min_samples);
+}
 
-inline void CrowdDBSCAN::setEps(double eps) { m_eps = eps; }
+inline void CrowdDBSCAN::setEps(double eps) {
+    if (std::isfinite(eps) && eps > 0.0) m_eps = eps;
+    // 非法输入（NaN/Inf/<=0）：保持原值，避免全员噪声/未定义行为
+}
 inline double CrowdDBSCAN::eps() const { return m_eps; }
-inline void CrowdDBSCAN::setMinSamples(int ms) { m_minSamples = ms; }
+inline void CrowdDBSCAN::setMinSamples(int ms) {
+    if (ms >= 1) m_minSamples = ms;
+    // 非法输入（<=0）：保持原值，避免全员一簇
+}
 inline int CrowdDBSCAN::minSamples() const { return m_minSamples; }
 
 inline void CrowdDBSCAN::clear() { m_pts.clear(); }
@@ -95,8 +104,8 @@ inline void CrowdDBSCAN::dbscan(
         double eps, int minSamples,
         std::vector<int>& labels, int& nClusters) {
     const int n = (int)pts.size();
-    const int UNCLASSIFIED = -1;
-    const int NOISE = -2;
+    const int NOISE = -1;          // 对外暴露的噪声标签（与结构体注释一致）
+    const int UNCLASSIFIED = -2;   // 内部哨兵，算法结束前应全部被替换
     labels.assign(n, UNCLASSIFIED);
     nClusters = 0;
     if (n == 0) return;
@@ -170,7 +179,7 @@ inline CrowdClusterFeatures CrowdDBSCAN::compute() const {
 
     feat.n_noise = 0;
     for (int i = 0; i < n; ++i)
-        if (labels[i] <= 0) ++feat.n_noise;            // -1/-2 均为未聚类
+        if (labels[i] <= 0) ++feat.n_noise;            // 噪声(-1) 与残余哨兵(-2) 均未聚类
     feat.n_clustered = n - feat.n_noise;
 
     std::vector<std::pair<double,double>> centers(nClusters);

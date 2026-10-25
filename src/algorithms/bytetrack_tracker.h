@@ -147,6 +147,7 @@ inline std::vector<std::pair<int, int>> hungarian(
 
 // ----------------------------------------------------------------------
 // 关联：检测框 vs 预测框，按 IoU 代价 + 阈值门限
+// thresh 为代价阈值：cost = 1 - IoU <= thresh 的配对才被接受（即 IoU >= 1 - thresh）。
 // ----------------------------------------------------------------------
 inline void associate(
     const std::vector<Box>& dets, const std::vector<Box>& trks,
@@ -443,7 +444,8 @@ struct TrackInfo {
  * 参数含义与 Python 版 ByteTrack 完全相同：
  * - track_thresh：高分检测阈值（默认 0.5）；
  * - det_thresh：检测置信度下界（默认 0.1），低于该值丢弃；
- * - match_thresh：IoU 代价阈值 = 1 - IoU 门限（默认 0.8，即要求 IoU >= 0.2）；
+ * - match_thresh：IoU 代价阈值（即 1 - IoU <= match_thresh 才接受，默认 0.8，
+ *   等价于要求 IoU >= 0.2；数值越大越宽松）；
  * - max_lost：轨迹连续未关联多少帧即删除（默认 30）；
  * - min_hits：新轨迹连续关联多少帧后被标记为已确认（默认 3）；
  * - dt：固定帧间隔（默认 1.0，即逐帧演化）；
@@ -513,7 +515,8 @@ public:
 
         if (!high_boxes.empty() && n_trk > 0) {
             std::vector<std::pair<int, int>> matches1;
-            associate(high_boxes, trk_boxes, 1.0 - m_matchThresh,
+            // 代价阈值 = m_matchThresh（1-IoU <= matchThresh 即 IoU >= 1-matchThresh）
+            associate(high_boxes, trk_boxes, m_matchThresh,
                       matches1, unmatched_high, unmatched_trk);
             for (std::size_t k = 0; k < matches1.size(); ++k) {
                 Track& trk = m_tracks[matches1[k].second];
@@ -541,7 +544,8 @@ public:
         if (!low_boxes.empty() && !conf_boxes.empty()) {
             std::vector<std::pair<int, int>> matches2;
             std::vector<int> unused_det, unused_trk;
-            associate(low_boxes, conf_boxes, 1.0 - m_matchThresh,
+            // 低分二次关联同样使用 m_matchThresh 作为代价阈值
+            associate(low_boxes, conf_boxes, m_matchThresh,
                       matches2, unused_det, unused_trk);
             for (std::size_t k = 0; k < matches2.size(); ++k) {
                 Track& trk = m_tracks[conf_trk_pos[matches2[k].second]];

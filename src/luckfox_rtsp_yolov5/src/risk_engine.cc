@@ -19,10 +19,11 @@ void RiskEngine::setHomography(const cv::Mat &H) {
 
 void RiskEngine::setConfig(const pedestrian::RiskConfig &cfg) {
     m_cfg = cfg;
-    // 若传入非法配置（例如 warning.n > danger.n），回退到默认值，保证引擎始终可用。
+    // 若传入非法配置（例如 warning.n > danger.n），回退到完整默认配置，
+    // 保持 WARNING 与 DANGER 各自的默认阈值（warning=5/0.28/0.55，
+    // danger=10/0.55/0.80），避免等级语义被破坏，保证引擎始终可用。
     if (m_cfg.warning.n > m_cfg.danger.n) {
-        m_cfg.warning = pedestrian::RiskRule();
-        m_cfg.danger = pedestrian::RiskRule();
+        m_cfg = pedestrian::RiskConfig();
     }
 }
 

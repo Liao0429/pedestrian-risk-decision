@@ -96,11 +96,10 @@ int main(int argc, char *argv[]) {
   pedestrian::RiskConfig riskCfg =
       pedestrian::loadRiskConfigOr("./config/default_config.json", pedestrian::RiskConfig());
   riskEngine.setConfig(riskCfg);
-#ifdef USE_ENHANCED_DECISION
+  // 增强决策模块默认启用（不再依赖编译宏开关）
   pedestrian::EnhancedConfig enhancedCfg;
   enhancedCfg.edge_dist_m = riskCfg.edge_dist_m;
-  pedestrian::EnhancedDecision enhancedDecision(enhancedCfg);  // 增强决策模块
-#endif
+  pedestrian::EnhancedDecision enhancedDecision(enhancedCfg);
 	RK_S32 s32Ret = 0; 
 	int sX,sY,eX,eY; 
 		
@@ -204,8 +203,7 @@ int main(int argc, char *argv[]) {
 			CrowdLevel crowd = CROWD_SAFE;
 			int featN = 0;
 			double featRho = 0.0, featGcc = 0.0, featFiedler = 0.0;
-#ifdef USE_ENHANCED_DECISION
-			// 增强决策：IPM 地面米制脚点 -> Kalman 平滑 -> 谱特征 -> FSM 稳定等级
+			// 增强决策（默认启用）：IPM 地面米制脚点 -> Kalman 平滑 -> 谱特征 -> FSM 稳定等级
 			{
 				std::vector<std::pair<float,float>> groundPts;
 				groundPts.reserve((size_t)od_results.count);
@@ -228,8 +226,8 @@ int main(int argc, char *argv[]) {
 				printf("[EnhancedDecision] level=%s n=%d rho=%.2f r_gcc=%.2f fiedler=%.3f\n",
 				       RiskEngine::levelName(crowd), featN, featRho, featGcc, featFiedler);
 			}
-#else
-			// 经典决策：RiskEngine 固定阈值规则（保留原有逻辑作为默认路径）
+
+			// 经典决策：RiskEngine 固定阈值规则（旁路保留，作为对比参考，不覆盖增强决策）
 			riskEngine.clear();
 			for(int i = 0; i < od_results.count; i++) {
 				object_detect_result *dres = &(od_results.results[i]);
@@ -241,11 +239,8 @@ int main(int argc, char *argv[]) {
 				}
 			}
 			riskEngine.computeFeatures();
-			crowd   = riskEngine.evaluate();
-			featN   = riskEngine.features().n;
-			featRho = riskEngine.features().density;
-			featGcc = riskEngine.features().r_gcc;
-#endif
+			// 旁路保留：经典 RiskEngine 仅作为对比/回退参考，不覆盖增强决策输出
+			riskEngine.evaluate();
 
 			for(int i = 0; i < od_results.count; i++)
 			{					
@@ -280,13 +275,8 @@ int main(int argc, char *argv[]) {
 				if (crowd == CROWD_WARNING)      color = cv::Scalar(0,255,255);
 				else if (crowd == CROWD_DANGER)  color = cv::Scalar(0,0,255);
 				char info[128];
-#ifdef USE_ENHANCED_DECISION
 				sprintf(info, "CROWD:%s n=%d rho=%.2f r_gcc=%.2f lambda2=%.3f",
 				        lvl, featN, featRho, featGcc, featFiedler);
-#else
-				sprintf(info, "CROWD:%s n=%d rho=%.2f r_gcc=%.2f",
-				        lvl, featN, featRho, featGcc);
-#endif
 				cv::rectangle(frame, cv::Point(0,0), cv::Point(width, 60), color, -1);
 				cv::putText(frame, info, cv::Point(10, 42),
 							cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0,0,0), 2);

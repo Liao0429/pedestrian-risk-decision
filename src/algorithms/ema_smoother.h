@@ -59,6 +59,12 @@ public:
         }
         if (dim == 0) dim = 1;
         m_alpha.assign(dim, alpha);
+        if (dim != m_dim) {
+            // 维度变化：旧状态失效，重置，避免 m_s 越界
+            m_s.clear();
+            m_lastT = -1;
+            m_initialized = false;
+        }
         m_dim = dim;
     }
 
@@ -71,6 +77,12 @@ public:
         std::vector<double> a = alpha;
         for (double& x : a) {
             if (!(x > 0.0 && x <= 1.0)) x = 0.3;
+        }
+        if (a.size() != m_dim) {
+            // 维度变化：旧状态失效，重置，避免 m_s 越界
+            m_s.clear();
+            m_lastT = -1;
+            m_initialized = false;
         }
         m_alpha = a;
         m_dim = a.size();
@@ -99,10 +111,24 @@ public:
 
     // ---- 主接口 ----
 
-    // 标量版本（dim 须为 1，否则取第 0 维）。
+    // 标量版本：dim==1 时平滑单一维度；dim>1 时仅更新第 0 维，
+    // 其余维度保持原值，避免一维输入与全维状态错配导致越界。
     double update(double value, int64_t t = -1) {
-        std::vector<double> v(1, value);
-        return update(v, t)[0];
+        if (m_dim <= 1) {
+            std::vector<double> v(1, value);
+            return update(v, t)[0];
+        }
+        // dim > 1：只对第 0 维做标量平滑（其余维度以 0 起算，等待向量输入）
+        if (!m_initialized) {
+            m_s.assign(m_dim, 0.0);
+            m_lastT = t;
+            m_initialized = true;
+        }
+        if (m_alpha.size() != m_dim) m_alpha.assign(m_dim, 0.3);
+        const std::vector<double> a = effectiveAlpha(t);
+        m_s[0] = a[0] * value + (1.0 - a[0]) * m_s[0];
+        m_lastT = t;
+        return m_s[0];
     }
 
     // 多变量版本：输入长度须等于 dim。
@@ -118,10 +144,8 @@ public:
                 m_alpha.assign(m_dim, 0.3);
             }
             if (value.size() != m_dim) {
-                // 维度不匹配：退化为仅拷贝输入，避免状态损坏
-                m_s = value;
-                m_lastT = t;
-                m_initialized = true;
+                // 维度不匹配：保持未初始化，等待与 dim 匹配的输入，
+                // 避免 m_s 长度与 m_dim 不一致导致后续越界
                 return m_s;
             }
             m_s = value;

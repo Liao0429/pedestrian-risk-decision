@@ -76,6 +76,7 @@ if(BUILD_LUCKFOX_DEMO)
       "BUILD_LUCKFOX_DEMO=ON 时需要设置 -DLUCKFOX_SDK_ROOT=<Luckfox SDK 根目录>")
   endif()
 
+  # main.cc 已默认启用增强决策路径（无需额外编译宏开关）
   add_executable(luckfox_pico_rtsp_yolov5
     ${PROJ_SRC_DIR}/main.cc
     ${PROJ_SRC_DIR}/enhanced_decision.cc

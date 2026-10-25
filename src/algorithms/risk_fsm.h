@@ -173,7 +173,7 @@ private:
 
     // DANGER 强制保持期是否已结束（帧数与毫秒数同时满足才结束）
     bool holdElapsed(int64_t now_ms) const {
-        if (entryMs_ < 0) return true;  // 从未进入 DANGER
+        if (level_ != RISK_DANGER) return true;  // 仅 DANGER 状态需要保持判断
         bool frameOk = true;
         if (cfg_.danger_hold_frames > 0) {
             frameOk = (frame_ - entryFrame_) >= cfg_.danger_hold_frames;

@@ -64,8 +64,9 @@ private:
                                std::vector<std::vector<char>>& adj,
                                std::vector<std::vector<double>>& L,
                                int& m);
-    // 对称矩阵 Jacobi 特征值分解(仅取特征值，升序返回)
-    static void jacobiEigenvalues(const std::vector<std::vector<double>>& A,
+    // 对称矩阵 Jacobi 特征值分解(仅取特征值，升序返回)。
+    // 返回 true 表示收敛；false 表示达到 max_sweeps 仍未收敛（调用方应回退到安全值）。
+    static bool jacobiEigenvalues(const std::vector<std::vector<double>>& A,
                                   std::vector<double>& eigvals);
 };
 
@@ -73,19 +74,32 @@ private:
 // 实现（头文件内联，方便单头文件集成到板端工程）
 // ----------------------------------------------------------------------
 
-inline GraphLaplacian::GraphLaplacian(double edge_dist) : m_edgeDist(edge_dist) {}
+inline GraphLaplacian::GraphLaplacian(double edge_dist) : m_edgeDist(2.0) {
+    setEdgeDist(edge_dist);
+}
 
-inline void GraphLaplacian::setEdgeDist(double d) { m_edgeDist = d; }
+inline void GraphLaplacian::setEdgeDist(double d) {
+    if (std::isfinite(d) && d > 0.0) m_edgeDist = d;
+    // 非法输入（NaN/Inf/非正）：保持原值，避免全图无边/异常建边
+}
 inline double GraphLaplacian::edgeDist() const { return m_edgeDist; }
 
 inline void GraphLaplacian::clear() { m_pts.clear(); }
 
 inline void GraphLaplacian::addPoint(float x, float y) {
-    m_pts.push_back(std::make_pair(x, y));
+    if (std::isfinite(x) && std::isfinite(y)) {
+        m_pts.push_back(std::make_pair(x, y));
+    }
+    // 非法坐标（NaN/Inf）：忽略该点，避免污染距离矩阵
 }
 
 inline void GraphLaplacian::setPoints(const std::vector<std::pair<float,float>>& pts) {
-    m_pts = pts;
+    m_pts.clear();
+    m_pts.reserve(pts.size());
+    for (std::size_t i = 0; i < pts.size(); ++i) {
+        if (std::isfinite(pts[i].first) && std::isfinite(pts[i].second))
+            m_pts.push_back(pts[i]);
+    }
 }
 
 inline std::vector<std::vector<char>> GraphLaplacian::adjacencyMatrix() const {
@@ -105,6 +119,11 @@ inline void GraphLaplacian::buildLaplacian(
     const int n = (int)pts.size();
     adj.assign(n, std::vector<char>(n, 0));
     m = 0;
+    // 输入校验：edgeDist 必须为正有限值，否则安全返回空图
+    if (!(edgeDist > 0.0) || !std::isfinite(edgeDist)) {
+        L.assign(n, std::vector<double>(n, 0.0));
+        return;
+    }
     if (n < 2) {
         L.assign(n, std::vector<double>(n, 0.0));
         return;
@@ -132,16 +151,17 @@ inline void GraphLaplacian::buildLaplacian(
     }
 }
 
-inline void GraphLaplacian::jacobiEigenvalues(
+inline bool GraphLaplacian::jacobiEigenvalues(
         const std::vector<std::vector<double>>& A,
         std::vector<double>& eigvals) {
     const int n = (int)A.size();
     eigvals.clear();
-    if (n == 0) return;
+    if (n == 0) return true;
 
     std::vector<std::vector<double>> a = A;   // 工作矩阵(将被对角化)
     const double tol = 1e-12;
     const int max_sweeps = 100;
+    bool converged = false;
 
     for (int sweep = 0; sweep < max_sweeps; ++sweep) {
         // 找最大非对角元 a[p][q]
@@ -153,7 +173,7 @@ inline void GraphLaplacian::jacobiEigenvalues(
                 if (av > off) { off = av; p = i; q = j; }
             }
         }
-        if (off < tol) break;   // 已收敛
+        if (off < tol) { converged = true; break; }   // 已收敛
 
         const double app = a[p][p];
         const double aqq = a[q][q];
@@ -181,12 +201,19 @@ inline void GraphLaplacian::jacobiEigenvalues(
         a[q][p] = 0.0;
     }
 
+    if (!converged) {
+        // 达到 max_sweeps 仍未收敛：不返回不可靠特征值，由调用方回退
+        eigvals.clear();
+        return false;
+    }
+
     eigvals.resize(n);
     for (int i = 0; i < n; ++i) eigvals[i] = a[i][i];
     std::sort(eigvals.begin(), eigvals.end());
-    // 对称半正定矩阵理论特征值 >= 0，数值上可能产生微小负值，做修正
+    // 与 Python 端 np.maximum(eigvals, 0) 一致：所有负特征值一律截断为 0
     for (double& e : eigvals)
-        if (e < 0.0 && e > -1e-9) e = 0.0;
+        if (e < 0.0) e = 0.0;
+    return true;
 }
 
 inline SpectralFeatures GraphLaplacian::computeFeatures() const {
@@ -266,27 +293,35 @@ inline SpectralFeatures GraphLaplacian::computeFeatures() const {
     // ---- 谱特征(Jacobi 特征值) ----
     {
         std::vector<double> eig;
-        jacobiEigenvalues(L, eig);   // 已升序
-        const double lambda2  = (n >= 2) ? eig[1] : 0.0;  // 第二小特征值
-        const double lambdaMax = eig[n - 1];              // 最大特征值
-
-        feat.fiedler = lambda2;
-        feat.algebraic_connectivity = lambda2;
-        feat.spectral_radius = lambdaMax;
-
-        // 特征熵：归一化特征谱的香农熵(自然对数)
-        double s = 0.0;
-        for (double e : eig) s += e;
-        if (s > 1e-12) {
-            double ent = 0.0;
-            for (double e : eig) {
-                if (e <= 0.0) continue;
-                const double p = e / s;
-                ent -= p * std::log(p);
-            }
-            feat.eig_entropy = ent;
-        } else {
+        const bool converged = jacobiEigenvalues(L, eig);   // 已升序
+        if (!converged) {
+            // 特征分解未收敛：谱特征回退到安全值（0），不输出不可靠特征值
+            feat.fiedler = 0.0;
+            feat.algebraic_connectivity = 0.0;
+            feat.spectral_radius = 0.0;
             feat.eig_entropy = 0.0;
+        } else {
+            const double lambda2  = (n >= 2) ? eig[1] : 0.0;  // 第二小特征值
+            const double lambdaMax = eig[n - 1];              // 最大特征值
+
+            feat.fiedler = lambda2;
+            feat.algebraic_connectivity = lambda2;
+            feat.spectral_radius = lambdaMax;
+
+            // 特征熵：归一化特征谱的香农熵(自然对数)
+            double s = 0.0;
+            for (double e : eig) s += e;
+            if (s > 1e-12) {
+                double ent = 0.0;
+                for (double e : eig) {
+                    if (e <= 0.0) continue;
+                    const double p = e / s;
+                    ent -= p * std::log(p);
+                }
+                feat.eig_entropy = ent;
+            } else {
+                feat.eig_entropy = 0.0;
+            }
         }
     }
 
