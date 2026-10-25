@@ -40,3 +40,8 @@
 - ✅ 新增 main.cc 信号处理（SIGINT/SIGTERM → g_stop → while(!g_stop) 优雅 cleanup 退出，配合 systemd Restart=always 自愈）；memset(text,sizeof text) 修正；commit a13371d
 - ✅ 信号处理版已部署开发板真机运行（RTSP 554 + 网页 1984 + 增强决策正常）
 - ⏳ 待办：T3 黄金回归测试（Python/C++ 一致性）、按类别差异化阈值、最终验收报告 docs/FINAL_REPORT.md
+
+## 论文初稿完善（agent 后台完成）
+- ✅ 本地论文 `H:\毕设论文\thesis_agent_draft\毕业论文.md` 新增 **6.6 多目标类别可配置** + **6.7 网页监控终端（go2rtc）** 两节，目录/功能需求表（F10/F11）/工作总结同步更新
+- 论文基于真实源码/文档/提交（c043879/ea39d12/0b51d00），未编造；仍只在本地，不上传 GitHub
+- 看板 T5 标记完成；下一步由心跳 cron 推进 T3 黄金回归测试 / T6 演示美观打磨
