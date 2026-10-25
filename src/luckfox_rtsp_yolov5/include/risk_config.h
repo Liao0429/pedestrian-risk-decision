@@ -30,6 +30,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 #include "../../algorithms/minijson.h"
 
@@ -49,6 +50,7 @@ struct RiskRule {
 // 完整风险决策配置
 struct RiskConfig {
     double   edge_dist_m = 2.0;
+    std::vector<int> target_classes{0};  // 检测目标类别集合（COCO id），默认 [0]=person；可切换 [2,5,7,3]=车辆等
     RiskRule danger;                // DANGER 阈值（默认 10 / 0.55 / 0.80）
     RiskRule warning{5.0, 0.28, 0.55};  // WARNING 阈值（默认 5 / 0.28 / 0.55）
 
@@ -87,6 +89,26 @@ inline RiskConfig loadRiskConfig(const std::string& path) {
             throw std::runtime_error("edge_dist_m 必须是正数");
         }
         cfg.edge_dist_m = v->asDouble();
+    }
+
+    if (const minijson::Value* arr = root.find("target_classes")) {
+        if (!arr->isArray() || arr->size() == 0) {
+            throw std::runtime_error("target_classes 必须是非空数组");
+        }
+        cfg.target_classes.clear();
+        for (size_t i = 0; i < arr->size(); ++i) {
+            const minijson::Value& e = (*arr)[i];
+            if (!e.isNumber() || e.asDouble() < 0.0 || e.asDouble() > 79.0) {
+                throw std::runtime_error("target_classes 元素必须是 0~79 整数（COCO 类别 id）");
+            }
+            cfg.target_classes.push_back(static_cast<int>(e.asDouble()));
+        }
+    } else if (const minijson::Value* v = root.find("target_class")) {
+        // 兼容旧的单个 target_class 配置
+        if (!v->isNumber() || v->asDouble() < 0.0 || v->asDouble() > 79.0) {
+            throw std::runtime_error("target_class 必须是非负整数（0~79，COCO 类别 id）");
+        }
+        cfg.target_classes = {static_cast<int>(v->asDouble())};
     }
 
     // 读取 danger / warning 子对象（允许部分配置，缺失项用默认值）

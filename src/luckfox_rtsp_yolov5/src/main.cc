@@ -11,6 +11,7 @@
 #include <sys/poll.h>
 #include <time.h>
 #include <unistd.h>
+#include <algorithm>
 #include <vector>
 
 #include "rtsp_demo.h"
@@ -209,7 +210,7 @@ int main(int argc, char *argv[]) {
 				groundPts.reserve((size_t)od_results.count);
 				for(int i = 0; i < od_results.count; i++) {
 					object_detect_result *dres = &(od_results.results[i]);
-					if (dres->cls_id != 0) continue; // COCO person = 0
+					if (std::find(riskCfg.target_classes.begin(), riskCfg.target_classes.end(), dres->cls_id) == riskCfg.target_classes.end()) continue; // 非目标类别跳过
 					int px = (int)((dres->box.left + dres->box.right) / 2);
 					int py = (int)dres->box.bottom;
 					mapCoordinates(&px, &py);
@@ -231,7 +232,7 @@ int main(int argc, char *argv[]) {
 			riskEngine.clear();
 			for(int i = 0; i < od_results.count; i++) {
 				object_detect_result *dres = &(od_results.results[i]);
-				if (dres->cls_id == 0) { // COCO person = 0
+				if (std::find(riskCfg.target_classes.begin(), riskCfg.target_classes.end(), dres->cls_id) != riskCfg.target_classes.end()) { // 目标类别
 					int px = (int)((dres->box.left + dres->box.right) / 2);
 					int py = (int)dres->box.bottom;
 					mapCoordinates(&px, &py);

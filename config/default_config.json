@@ -1,5 +1,6 @@
 {
   "edge_dist_m": 2.0,
+  "target_classes": [0],
   "danger": {
     "n": 10,
     "rho": 0.55,
@@ -10,5 +11,5 @@
     "rho": 0.28,
     "gcc": 0.55
   },
-  "_comment": "规则阈值配置。danger/warning 的 n=人数阈值, rho=网络密度, gcc=最大连通分量占比。与 C++ risk_engine.cc 默认一致。"
+  "_comment": "规则阈值配置。target_classes=检测目标类别集合（COCO id，默认[0]=person；车辆[2,5,7,3]、狗[17]、猫[16]、动物[18,19,20]）。danger/warning 的 n=人数阈值, rho=网络密度, gcc=最大连通分量占比。"
 }
