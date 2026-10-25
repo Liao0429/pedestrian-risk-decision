@@ -268,8 +268,8 @@ class RiskFSM:
     def _hold_elapsed(self, now_ms: Optional[int]) -> bool:
         """DANGER 强制保持期是否已结束（帧数与毫秒数同时满足才结束）。"""
         cfg = self.config
-        if self._entry_ms is None:
-            return True  # 尚未进入过 DANGER，无需保持
+        if self._state != "DANGER":
+            return True  # 不在 DANGER 状态，无需保持（对齐 C++ risk_fsm.h：level_ != RISK_DANGER 时早退）
 
         frame_ok = True
         if cfg.danger_hold_frames > 0:

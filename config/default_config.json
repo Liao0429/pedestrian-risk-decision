@@ -11,5 +11,5 @@
     "rho": 0.28,
     "gcc": 0.55
   },
-  "_comment": "规则阈值配置。target_classes=检测目标类别集合（COCO id，默认[0]=person；车辆[2,5,7,3]、狗[17]、猫[16]、动物[18,19,20]）。danger/warning 的 n=人数阈值, rho=网络密度, gcc=最大连通分量占比。"
+  "_comment": "规则阈值配置。target_classes=检测目标类别集合（COCO id，默认[0]=person；车辆[2,5,7,3]、狗[16]、猫[15]、动物[14,18,19,20,21]）。danger/warning 的 n=人数阈值, rho=网络密度, gcc=最大连通分量占比。"
 }

@@ -167,6 +167,23 @@ def test_danger_hold_frames():
     assert fsm.level == "WARNING"
 
 
+def test_danger_hold_frames_without_timestamp():
+    """now_ms=None（无时间戳）时帧保持应生效（回归：修复前 _hold_elapsed 早退致帧保持失效）。"""
+    fsm = make_fsm(confirm_up=3, confirm_down=2, danger_hold_frames=4, danger_hold_ms=0)
+    levels = [fsm.update(HIGH, None) for _ in range(6)]  # 第 6 帧进入 DANGER
+    assert fsm.level == "DANGER"
+    # 进入后立即给低分：保持期内不得降级（now_ms 全程 None）
+    for _ in range(5):
+        levels.append(fsm.update(LOW, None))
+    # 进入帧为第 6 帧，保持 4 帧：
+    assert levels[6] == "DANGER", levels   # frame 7
+    assert levels[7] == "DANGER", levels   # frame 8
+    assert levels[8] == "DANGER", levels   # frame 9
+    assert levels[9] == "DANGER", levels   # frame 10（保持结束，降级计数 1）
+    assert levels[10] == "WARNING", levels  # frame 11（降级计数 2 -> WARNING）
+    assert fsm.level == "WARNING"
+
+
 def test_danger_hold_ms():
     fsm = make_fsm(confirm_up=3, confirm_down=2, danger_hold_frames=0, danger_hold_ms=1000)
     # 用递增时间戳进入 DANGER

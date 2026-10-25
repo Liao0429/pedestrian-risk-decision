@@ -37,3 +37,4 @@ src/luckfox_rtsp_yolov5/tests/*.o
 # 开发板真机运行日志（真实数据证据，允许上传）
 !results/edge_board/*.log
 
+docs/thesis/
