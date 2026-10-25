@@ -24,9 +24,9 @@ from src.algorithms.graph_laplacian import compute_laplacian_features
 from src.algorithms.kalman_tracker import KalmanTracker
 from src.algorithms.risk_fsm import RiskFSM, RiskFSMConfig
 
-def detect_pedestrians(model, frame, conf, imgsz, device, H, scale_mpp):
-    """检测 person，返回 (boxes_xyxy, detections, ground_pts)。"""
-    results = model.predict(frame, conf=conf, imgsz=imgsz, classes=[0], device=device, verbose=False)
+def detect_pedestrians(model, frame, conf, imgsz, device, H, scale_mpp, classes=None):
+    """检测目标类别（默认 person），返回 (boxes_xyxy, detections, ground_pts)。"""
+    results = model.predict(frame, conf=conf, imgsz=imgsz, classes=classes or [0], device=device, verbose=False)
     boxes_xyxy, detections, pts = [], [], []
     if results and len(results) > 0:
         r = results[0]
@@ -67,7 +67,7 @@ def draw_frame(img, boxes_xyxy, level, feat):
     return img
 
 def process_video(model, video_path, out_dir, conf, imgsz, H, scale_mpp, device,
-                   edge_dist, cfg, use_spectral):
+                   edge_dist, cfg, use_spectral, classes=None):
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         print("[ERROR] 无法打开视频:", video_path, file=sys.stderr)
@@ -95,7 +95,7 @@ def process_video(model, video_path, out_dir, conf, imgsz, H, scale_mpp, device,
         if not ok:
             break
         boxes_xyxy, detections, raw_pts = detect_pedestrians(
-            model, frame, conf, imgsz, device, H, scale_mpp)
+            model, frame, conf, imgsz, device, H, scale_mpp, classes)
 
         # Kalman 平滑脚点
         states = tracker.update(raw_pts)   # {id: (x, y, vx, vy)}
@@ -157,10 +157,13 @@ def main():
     parser.add_argument("--homography", default=None)
     parser.add_argument("--scale", type=float, default=None, help="无 H 时的近似比例尺(米/像素)；默认用真实 IPM")
     parser.add_argument("--device", default=None)
+    parser.add_argument("--classes", default="0",
+                        help="检测目标类别，逗号分隔的 COCO id 列表（默认 0=person；如 2,5,7,3=车辆；16=狗；15=猫）")
     parser.add_argument("--edge-dist", type=float, default=EDGE_DIST_M)
     parser.add_argument("--config", default=None)
     parser.add_argument("--spectral", action="store_true", help="启用图拉普拉斯谱特征")
     args = parser.parse_args()
+    classes = [int(x) for x in args.classes.split(",") if x.strip()]
 
     cfg = load_config(args.config)
     edge_dist = cfg.get("edge_dist_m", args.edge_dist)
@@ -174,7 +177,7 @@ def main():
         print("[ERROR] 增强版当前支持视频文件(--input video.mp4)，图片请用 crowd_test.py", file=sys.stderr)
         return 1
     process_video(model, args.input, args.output, args.conf, args.imgsz, H,
-                  args.scale, args.device, edge_dist, cfg, args.spectral)
+                  args.scale, args.device, edge_dist, cfg, args.spectral, args.classes)
 
 if __name__ == "__main__":
     main()

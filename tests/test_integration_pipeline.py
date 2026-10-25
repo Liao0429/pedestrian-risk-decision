@@ -355,7 +355,7 @@ def _make_fake_detector(pts):
     """返回一个替换 detect_pedestrians 的假检测器，恒定返回给定人群脚点。"""
     import crowd_test_enhanced as cte
 
-    def fake_detect(model, frame, conf, imgsz, device, H, scale_mpp):
+    def fake_detect(model, frame, conf, imgsz, device, H, scale_mpp, classes=None):
         boxes_xyxy = []
         detections = []
         ground_pts = []

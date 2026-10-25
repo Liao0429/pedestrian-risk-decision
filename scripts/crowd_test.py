@@ -292,7 +292,7 @@ def draw_annotation(img, boxes, level, feat):
 
 
 def process_image(model, img_path, out_dir, conf, imgsz, H, scale_mpp, device,
-                  edge_dist, cfg=None):
+                  edge_dist, cfg=None, classes=None):
     """处理单张图片，返回统计 dict(失败返回 None 并打印错误)。"""
     basename = os.path.splitext(os.path.basename(img_path))[0]
 
@@ -316,8 +316,8 @@ def process_image(model, img_path, out_dir, conf, imgsz, H, scale_mpp, device,
 
     # ---- 推理 ----
     try:
-        results = model.predict(img, conf=conf, imgsz=imgsz, classes=[0],
-                                device=device, verbose=False)
+        results = model.predict(img, conf=conf, imgsz=imgsz, classes=classes or [0],
+                                        device=device, verbose=False)
     except Exception as e:
         print("[ERROR] 推理失败 %s: %s" % (img_path, e), file=sys.stderr)
         return None
@@ -422,6 +422,8 @@ def main():
                              "默认使用与 C++ 端一致的固定 H 并按图像尺寸缩放")
     parser.add_argument("--scale", type=float, default=None,
                         help="近似比例尺(米/像素)，提供则跳过单应矩阵")
+    parser.add_argument("--classes", default="0",
+                        help="检测目标类别，逗号分隔的 COCO id 列表（默认 0=person；如 2,5,7,3=车辆；16=狗；15=猫）")
     parser.add_argument("--device", default=None,
                         help="推理设备，如 'cpu'/'0'(默认自动选择)")
     parser.add_argument("--edge-dist", type=float, default=EDGE_DIST_M,
@@ -429,6 +431,7 @@ def main():
     parser.add_argument("--config", default=None,
                         help="规则阈值配置文件(JSON)，不提供则用内置默认(与 C++ 一致)")
     args = parser.parse_args()
+    args.classes = [int(x) for x in args.classes.split(",") if x.strip()]
 
     cfg = load_config(args.config)
     edge_dist = cfg.get("edge_dist_m", args.edge_dist)
@@ -465,8 +468,8 @@ def main():
         print("[%d/%d] 处理 %s" % (idx, len(images), img_path))
         try:
             rec = process_image(model, img_path, out_dir,
-                                args.conf, args.imgsz, H, args.scale,
-                                args.device, edge_dist, cfg)
+                                            args.conf, args.imgsz, H, args.scale,
+                                            args.device, edge_dist, cfg, args.classes)
         except Exception as e:
             print("[ERROR] 处理失败 %s: %s" % (img_path, e), file=sys.stderr)
             rec = None
