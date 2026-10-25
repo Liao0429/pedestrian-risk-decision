@@ -11,7 +11,6 @@ crowd_test_enhanced.py - 增强版测试脚本
   python crowd_test_enhanced.py --input dataset/videos50/xxx.mp4 --output results/video_test --spectral --device 0
 """
 import argparse, json, os, sys, time
-from types import SimpleNamespace
 import numpy as np
 import cv2
 from ultralytics import YOLO
@@ -76,6 +75,9 @@ def process_video(model, video_path, out_dir, conf, imgsz, H, scale_mpp, device,
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    if H is None and scale_mpp is None:
+        H = get_homography(width, height)
+        print("[INFO] 未指定 --homography/--scale，使用默认 IPM 标定 H（与基线/C++ 端一致）", file=sys.stderr)
     os.makedirs(out_dir, exist_ok=True)
     base = os.path.splitext(os.path.basename(video_path))[0]
     out_path = os.path.join(out_dir, base + "_enhanced.mp4")
@@ -110,15 +112,18 @@ def process_video(model, video_path, out_dir, conf, imgsz, H, scale_mpp, device,
             except Exception:
                 pass
 
-        # 单帧等级 -> FSM 稳定等级
+        # 单帧等级 -> FSM 稳定等级（RiskFSM.update 期望 Mapping，传 dict）
         raw_level = evaluate_level(n, density, r_gcc, cfg)
-        fs = SimpleNamespace(n=n, density=density, r_gcc=r_gcc)
         try:
             now_ms = int(frame_id * 1000.0 / max(fps, 1))
-            fsm.update(fs, now_ms)
-            lv = fsm.level()
+            # 传 dict 而非 SimpleNamespace：RiskFSM 按 Mapping 读取 features
+            fsm.update({"n": n, "density": density, "r_gcc": r_gcc}, now_ms)
+            # 注意：RiskFSM.level 是属性（返回字符串），不是方法
+            lv = fsm.level
             stable_level = LEVELS[lv] if isinstance(lv, int) else str(lv)
         except Exception as e:
+            # 兜底：FSM 异常时退回单帧规则判定，但打印告警避免静默
+            print("[WARN] FSM 更新失败，回退单帧判定: %s" % e, file=sys.stderr)
             stable_level = raw_level
 
         timeline.append({"frame": frame_id, "level": stable_level, "n": n,
@@ -150,7 +155,7 @@ def main():
     parser.add_argument("--weights", default="yolov8n.pt")
     parser.add_argument("--imgsz", type=int, default=640)
     parser.add_argument("--homography", default=None)
-    parser.add_argument("--scale", type=float, default=0.01, help="无 H 时的近似比例尺(米/像素)")
+    parser.add_argument("--scale", type=float, default=None, help="无 H 时的近似比例尺(米/像素)；默认用真实 IPM")
     parser.add_argument("--device", default=None)
     parser.add_argument("--edge-dist", type=float, default=EDGE_DIST_M)
     parser.add_argument("--config", default=None)
