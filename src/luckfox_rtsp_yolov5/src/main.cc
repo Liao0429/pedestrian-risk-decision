@@ -71,7 +71,13 @@ void mapCoordinates(int *x, int *y) {
 }
 
 
+// ---- 全局停止标志与信号处理（优雅退出，配合 systemd 看门狗自愈） ----
+static volatile sig_atomic_t g_stop = 0;
+static void signal_handler(int sig) { (void)sig; g_stop = 1; }
+
 int main(int argc, char *argv[]) {
+  signal(SIGINT, signal_handler);
+  signal(SIGTERM, signal_handler);
   system("RkLunch-stop.sh");
 
   // ==== 风险决策引擎 + 逆透视变换(IPM)标定 ====
@@ -269,7 +275,7 @@ int main(int argc, char *argv[]) {
   }
   venc_ready = true;
   printf("venc init success\n");
-  	while(1)
+  	while (!g_stop)
 	{	
 		// get vi frame
 		h264_frame.stVFrame.u32TimeRef = H264_TimeRef++;
@@ -406,7 +412,7 @@ int main(int argc, char *argv[]) {
 		if (s32Ret != RK_SUCCESS) {
 			RK_LOGE("RK_MPI_VENC_ReleaseStream fail %x", s32Ret);
 		}
-		memset(text,0,8);
+		memset(text, 0, sizeof text);
 	}
 	// ---- 正常退出：安全清理所有已初始化资源 ----
 	cleanup();
