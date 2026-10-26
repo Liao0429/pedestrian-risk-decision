@@ -79,3 +79,21 @@
   - **引用文件逐一核实存在**：`start_demo.sh`、两段增强视频+timeline、4 张真机抓帧、架构图/硬件 3D 图
 - ✅ 同步更新：README 文档索引补 `DEMO_SCRIPT.md`；KANBAN **T6 标记完成**；FINAL_REPORT 完成度 **96% → 97%**、答辩准备段补现场讲稿
 - ✅ 看板全部任务（T0-T8）现已 **全部完成**，无进行中项
+
+## 后续推进（心跳第 7 轮，收口 review2 P1-8 单应矩阵硬编码）
+
+- ✅ **落地「单应矩阵外部标定文件加载」**（响应 review2 `fix_recheck.md` 中唯一未修的 P1-8 高优项：main.cc 硬编码 srcPts/dstPts 四点，相机位姿变化需重编译）：
+  - `include/ipm_transform.h` 新增 `loadHomographyFromFile(path, H)` 与 `loadHomographyOr(path, fallback)`：
+    - 读取文本 3x3 单应（空格/逗号分隔，与 Python `src/algorithms/ipm_calibrate.py` 的 `save_homography(..., .txt/.csv)` 输出兼容）
+    - 校验恰好 9 个数值、拒绝分母行全 0 的退化透视、文件缺失返回 false（不抛异常，便于回退）
+    - 返回 `cv::Mat(3,3,CV_64F)`，天然满足 security_robustness 对 `setHomography` 的类型要求
+  - `include/risk_config.h`：`RiskConfig` 新增可选字段 `homography_file`（空串=用默认），`loadRiskConfig` 校验必须是字符串
+  - `src/main.cc`：配置了 `homography_file` 时优先加载外部标定并打日志，加载失败回退默认硬编码单应并告警；删除原先重复的 `loadRiskConfigOr` 调用
+  - `config/default_config.json` 新增 `"homography_file": ""` 及注释；`README.md` / `KANBAN.md` / `FINAL_REPORT.md` 同步更新
+- ✅ **测试**：`tests/test_risk_config.cc` 新增 `test_homography_file_field`（缺失默认空串/正常读取/非法类型抛异常）与 `test_load_homography_file`（合法空格/逗号 CSV/文件缺失/数值不足/退化矩阵/loadHomographyOr 回退）
+- ✅ **验证（全真实）**：
+  - Python 全量 **137 passed**
+  - 旧电脑（192.168.0.68）主机 g++ 编译运行 test_risk_config：**30/30 通过**（OpenCV 缺失时加载函数走 SKIP，配置字段测试真实运行）
+  - Luckfox SDK 交叉编译 `luckfox_pico_rtsp_yolov5`：**编译链接成功**（无新增错误）
+  - 交叉编译独立板端测试 `homography_load_test`，传开发板 192.168.0.136 真实运行：`load ok=1 type=6(CV_64F)`、`map(0,480)->(173.469391,1081.632690)` 与手工齐次计算完全一致（w=1.96, x=340/1.96=173.47, y=2120/1.96=1081.63）；6 个数值/退化矩阵/文件缺失均正确返回 false
+- 📌 看板新增 **T9 完成**：至此 review2 全部高优项（P0/P1 及 P1-8）均已落地，剩余仅硬件采购实测与 RTSP/网页鉴权等非主线项

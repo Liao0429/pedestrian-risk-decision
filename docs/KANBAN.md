@@ -16,6 +16,7 @@
 | T6 | 答辩演示打磨：美观/截图/预录视频/演示脚本 | ✅ 完成 | DEMO_SCRIPT.md 讲稿+故障预案落地，DEMO_VIDEO.md/截图/视频已核实 |
 | T7 | 心跳cron自检 + 看板更新 + 最终验收报告 | ✅ 完成 | docs/FINAL_REPORT.md 已生成 |
 | T8 | 按类别差异化置信度阈值（车辆/动物语义不同） | ✅ 完成 | 心跳第5轮落地，commit 见日志；C++ 27/27 + Python 137 过 |
+| T9 | P2 单应外部标定文件加载（review2 P1-8 硬编码） | ✅ 完成 | 心跳第7轮落地：`homography_file` 配置 + `loadHomographyFromFile`，交叉编译过，板端 ARM 验证 |
 
 ## 进度日志
 
