@@ -56,17 +56,18 @@ import time
 
 import numpy as np
 
+# 依赖延迟加载：cv2/ultralytics 仅 CLI 检测/可视化需要，算法纯函数
+# （compute_features/evaluate_level/load_config）可在无这些库的环境导入，
+# 便于单元测试与 CI 轻量运行。缺失时置 None，在 main() 统一报错。
 try:
     import cv2
-except ImportError as e:  # pragma: no cover
-    sys.exit("[crowd_test] 缺少 opencv，请先安装: pip install opencv-python-headless\n"
-             "原始错误: %s" % e)
+except ImportError:  # pragma: no cover
+    cv2 = None
 
 try:
     from ultralytics import YOLO
-except ImportError as e:  # pragma: no cover
-    sys.exit("[crowd_test] 缺少 ultralytics，请先安装: pip install ultralytics\n"
-             "原始错误: %s" % e)
+except ImportError:  # pragma: no cover
+    YOLO = None
 
 
 # ----------------------------------------------------------------------
@@ -404,6 +405,10 @@ def collect_images(input_path):
 
 
 def main():
+    if cv2 is None:
+        sys.exit("[crowd_test] 缺少 opencv，请先安装: pip install opencv-python-headless")
+    if YOLO is None:
+        sys.exit("[crowd_test] 缺少 ultralytics，请先安装: pip install ultralytics")
     parser = argparse.ArgumentParser(
         description="YOLO 行人检测 + 复杂网络拥挤度/风险等级测试")
     parser.add_argument("--input", required=True,
