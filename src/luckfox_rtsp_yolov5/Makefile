@@ -101,6 +101,7 @@ luckfox:
 	    $(SRC_DIR)/yolov5.cc \
 	    $(SRC_DIR)/postprocess.cc \
 	    $(SRC_DIR)/luckfox_mpi.cc \
+	    $(SRC_DIR)/preprocess.cc \
 	    -L$(LUCKFOX_SDK_ROOT)/lib -lrknnmrt -lrtsp_demo -lopencv_core -lopencv_imgproc \
 	    -lpthread -o luckfox_pico_rtsp_yolov5
 	@echo "产物: ./luckfox_pico_rtsp_yolov5（用 CROSS_COMPILE 前缀调用 $(CXX) 即交叉编译）"
@@ -110,6 +111,7 @@ clean:
 	      $(TEST_DIR)/test_minijson \
 	      $(TEST_DIR)/test_risk_config \
 	      $(TEST_DIR)/test_golden_regression \
+	      $(TEST_DIR)/test_preprocess \
 	      luckfox_pico_rtsp_yolov5
 
 help:

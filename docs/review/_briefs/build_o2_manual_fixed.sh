@@ -6,7 +6,7 @@ mkdir -p /tmp/o2build
 INC="-I$SDK/example/luckfox_pico_rtsp_yolov5/include -I$SDK -I$SDK/utils -I$SDK/common -I$SDK/common/isp3.x -I$SDK/include -I$SDK/include/rknn -I$SDK/include/librga -I$SDK/include/rkaiq -I$SDK/include/rkaiq/uAPI2 -I$SDK/include/rkaiq/common -I$SDK/include/rkaiq/xcore -I$SDK/include/rkaiq/algos -I$SDK/include/rkaiq/iq_parser -I$SDK/include/rkaiq/iq_parser_v2 -I$SDK/include/rkaiq/smartIr -I$SDK/include/opencv4"
 DEFS="-DRV1106_1103 -DISP_HW_V30 -DRKPLATFORM=ON -DARCH64=OFF -DUAPI2 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
 cd $SDK/example/luckfox_pico_rtsp_yolov5
-for f in src/main.cc src/enhanced_decision.cc src/luckfox_mpi.cc src/postprocess.cc src/risk_engine.cc src/yolov5.cc; do
+for f in src/main.cc src/enhanced_decision.cc src/luckfox_mpi.cc src/postprocess.cc src/risk_engine.cc src/yolov5.cc src/preprocess.cc; do
   obj=/tmp/o2build/$(basename $f .cc).o
   echo "编译 $f -> $obj"
   $CXX -std=c++11 -O2 $DEFS $INC -c $f -o $obj

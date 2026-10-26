@@ -148,10 +148,8 @@ int main(int argc, char *argv[]) {
     int ret = 0;
     char text[32];
     rknn_app_context_t rknn_app_ctx;
-    object_detect_result_list od_results;
-    // 图像预处理 letterbox 预计算参数（阶段八：NV12 直接采样生成 RGB letterbox）
-    pedestrian::LetterboxParams g_lb_params;
-    memset(&rknn_app_ctx, 0, sizeof(rknn_app_context_t));
+        object_detect_result_list od_results;
+        memset(&rknn_app_ctx, 0, sizeof(rknn_app_context_t));
 
   VENC_STREAM_S stFrame;
   memset(&stFrame, 0, sizeof(stFrame));
@@ -341,22 +339,7 @@ int main(int argc, char *argv[]) {
   }
   venc_ready = true;
     printf("venc init success\n");
-
-    // 预计算 letterbox 参数（几何与旧 letterbox() 一致），并同步全局几何变量
-    // （mapCoordinates / IPM 依赖 scale、leftPadding、topPadding）。
-    if (pedestrian::letterbox_prepare(width, height, model_width, model_height,
-                                      &g_lb_params) != 0) {
-      fprintf(stderr, "[FATAL] letterbox_prepare 失败\n");
-      cleanup();
-      return -1;
-    }
-    scale = (float)g_lb_params.roi_w / (float)width;
-    leftPadding = g_lb_params.left_pad;
-    topPadding  = g_lb_params.top_pad;
-    printf("[PREPROC] letterbox 几何: roi=%dx%d pad=%d,%d scale=%.4f\n",
-           g_lb_params.roi_w, g_lb_params.roi_h,
-           g_lb_params.left_pad, g_lb_params.top_pad, scale);
-  	// ---- 主循环看门狗计数（取帧连续失败判定挂死；编码/RTSP 失败仅告警） ----
+   	// ---- 主循环看门狗计数（取帧连续失败判定挂死；编码/RTSP 失败仅告警） ----
 	int vi_consec_fail = 0;
 	int venc_send_fail = 0;
 	int venc_stream_fail = 0;
@@ -392,16 +375,11 @@ int main(int argc, char *argv[]) {
 						    static_cast<const uint8_t *>(vi_data), g_lb_params,
 						    static_cast<uint8_t *>(rknn_app_ctx.input_mems[0]->virt_addr));
 						{
-							const unsigned long long t_now = profileNowUs();
-							g_prof.us_letterbox += t_now - t_mark;
-							t_mark = t_now;
-						}
-			{
-				const unsigned long long t_now = profileNowUs();
-				g_prof.us_letterbox += t_now - t_mark;
-				t_mark = t_now;
-			}
-			inference_yolov5_model(&rknn_app_ctx, &od_results);
+													const unsigned long long t_now = profileNowUs();
+													g_prof.us_letterbox += t_now - t_mark;
+													t_mark = t_now;
+												}
+												inference_yolov5_model(&rknn_app_ctx, &od_results);
 			{
 				const unsigned long long t_now = profileNowUs();
 				g_prof.us_rknn += t_now - t_mark;
