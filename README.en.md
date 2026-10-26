@@ -13,7 +13,7 @@
 - **Temporal decision**: multi-object Kalman tracking (nearest-neighbor association) + FSM finite-state machine (hysteresis / debounce / DANGER hold); ByteTrack/EMA modules are standalone with unit tests (optional extension)
 - **Risk grading**: real-time **SAFE / WARNING / DANGER** three-level output
 - **Configurable**: rule thresholds loaded from JSON (`config/default_config.json`)
-- **Edge performance**: NEON-optimized preprocessing (CPU preprocess 136ms→33ms), **7.46 FPS** measured, ~11MB RSS, 1h+ long-run with zero restart (watchdog + bounded timeouts)
+- **Edge performance**: NEON-optimized preprocessing (CPU preprocess 136ms→33ms), **7.46 FPS** measured, ~11MB RSS, 2.5h+ long-run with zero restart (watchdog + bounded timeouts)
 - **Extensible hardware**: dual-servo gimbal, voice alert, color touchscreen, physical switch (`docs/hardware/`)
 
 ## 🏗️ System Architecture
@@ -93,7 +93,7 @@ Details: `results/rerun/_ablation.json` and `docs/figures/fig_ablation.png`.
 | Frame rate (after NEON) | **6.30 → 7.46 FPS (+18%)** |
 | CPU preprocessing (letterbox+RGB) | **136ms → 33ms (-76%, NEON)** |
 | Memory (RSS) | **~10.5-10.9MB** |
-| Long-run (systemd watchdog + bounded timeouts) | **1h+ zero restart, zero error** (t0~t4 snapshots) |
+| Long-run (systemd watchdog + bounded timeouts) | **2.5h+ zero restart, zero error** (t0~t5 snapshots) |
 | On-board golden tests | **174/174 passed** (NEON vs scalar) |
 | Main-loop protection | VI/VENC 1s bounded timeout; 30 consecutive failures → exit, watchdog restarts |
 
