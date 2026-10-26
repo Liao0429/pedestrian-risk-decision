@@ -90,8 +90,8 @@ pedestrian-risk-decision/
 - 人群聚集场景（SAFE → WARNING → DANGER 风险过渡，FSM 稳定）：
   [![人群聚集增强演示](docs/figures/demo_mixkit_134.png)](results/demo/mixkit_134_enhanced.mp4)
 
-- 稀疏/无人场景（零误报）：
-  [![稀疏场景增强](docs/figures/demo_mixkit_13265.png)](results/video_enhanced_fsm/mixkit_13265_enhanced.mp4)
+- 稀疏/无人场景（真实少人，零误报）：
+  [![稀疏场景增强](docs/figures/demo_mixkit_50134.png)](results/demo/mixkit_50134_enhanced.mp4)
 
 > 视频为真实数据集（Mixkit）经 `scripts/crowd_test_enhanced.py`（Kalman + 谱特征 + FSM）处理生成；逐帧时间线 JSON 在 `results/rerun/video_enhanced/` 与 `results/video_enhanced_fsm/`。
 
