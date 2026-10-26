@@ -295,6 +295,34 @@ void test_fsm_invalid_weights() {
     std::remove(kTmpPath);
 }
 
+void test_frame_dt_loading() {
+    // 缺失 -> 默认 1/30
+    writeFile(R"({"edge_dist_m": 2.5})");
+    pedestrian::RiskConfig cfg = pedestrian::loadRiskConfig(kTmpPath);
+    CHECK(std::fabs(cfg.frame_dt - 1.0 / 30.0) < 1e-9);
+    std::remove(kTmpPath);
+
+    // 正常读取
+    writeFile(R"({"frame_dt": 0.1})");
+    cfg = pedestrian::loadRiskConfig(kTmpPath);
+    CHECK(std::fabs(cfg.frame_dt - 0.1) < 1e-9);
+    std::remove(kTmpPath);
+
+    // 非正数 -> 抛异常
+    writeFile(R"({"frame_dt": -0.1})");
+    bool threw = false;
+    try { pedestrian::loadRiskConfig(kTmpPath); } catch (const std::runtime_error&) { threw = true; }
+    CHECK(threw);
+    std::remove(kTmpPath);
+
+    // 非数字 -> 抛异常
+    writeFile(R"({"frame_dt": "fast"})");
+    threw = false;
+    try { pedestrian::loadRiskConfig(kTmpPath); } catch (const std::runtime_error&) { threw = true; }
+    CHECK(threw);
+    std::remove(kTmpPath);
+}
+
 #if HAS_OPENCV
 void test_load_homography_file() {
     const char* kHPath = "tmp_ipm_homography_test.txt";
@@ -404,6 +432,7 @@ int main() {
     test_fsm_missing_uses_default();
     test_fsm_invalid_hysteresis();
     test_fsm_invalid_weights();
+    test_frame_dt_loading();
     test_load_homography_file();
     test_risk_engine_config();
 

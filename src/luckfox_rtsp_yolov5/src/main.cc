@@ -112,6 +112,7 @@ int main(int argc, char *argv[]) {
   pedestrian::EnhancedConfig enhancedCfg;
   enhancedCfg.edge_dist_m = riskCfg.edge_dist_m;
   enhancedCfg.fsm = riskCfg.fsm;      // FSM 参数走 JSON 配置（与 Python 端一致）
+  enhancedCfg.frame_dt = riskCfg.frame_dt;  // Kalman 时间基准走配置（按实际帧率调整）
   pedestrian::EnhancedDecision enhancedDecision(enhancedCfg);
 
   // ---- 资源句柄与初始化状态（任一关键初始化失败时安全清理） ----
@@ -405,33 +406,37 @@ int main(int argc, char *argv[]) {
 			}
 
 		}
-		memcpy(data, frame.data, width * height * 3);					
-		
-		// encode H264
-		RK_MPI_VENC_SendFrame(0, &h264_frame,-1);
-
-		// rtsp
-		s32Ret = RK_MPI_VENC_GetStream(0, &stFrame, -1);
-		if(s32Ret == RK_SUCCESS)
+		// ---- 取帧成功后才编码/推流/释放（失败时跳过本帧，避免陈旧帧编码与错误释放）----
+		if (s32Ret == RK_SUCCESS)
 		{
-			if(g_rtsplive && g_rtsp_session)
-			{
-				//printf("len = %d PTS = %d \n",stFrame.pstPack->u32Len, stFrame.pstPack->u64PTS);	
-				void *pData = RK_MPI_MB_Handle2VirAddr(stFrame.pstPack->pMbBlk);
-				rtsp_tx_video(g_rtsp_session, (uint8_t *)pData, stFrame.pstPack->u32Len,
-							  stFrame.pstPack->u64PTS);
-				rtsp_do_event(g_rtsplive);
-			}
-		}
+			memcpy(data, frame.data, width * height * 3);
 
-		// release frame 
-		s32Ret = RK_MPI_VI_ReleaseChnFrame(0, 0, &stViFrame);
-		if (s32Ret != RK_SUCCESS) {
-			RK_LOGE("RK_MPI_VI_ReleaseChnFrame fail %x", s32Ret);
-		}
-		s32Ret = RK_MPI_VENC_ReleaseStream(0, &stFrame);
-		if (s32Ret != RK_SUCCESS) {
-			RK_LOGE("RK_MPI_VENC_ReleaseStream fail %x", s32Ret);
+			// encode H264
+			RK_MPI_VENC_SendFrame(0, &h264_frame,-1);
+
+			// rtsp
+			s32Ret = RK_MPI_VENC_GetStream(0, &stFrame, -1);
+			if(s32Ret == RK_SUCCESS)
+			{
+				if(g_rtsplive && g_rtsp_session)
+				{
+					//printf("len = %d PTS = %d \n",stFrame.pstPack->u32Len, stFrame.pstPack->u64PTS);
+					void *pData = RK_MPI_MB_Handle2VirAddr(stFrame.pstPack->pMbBlk);
+					rtsp_tx_video(g_rtsp_session, (uint8_t *)pData, stFrame.pstPack->u32Len,
+								  stFrame.pstPack->u64PTS);
+					rtsp_do_event(g_rtsplive);
+				}
+				s32Ret = RK_MPI_VENC_ReleaseStream(0, &stFrame);
+				if (s32Ret != RK_SUCCESS) {
+					RK_LOGE("RK_MPI_VENC_ReleaseStream fail %x", s32Ret);
+				}
+			}
+
+			// release VI frame（成功取帧后必须释放）
+			s32Ret = RK_MPI_VI_ReleaseChnFrame(0, 0, &stViFrame);
+			if (s32Ret != RK_SUCCESS) {
+				RK_LOGE("RK_MPI_VI_ReleaseChnFrame fail %x", s32Ret);
+			}
 		}
 		memset(text, 0, sizeof text);
 	}

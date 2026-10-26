@@ -59,6 +59,7 @@ struct RiskConfig {
     std::vector<int> target_classes{0};  // 检测目标类别集合（COCO id），默认 [0]=person；可切换 [2,5,7,3]=车辆等
     std::map<int,float> class_conf_thresholds;  // 按类别差异化置信度阈值（COCO id -> 最低置信度 0~1）。空=不区分（仅用全局 BOX_THRESH）
     RiskFSMConfig fsm;                  // 增强决策 FSM 参数（默认与 Python 端 RiskFSMConfig 一致，可 JSON 配置）
+    double frame_dt = 1.0 / 30.0;       // Kalman 平滑的帧间隔（秒）；默认 30FPS，板端实际帧率低时应按实测配置
     RiskRule danger;                // DANGER 阈值（默认 10 / 0.55 / 0.80）
     RiskRule warning{5.0, 0.28, 0.55};  // WARNING 阈值（默认 5 / 0.28 / 0.55）
 
@@ -195,6 +196,13 @@ inline RiskConfig loadRiskConfig(const std::string& path) {
                 throw std::runtime_error("warning.gcc 必须在 [0,1]");
             cfg.warning.gcc = gcc->asDouble();
         }
+    }
+
+    // 增强决策 Kalman 帧间隔（可选，秒）。缺失用默认 1/30（30FPS）。
+    if (const minijson::Value* v = root.find("frame_dt")) {
+        if (!v->isNumber() || v->asDouble() <= 0.0)
+            throw std::runtime_error("frame_dt 必须为正数（秒，如 0.1 表示 10FPS）");
+        cfg.frame_dt = v->asDouble();
     }
 
     // 增强决策 FSM 参数（可选）。缺失时用默认 RiskFSMConfig（与 Python 端一致）。

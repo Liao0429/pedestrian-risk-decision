@@ -119,11 +119,19 @@ int venc_init(int chnId, int width, int height, RK_CODEC_ID_E enType) {
 	stAttr.stVencAttr.u32BufSize = width * height * 3 / 2;
 	stAttr.stVencAttr.enMirror = MIRROR_NONE;
 
-	RK_MPI_VENC_CreateChn(chnId, &stAttr);
+	RK_S32 venc_ret = RK_MPI_VENC_CreateChn(chnId, &stAttr);
+	if (venc_ret != RK_SUCCESS) {
+		printf("RK_MPI_VENC_CreateChn %x\n", venc_ret);
+		return -1;
+	}
 
 	memset(&stRecvParam, 0, sizeof(VENC_RECV_PIC_PARAM_S));
 	stRecvParam.s32RecvPicNum = -1;
-	RK_MPI_VENC_StartRecvFrame(chnId, &stRecvParam);
+	venc_ret = RK_MPI_VENC_StartRecvFrame(chnId, &stRecvParam);
+	if (venc_ret != RK_SUCCESS) {
+		printf("RK_MPI_VENC_StartRecvFrame %x\n", venc_ret);
+		return -1;
+	}
 
 	return 0;
 }
