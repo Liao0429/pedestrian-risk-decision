@@ -452,3 +452,19 @@
   无 203/EXEC 循环；服务全程 active，无 `rknn_run fail`/看门狗告警。
 - 对应提交：`795a2ec`、`cf72a67`、`5743c16`、`fd47944`。
 - 主机黄金测试（标量路径）仍 **174 通过**；`pytest` **158 passed**。
+
+## 阶段九：长稳数据采集起点（2026-10-27 凌晨）
+
+NEON 版已部署并稳定运行。为 8h/24h 长稳测试建立可复现采集机制：
+
+- 新增 `scripts/board_health_snapshot.py`：SSH（paramiko）**无侵入**采集板端健康快照
+  （服务状态/NRestarts、看门狗、进程 RSS/VSZ、内存、日志错误计数、`[PROFILE]` 最新性能、
+  25s 实测 FPS），追加到 `results/edge_board/long_stability.jsonl`。
+- **t0 基线**（2026-10-27 04:10，NEON 版部署后约 21 分钟）：
+  - `pedestrian-risk`：**active/running，NRestarts=0**（自 03:49:24 部署以来零重启）；看门狗 active。
+  - 日志：`rknn_run fail` = 0；当前进程 journal 错误 = **0**。
+  - 实测 FPS：**7.48**（25s 采样）；`[PROFILE]` 稳定：cvt_resize ~7ms、letterbox ~26ms、
+    rknn ~91ms、total ~134ms。
+  - 内存：进程 RSS 11.2MB / 系统可用 170MB，无泄漏迹象。
+- **历史 journal 噪音说明**：00:00–03:49 部署迭代期存在 `Permission denied` 与服务重启计数
+  （部署过程产物），**非当前运行错误**；采集脚本已按当前进程 PID 过滤（`_PID=`）。

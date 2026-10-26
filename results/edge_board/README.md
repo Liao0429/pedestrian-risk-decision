@@ -47,3 +47,21 @@ sudo LD_LIBRARY_PATH=./lib ./luckfox_pico_rtsp_yolov5
 # 查看增强决策实时日志
 tail -f /tmp/enhanced_run.log   # 或按实际重定向路径
 ```
+
+## 长稳数据（long_stability.jsonl）
+
+`long_stability.jsonl` 是开发板健康快照时间序列（8h/24h 长稳测试数据源），
+由 `scripts/board_health_snapshot.py` 采集，每行一个 JSON 快照：
+
+- 服务状态：`pedestrian-risk` / 看门狗 的 ActiveState、NRestarts、启动时间
+- 进程：PID、RSS/VSZ、运行时长、真实 exe 路径
+- 系统：内存/交换使用、日志新鲜度、`rknn_run fail` 计数
+- 性能：最近 `[PROFILE]` 各阶段耗时（cvt_resize/letterbox/rknn/total/FPS）+ 25s 实测 FPS
+- 错误：当前进程 journal 错误计数（已按 PID 过滤部署迭代期噪音）
+
+复现：
+
+```bash
+cd H:/PedestrianRiskDecision   # 或仓库根目录
+python scripts/board_health_snapshot.py --fps-samples 25
+```
