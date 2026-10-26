@@ -7,7 +7,7 @@
 #
 # 依赖：
 #   - 主机测试仅需 g++（C++11）。
-#   - 交叉编译需要 Luckfox 官方工具链 + RKNN/RTSP/OpenCV 库（见 docs/INTEGRATION_PLAN.md）。
+#   - 交叉编译需要 Luckfox 官方工具链 + RKNN/RTSP/OpenCV 库（见 docs/ARCHITECTURE.md）。
 # =============================================================================
 
 CXX      ?= g++

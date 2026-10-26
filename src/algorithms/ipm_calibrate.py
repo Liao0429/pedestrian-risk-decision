@@ -15,7 +15,7 @@ cv2.getPerspectiveTransform 求解固定单应矩阵 H（3x3），实现
   - 命令行交互标定：给定 4 组像素点与地面点，输出 H 并保存
 
 依赖：numpy、opencv-python（cv2）。
-板端 C++ 集成参考 docs/ALGORITHM_UPGRADE.md。
+板端 C++ 集成参考 docs/algorithms.md。
 
 用法示例
 --------
