@@ -319,3 +319,52 @@
 - **修复**：`chmod +x` + `systemctl restart pedestrian-risk`，服务恢复 active，PROFILE 持续输出。
 - **教训**：SFTP 上传二进制后必须 `chmod +x` 再 `mv` 覆盖（第一次部署做了，第二次漏掉）。
 - 已恢复运行，板端当前二进制即 P1-6 打点版本（md5 `e85051c0...`）。
+---
+
+## 七、谱特征接入 FSM 实验裁决（2026-10-27，P1-1 关闭：不采纳）
+
+> 依据：Agent3/交叉A 裁决遗留——消融 C 组=B 组的根因是谱特征只计算未接入 FSM。
+> 新增 `scripts/spectral_fsm_experiment.py` + `tests/test_spectral_fsm_experiment.py`（8 测试）。
+> 对应提交：见本阶段 commit。结果 JSON：`results/rerun/_spectral_fsm_experiment.json`。
+
+## 1. 方法（完全离线、可复现，不改生产代码）
+- **场景判别**：复用 scenario_test 的 10 个合成场景，用谱修正 FSM 重算 20 帧稳定等级。
+- **111 条视频离线重算**：读 `results/rerun/video_enhanced/*/timeline.json`（45021 帧），
+  先以原配置重算（M0 一致性校验），再扫描谱修正模式。
+- **谱修正模式**（SpectralRiskFSM 子类，不修改 `risk_fsm.py`）：
+  - M1 正反馈：`score += w4 * fiedler_norm`（谱连通度越高风险越高）
+  - M2 抑制：`score -= w4 * (1-fiedler_norm) * r_gcc`（高 r_gcc 但低 fiedler → 降分）
+  - `fiedler_norm = fiedler/(fiedler+1)`；fiedler<=0 视为不可用（中性 0.5）。
+
+## 2. 结果
+- **M0 一致性**：ms33 模式重算与 timeline 等级一致率 **99.70%**（44888/45021）→ 重算方法可靠；
+  M0 全局 DANGER 帧 7909 / 切换均 3.97 / DANGER 视频 40，与上一轮真实基线（7807/4.0/40）吻合。
+- **场景判别**：n10_chain（10 人 1.5m 串排）在 M0 即为 **WARNING**（FSM 已抑制规则引擎的
+  DANGER 误判）；n10_cluster（紧密团）在所有模式保持 DANGER；分散/两簇场景不受影响。
+- **111 条视频扫描**：
+  | 模式 | DANGER帧 | 切换均/视频 | DANGER视频 |
+  |---|---|---|---|
+  | M0 | 7909 | 3.97 | 40 |
+  | M1_0.1 | 12714 | 5.31 | 68 |
+  | M1_0.2 | 14598 | 6.14 | 72 |
+  | M2_0.05 | 4954 | 3.18 | 26 |
+  | M2_0.1 | 3580 | 4.00 | 21 |
+  | M2_0.2 | 1869 | 3.68 | 12 |
+
+## 3. 裁决（实验证据，非投票）
+- **拒绝 M1（正反馈）**：DANGER 视频 40→65+，过度敏感；fiedler>0 的帧普遍加分，与
+  “局部聚集”语义脱钩，无 GT 支持。
+- **拒绝 M2（抑制）**：fiedler 分布检验证明其非语义增益——M2_0.1 被降级帧的 fiedler
+  中位数 **0.83**，仍 DANGER 帧中位数 **0.69**（被降级的反而更高）。原因是 DANGER 帧
+  r_gcc≈1，惩罚项 `w4*(1-fiedler_norm)*r_gcc` 对几乎所有 DANGER 帧近似常数（~0.05-0.06 分），
+  实际是**整体阈值偏移**，把边缘 DANGER 帧推回 WARNING，而非区分“链状伪聚集”。
+- **关键背景**：FSM 本身已把链状场景压为 WARNING（场景判别 M0），谱修正的边际收益有限；
+  且当前评分公式下 fiedler 与 r_gcc 高度相关，谱项无法提供独立区分度。
+- **结论**：谱特征**不接入**生产 FSM（C++ `enhanced_decision.cc` 维持现状：计算+显示+日志）。
+  消融 C 组=B 组的表述收敛为：“谱特征未接入决策；接入实验（M1/M2）证明无独立语义增益，
+  故不采纳”——论文/答辩引用 `_spectral_fsm_experiment.json` 作为候选方向已实验验证的证据。
+
+## 4. 验证与回退
+- `pytest tests/` → **158 passed**（150 原有 + 8 新增谱实验测试）。
+- 未修改生产代码（risk_fsm.py / enhanced_decision.cc 零改动）→ 无需回退；
+  实验脚本与结果 JSON 已提交，可随时重跑复现。

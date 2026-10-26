@@ -1,0 +1,440 @@
+{
+  "method": "离线重算：results/rerun/video_enhanced/*/timeline.json；M0=原配置（校验），M1=谱正反馈，M2=谱抑制",
+  "fiedler_norm": "fiedler/(fiedler+1)；fiedler<=0 视为不可用（中性 0.5）",
+  "now_ms_mode": "ms33",
+  "scenarios": [
+    {
+      "name": "n8_dispersed",
+      "desc": "8 人完全分散（间距3m）",
+      "n": 8,
+      "density": 0.0,
+      "r_gcc": 0.125,
+      "clustering": 0.0,
+      "fiedler": 0.0,
+      "levels": {
+        "M0": "SAFE",
+        "M1_0.05": "SAFE",
+        "M1_0.1": "SAFE",
+        "M1_0.2": "SAFE",
+        "M2_0.05": "SAFE",
+        "M2_0.1": "SAFE",
+        "M2_0.2": "SAFE"
+      }
+    },
+    {
+      "name": "n8_pairs",
+      "desc": "8 人=4个二人组（组间3m）",
+      "n": 8,
+      "density": 0.1429,
+      "r_gcc": 0.25,
+      "clustering": 0.0,
+      "fiedler": 0.0,
+      "levels": {
+        "M0": "SAFE",
+        "M1_0.05": "SAFE",
+        "M1_0.1": "SAFE",
+        "M1_0.2": "SAFE",
+        "M2_0.05": "SAFE",
+        "M2_0.1": "SAFE",
+        "M2_0.2": "SAFE"
+      }
+    },
+    {
+      "name": "n8_cluster",
+      "desc": "8 人紧密网格（0.8m）",
+      "n": 8,
+      "density": 0.9643,
+      "r_gcc": 1.0,
+      "clustering": 0.9643,
+      "fiedler": 6.0,
+      "levels": {
+        "M0": "DANGER",
+        "M1_0.05": "DANGER",
+        "M1_0.1": "DANGER",
+        "M1_0.2": "DANGER",
+        "M2_0.05": "DANGER",
+        "M2_0.1": "DANGER",
+        "M2_0.2": "DANGER"
+      }
+    },
+    {
+      "name": "n10_dispersed",
+      "desc": "10 人完全分散（间距3m）",
+      "n": 10,
+      "density": 0.0,
+      "r_gcc": 0.1,
+      "clustering": 0.0,
+      "fiedler": 0.0,
+      "levels": {
+        "M0": "SAFE",
+        "M1_0.05": "SAFE",
+        "M1_0.1": "SAFE",
+        "M1_0.2": "SAFE",
+        "M2_0.05": "SAFE",
+        "M2_0.1": "SAFE",
+        "M2_0.2": "SAFE"
+      }
+    },
+    {
+      "name": "n10_two_clusters",
+      "desc": "10 人=两个5人簇（簇距4m）",
+      "n": 10,
+      "density": 0.4444,
+      "r_gcc": 0.5,
+      "clustering": 1.0,
+      "fiedler": 0.0,
+      "levels": {
+        "M0": "WARNING",
+        "M1_0.05": "WARNING",
+        "M1_0.1": "WARNING",
+        "M1_0.2": "WARNING",
+        "M2_0.05": "WARNING",
+        "M2_0.1": "WARNING",
+        "M2_0.2": "WARNING"
+      }
+    },
+    {
+      "name": "n10_cluster",
+      "desc": "10 人紧密网格（0.8m）",
+      "n": 10,
+      "density": 0.8222,
+      "r_gcc": 1.0,
+      "clustering": 0.885,
+      "fiedler": 4.3187,
+      "levels": {
+        "M0": "DANGER",
+        "M1_0.05": "DANGER",
+        "M1_0.1": "DANGER",
+        "M1_0.2": "DANGER",
+        "M2_0.05": "DANGER",
+        "M2_0.1": "DANGER",
+        "M2_0.2": "DANGER"
+      }
+    },
+    {
+      "name": "n10_chain",
+      "desc": "10 人链状（1.5m 间距）",
+      "n": 10,
+      "density": 0.2,
+      "r_gcc": 1.0,
+      "clustering": 0.0,
+      "fiedler": 0.0979,
+      "levels": {
+        "M0": "WARNING",
+        "M1_0.05": "WARNING",
+        "M1_0.1": "WARNING",
+        "M1_0.2": "WARNING",
+        "M2_0.05": "WARNING",
+        "M2_0.1": "WARNING",
+        "M2_0.2": "SAFE"
+      }
+    },
+    {
+      "name": "n12_dispersed",
+      "desc": "12 人完全分散（间距3m）",
+      "n": 12,
+      "density": 0.0,
+      "r_gcc": 0.0833,
+      "clustering": 0.0,
+      "fiedler": 0.0,
+      "levels": {
+        "M0": "SAFE",
+        "M1_0.05": "SAFE",
+        "M1_0.1": "SAFE",
+        "M1_0.2": "SAFE",
+        "M2_0.05": "SAFE",
+        "M2_0.1": "SAFE",
+        "M2_0.2": "SAFE"
+      }
+    },
+    {
+      "name": "n12_cluster",
+      "desc": "12 人紧密网格（0.8m）",
+      "n": 12,
+      "density": 0.803,
+      "r_gcc": 1.0,
+      "clustering": 0.8662,
+      "fiedler": 5.1322,
+      "levels": {
+        "M0": "DANGER",
+        "M1_0.05": "DANGER",
+        "M1_0.1": "DANGER",
+        "M1_0.2": "DANGER",
+        "M2_0.05": "DANGER",
+        "M2_0.1": "DANGER",
+        "M2_0.2": "DANGER"
+      }
+    },
+    {
+      "name": "n12_two_clusters",
+      "desc": "12 人=两个6人簇（簇距5m）",
+      "n": 12,
+      "density": 0.4545,
+      "r_gcc": 0.5,
+      "clustering": 1.0,
+      "fiedler": 0.0,
+      "levels": {
+        "M0": "WARNING",
+        "M1_0.05": "WARNING",
+        "M1_0.1": "WARNING",
+        "M1_0.2": "WARNING",
+        "M2_0.05": "WARNING",
+        "M2_0.1": "WARNING",
+        "M2_0.2": "WARNING"
+      }
+    }
+  ],
+  "video_summary": {
+    "M0": {
+      "mode": "M0",
+      "w4": 0.0,
+      "frames": 45021,
+      "DANGER_frames": 7909,
+      "WARNING_frames": 11461,
+      "SAFE_frames": 25651,
+      "switches_total": 441,
+      "switches_avg_per_video": 3.97,
+      "DANGER_videos": 40,
+      "now_ms_mode": "ms33"
+    },
+    "M1_0.05": {
+      "mode": "M1",
+      "w4": 0.05,
+      "frames": 45021,
+      "DANGER_frames": 11984,
+      "WARNING_frames": 8636,
+      "SAFE_frames": 24401,
+      "switches_total": 544,
+      "switches_avg_per_video": 4.9,
+      "DANGER_videos": 65,
+      "now_ms_mode": "ms33"
+    },
+    "M1_0.1": {
+      "mode": "M1",
+      "w4": 0.1,
+      "frames": 45021,
+      "DANGER_frames": 12714,
+      "WARNING_frames": 9489,
+      "SAFE_frames": 22818,
+      "switches_total": 589,
+      "switches_avg_per_video": 5.31,
+      "DANGER_videos": 68,
+      "now_ms_mode": "ms33"
+    },
+    "M1_0.2": {
+      "mode": "M1",
+      "w4": 0.2,
+      "frames": 45021,
+      "DANGER_frames": 14598,
+      "WARNING_frames": 15928,
+      "SAFE_frames": 14495,
+      "switches_total": 681,
+      "switches_avg_per_video": 6.14,
+      "DANGER_videos": 72,
+      "now_ms_mode": "ms33"
+    },
+    "M2_0.05": {
+      "mode": "M2",
+      "w4": 0.05,
+      "frames": 45021,
+      "DANGER_frames": 4954,
+      "WARNING_frames": 13623,
+      "SAFE_frames": 26444,
+      "switches_total": 353,
+      "switches_avg_per_video": 3.18,
+      "DANGER_videos": 26,
+      "now_ms_mode": "ms33"
+    },
+    "M2_0.1": {
+      "mode": "M2",
+      "w4": 0.1,
+      "frames": 45021,
+      "DANGER_frames": 3580,
+      "WARNING_frames": 12047,
+      "SAFE_frames": 29394,
+      "switches_total": 444,
+      "switches_avg_per_video": 4.0,
+      "DANGER_videos": 21,
+      "now_ms_mode": "ms33"
+    },
+    "M2_0.2": {
+      "mode": "M2",
+      "w4": 0.2,
+      "frames": 45021,
+      "DANGER_frames": 1869,
+      "WARNING_frames": 13072,
+      "SAFE_frames": 30080,
+      "switches_total": 408,
+      "switches_avg_per_video": 3.68,
+      "DANGER_videos": 12,
+      "now_ms_mode": "ms33"
+    }
+  },
+  "m2_vs_m0_analysis": {
+    "diff": {
+      "D降级为非D": 4363,
+      "非D升级为D": 34,
+      "W降级为S": 3560,
+      "S升级为W/D": 6
+    },
+    "fiedler_stats": {
+      "M0_DANGER帧": {
+        "N": 7909,
+        "mean": 1.1038,
+        "median": 0.7143
+      },
+      "M2仍DANGER帧": {
+        "N": 3546,
+        "mean": 1.11,
+        "median": 0.6901
+      },
+      "M2被降级(原D)帧": {
+        "N": 4363,
+        "mean": 1.0988,
+        "median": 0.8328
+      }
+    },
+    "video_diff": [
+      {
+        "video": "mixkit_4519",
+        "D降级帧": 520,
+        "D新增帧": 0,
+        "M0_D": 520,
+        "M2_D": 0
+      },
+      {
+        "video": "mixkit_4437",
+        "D降级帧": 509,
+        "D新增帧": 4,
+        "M0_D": 575,
+        "M2_D": 70
+      },
+      {
+        "video": "mixkit_4157",
+        "D降级帧": 351,
+        "D新增帧": 0,
+        "M0_D": 441,
+        "M2_D": 90
+      },
+      {
+        "video": "mixkit_4188",
+        "D降级帧": 206,
+        "D新增帧": 0,
+        "M0_D": 494,
+        "M2_D": 288
+      },
+      {
+        "video": "mixkit_134",
+        "D降级帧": 191,
+        "D新增帧": 0,
+        "M0_D": 247,
+        "M2_D": 56
+      },
+      {
+        "video": "mixkit_43150",
+        "D降级帧": 191,
+        "D新增帧": 0,
+        "M0_D": 191,
+        "M2_D": 0
+      },
+      {
+        "video": "mixkit_18264",
+        "D降级帧": 173,
+        "D新增帧": 0,
+        "M0_D": 173,
+        "M2_D": 0
+      },
+      {
+        "video": "mixkit_48507",
+        "D降级帧": 164,
+        "D新增帧": 0,
+        "M0_D": 164,
+        "M2_D": 0
+      },
+      {
+        "video": "mixkit_4332",
+        "D降级帧": 157,
+        "D新增帧": 0,
+        "M0_D": 504,
+        "M2_D": 347
+      },
+      {
+        "video": "mixkit_805",
+        "D降级帧": 133,
+        "D新增帧": 0,
+        "M0_D": 133,
+        "M2_D": 0
+      },
+      {
+        "video": "mixkit_4948",
+        "D降级帧": 125,
+        "D新增帧": 0,
+        "M0_D": 125,
+        "M2_D": 0
+      },
+      {
+        "video": "mixkit_4401",
+        "D降级帧": 124,
+        "D新增帧": 0,
+        "M0_D": 318,
+        "M2_D": 194
+      },
+      {
+        "video": "mixkit_4180",
+        "D降级帧": 114,
+        "D新增帧": 0,
+        "M0_D": 270,
+        "M2_D": 156
+      },
+      {
+        "video": "mixkit_17630",
+        "D降级帧": 110,
+        "D新增帧": 0,
+        "M0_D": 110,
+        "M2_D": 0
+      },
+      {
+        "video": "mixkit_23410",
+        "D降级帧": 105,
+        "D新增帧": 0,
+        "M0_D": 105,
+        "M2_D": 0
+      },
+      {
+        "video": "mixkit_4147",
+        "D降级帧": 105,
+        "D新增帧": 0,
+        "M0_D": 422,
+        "M2_D": 317
+      },
+      {
+        "video": "mixkit_4186",
+        "D降级帧": 76,
+        "D新增帧": 0,
+        "M0_D": 76,
+        "M2_D": 0
+      },
+      {
+        "video": "mixkit_4451",
+        "D降级帧": 74,
+        "D新增帧": 0,
+        "M0_D": 74,
+        "M2_D": 0
+      },
+      {
+        "video": "mixkit_3429",
+        "D降级帧": 72,
+        "D新增帧": 21,
+        "M0_D": 204,
+        "M2_D": 153
+      },
+      {
+        "video": "mixkit_4344",
+        "D降级帧": 70,
+        "D新增帧": 0,
+        "M0_D": 70,
+        "M2_D": 0
+      }
+    ]
+  }
+}
