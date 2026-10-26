@@ -102,12 +102,14 @@ struct EnhancedResult {
     double algebraic_connectivity;   // 代数连通度（与 fiedler 等价）
     double eig_entropy;              // 特征熵
     double score;                    // FSM 综合拥挤度评分 [0,1]
+    bool   spectral_converged;      // 图拉普拉斯特征分解是否收敛（false 表示谱特征已安全回退 0）
     std::vector<std::pair<float,float>> smoothPts;   // 平滑后的地面脚点（米）
 
     EnhancedResult()
         : level(0), n(0), density(0.0), r_gcc(0.0), fiedler(0.0),
           clustering(0.0), spectral_radius(0.0),
-          algebraic_connectivity(0.0), eig_entropy(0.0), score(0.0) {}
+          algebraic_connectivity(0.0), eig_entropy(0.0), score(0.0),
+          spectral_converged(true) {}
 };
 
 // 增强决策模块

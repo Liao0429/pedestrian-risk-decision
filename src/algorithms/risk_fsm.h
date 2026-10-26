@@ -29,6 +29,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <string>
 
 namespace pedestrian {
 
@@ -68,6 +69,26 @@ struct RiskFSMConfig {
     int    danger_hold_ms = 1000;    // DANGER 至少保持毫秒（0 或 now_ms<0 时禁用）
     // 运动趋势偏置
     double trend_bias = 0.05;
+
+    // 校验配置合法性（与 Python 端 RiskFSMConfig.__post_init__ 一致）。
+    // 返回 true 表示合法；false 时 err 填充具体原因，便于 JSON 加载时报错。
+    bool validate(std::string& err) const {
+        if (w1 < 0.0 || w2 < 0.0 || w3 < 0.0) { err = "权重 w1/w2/w3 必须为非负值"; return false; }
+        if (w1 + w2 + w3 <= 0.0)              { err = "权重之和必须大于 0"; return false; }
+        if (n_ref <= 0)                       { err = "n_ref 必须为正整数"; return false; }
+        if (confirm_up < 1 || confirm_down < 1) { err = "confirm_up / confirm_down 必须 >= 1"; return false; }
+        if (danger_hold_frames < 0 || danger_hold_ms < 0) { err = "danger_hold_frames / danger_hold_ms 必须 >= 0"; return false; }
+        if (up_warning < 0.0 || up_warning > 1.0 ||
+            up_danger  < 0.0 || up_danger  > 1.0 ||
+            down_safe  < 0.0 || down_safe  > 1.0 ||
+            down_warning < 0.0 || down_warning > 1.0) {
+            err = "阈值必须在 [0,1] 范围内"; return false;
+        }
+        // 滞回一致性：升级阈值必须严格高于对应降级阈值，否则无滞回带
+        if (up_warning <= down_safe) { err = "up_warning 必须大于 down_safe（否则无滞回带）"; return false; }
+        if (up_danger <= down_warning) { err = "up_danger 必须大于 down_warning（否则无滞回带）"; return false; }
+        return true;
+    }
 };
 
 class RiskFSM {

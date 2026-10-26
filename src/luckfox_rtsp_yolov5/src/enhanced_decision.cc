@@ -156,6 +156,7 @@ EnhancedResult EnhancedDecision::processFrame(
     res.spectral_radius        = feat.spectral_radius;
     res.algebraic_connectivity = feat.algebraic_connectivity;
     res.eig_entropy            = feat.eig_entropy;
+    res.spectral_converged     = feat.converged;
 
     // 3. FSM 稳定等级
     FsmFeatures f;

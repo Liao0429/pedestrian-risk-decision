@@ -111,6 +111,7 @@ int main(int argc, char *argv[]) {
   // 增强决策模块默认启用（不再依赖编译宏开关）
   pedestrian::EnhancedConfig enhancedCfg;
   enhancedCfg.edge_dist_m = riskCfg.edge_dist_m;
+  enhancedCfg.fsm = riskCfg.fsm;      // FSM 参数走 JSON 配置（与 Python 端一致）
   pedestrian::EnhancedDecision enhancedDecision(enhancedCfg);
 
   // ---- 资源句柄与初始化状态（任一关键初始化失败时安全清理） ----

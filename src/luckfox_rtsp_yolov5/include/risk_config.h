@@ -26,6 +26,7 @@
 // WARNING 5/0.28/0.55、edge_dist 2.0m）。
 // =============================================================================
 
+#include <cmath>
 #include <fstream>
 #include <cstdlib>
 #include <map>
@@ -35,6 +36,7 @@
 #include <vector>
 
 #include "../../algorithms/minijson.h"
+#include "../../algorithms/risk_fsm.h"
 
 namespace pedestrian {
 
@@ -56,6 +58,7 @@ struct RiskConfig {
     std::string homography_file;  // 外部 IPM 单应标定文件路径（文本 3x3，与 ipm_calibrate.py 的 .txt/.csv 兼容）。空串=用默认硬编码单应（相机位姿变化时配置此字段即可，无需重编译）
     std::vector<int> target_classes{0};  // 检测目标类别集合（COCO id），默认 [0]=person；可切换 [2,5,7,3]=车辆等
     std::map<int,float> class_conf_thresholds;  // 按类别差异化置信度阈值（COCO id -> 最低置信度 0~1）。空=不区分（仅用全局 BOX_THRESH）
+    RiskFSMConfig fsm;                  // 增强决策 FSM 参数（默认与 Python 端 RiskFSMConfig 一致，可 JSON 配置）
     RiskRule danger;                // DANGER 阈值（默认 10 / 0.55 / 0.80）
     RiskRule warning{5.0, 0.28, 0.55};  // WARNING 阈值（默认 5 / 0.28 / 0.55）
 
@@ -192,6 +195,74 @@ inline RiskConfig loadRiskConfig(const std::string& path) {
                 throw std::runtime_error("warning.gcc 必须在 [0,1]");
             cfg.warning.gcc = gcc->asDouble();
         }
+    }
+
+    // 增强决策 FSM 参数（可选）。缺失时用默认 RiskFSMConfig（与 Python 端一致）。
+    if (const minijson::Value* fsmObj = root.find("fsm")) {
+        if (!fsmObj->isObject()) throw std::runtime_error("fsm 必须是对象");
+        RiskFSMConfig f;
+        if (const minijson::Value* v = fsmObj->find("w1")) {
+            if (!v->isNumber() || v->asDouble() < 0.0) throw std::runtime_error("fsm.w1 必须是非负数");
+            f.w1 = v->asDouble();
+        }
+        if (const minijson::Value* v = fsmObj->find("w2")) {
+            if (!v->isNumber() || v->asDouble() < 0.0) throw std::runtime_error("fsm.w2 必须是非负数");
+            f.w2 = v->asDouble();
+        }
+        if (const minijson::Value* v = fsmObj->find("w3")) {
+            if (!v->isNumber() || v->asDouble() < 0.0) throw std::runtime_error("fsm.w3 必须是非负数");
+            f.w3 = v->asDouble();
+        }
+        if (const minijson::Value* v = fsmObj->find("n_ref")) {
+            if (!v->isNumber() || v->asDouble() <= 0.0) throw std::runtime_error("fsm.n_ref 必须为正数");
+            f.n_ref = static_cast<int>(v->asDouble());
+        }
+        if (const minijson::Value* v = fsmObj->find("up_warning")) {
+            if (!v->isNumber() || v->asDouble() < 0.0 || v->asDouble() > 1.0)
+                throw std::runtime_error("fsm.up_warning 必须在 [0,1]");
+            f.up_warning = v->asDouble();
+        }
+        if (const minijson::Value* v = fsmObj->find("up_danger")) {
+            if (!v->isNumber() || v->asDouble() < 0.0 || v->asDouble() > 1.0)
+                throw std::runtime_error("fsm.up_danger 必须在 [0,1]");
+            f.up_danger = v->asDouble();
+        }
+        if (const minijson::Value* v = fsmObj->find("down_safe")) {
+            if (!v->isNumber() || v->asDouble() < 0.0 || v->asDouble() > 1.0)
+                throw std::runtime_error("fsm.down_safe 必须在 [0,1]");
+            f.down_safe = v->asDouble();
+        }
+        if (const minijson::Value* v = fsmObj->find("down_warning")) {
+            if (!v->isNumber() || v->asDouble() < 0.0 || v->asDouble() > 1.0)
+                throw std::runtime_error("fsm.down_warning 必须在 [0,1]");
+            f.down_warning = v->asDouble();
+        }
+        if (const minijson::Value* v = fsmObj->find("confirm_up")) {
+            if (!v->isNumber() || v->asDouble() < 1.0) throw std::runtime_error("fsm.confirm_up 必须 >= 1");
+            f.confirm_up = static_cast<int>(v->asDouble());
+        }
+        if (const minijson::Value* v = fsmObj->find("confirm_down")) {
+            if (!v->isNumber() || v->asDouble() < 1.0) throw std::runtime_error("fsm.confirm_down 必须 >= 1");
+            f.confirm_down = static_cast<int>(v->asDouble());
+        }
+        if (const minijson::Value* v = fsmObj->find("danger_hold_frames")) {
+            if (!v->isNumber() || v->asDouble() < 0.0) throw std::runtime_error("fsm.danger_hold_frames 必须 >= 0");
+            f.danger_hold_frames = static_cast<int>(v->asDouble());
+        }
+        if (const minijson::Value* v = fsmObj->find("danger_hold_ms")) {
+            if (!v->isNumber() || v->asDouble() < 0.0) throw std::runtime_error("fsm.danger_hold_ms 必须 >= 0");
+            f.danger_hold_ms = static_cast<int>(v->asDouble());
+        }
+        if (const minijson::Value* v = fsmObj->find("trend_bias")) {
+            if (!v->isNumber() || !std::isfinite(v->asDouble())) throw std::runtime_error("fsm.trend_bias 必须是有限数");
+            f.trend_bias = v->asDouble();
+        }
+        // 滞回一致性等语义校验（与 Python 端 RiskFSMConfig.__post_init__ 一致）
+        std::string err;
+        if (!f.validate(err)) {
+            throw std::runtime_error("fsm 配置非法: " + err);
+        }
+        cfg.fsm = f;
     }
 
     // 语义校验：WARNING 阈值不得高于 DANGER（否则 DANGER 永远无法单独触发）

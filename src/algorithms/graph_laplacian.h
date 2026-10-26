@@ -36,6 +36,7 @@ struct SpectralFeatures {
     double spectral_radius = 0.0;       // 谱半径 = 最大特征值 lambda_max
     double algebraic_connectivity = 0.0;// 代数连通度(与 fiedler 数学等价)
     double eig_entropy = 0.0;           // 特征熵(归一化特征谱的香农熵，自然对数)
+    bool   converged = true;             // 特征分解是否收敛（Jacobi 达到 max_sweeps 未收敛时为 false）
 };
 
 class GraphLaplacian {
@@ -230,6 +231,7 @@ inline SpectralFeatures GraphLaplacian::computeFeatures() const {
         feat.spectral_radius = 0.0;
         feat.algebraic_connectivity = 0.0;
         feat.eig_entropy = 0.0;
+        feat.converged = true;   // n<2 不涉及特征分解，视为收敛
         return feat;
     }
 
@@ -294,6 +296,7 @@ inline SpectralFeatures GraphLaplacian::computeFeatures() const {
     {
         std::vector<double> eig;
         const bool converged = jacobiEigenvalues(L, eig);   // 已升序
+        feat.converged = converged;
         if (!converged) {
             // 特征分解未收敛：谱特征回退到安全值（0），不输出不可靠特征值
             feat.fiedler = 0.0;

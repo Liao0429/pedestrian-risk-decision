@@ -208,6 +208,93 @@ void test_homography_file_field() {
     std::remove(kTmpPath);
 }
 
+void test_fsm_config_loading() {
+    writeFile(R"({
+        "fsm": {
+            "w1": 0.5, "w2": 0.3, "w3": 0.2,
+            "n_ref": 30,
+            "up_warning": 0.45, "up_danger": 0.7,
+            "down_safe": 0.30, "down_warning": 0.6,
+            "confirm_up": 4, "confirm_down": 6,
+            "danger_hold_frames": 20, "danger_hold_ms": 2000,
+            "trend_bias": 0.1
+        }
+    })");
+    pedestrian::RiskConfig cfg = pedestrian::loadRiskConfig(kTmpPath);
+    CHECK_EQ(cfg.fsm.w1, 0.5);
+    CHECK_EQ(cfg.fsm.w2, 0.3);
+    CHECK_EQ(cfg.fsm.w3, 0.2);
+    CHECK_EQ(cfg.fsm.n_ref, 30);
+    CHECK_EQ(cfg.fsm.up_warning, 0.45);
+    CHECK_EQ(cfg.fsm.up_danger, 0.7);
+    CHECK_EQ(cfg.fsm.down_safe, 0.30);
+    CHECK_EQ(cfg.fsm.down_warning, 0.6);
+    CHECK_EQ(cfg.fsm.confirm_up, 4);
+    CHECK_EQ(cfg.fsm.confirm_down, 6);
+    CHECK_EQ(cfg.fsm.danger_hold_frames, 20);
+    CHECK_EQ(cfg.fsm.danger_hold_ms, 2000);
+    CHECK_EQ(cfg.fsm.trend_bias, 0.1);
+    std::remove(kTmpPath);
+}
+
+void test_fsm_missing_uses_default() {
+    writeFile(R"({"edge_dist_m": 2.5})");
+    pedestrian::RiskConfig cfg = pedestrian::loadRiskConfig(kTmpPath);
+    // 默认 FSM 参数与 Python 端 RiskFSMConfig 一致
+    CHECK_EQ(cfg.fsm.w1, 0.4);
+    CHECK_EQ(cfg.fsm.up_warning, 0.40);
+    CHECK_EQ(cfg.fsm.up_danger, 0.65);
+    CHECK_EQ(cfg.fsm.confirm_up, 3);
+    CHECK_EQ(cfg.fsm.confirm_down, 5);
+    std::remove(kTmpPath);
+}
+
+void test_fsm_invalid_hysteresis() {
+    // up_warning <= down_safe -> 无滞回带，抛异常
+    writeFile(R"({"fsm": {"up_warning": 0.3, "down_safe": 0.4}})");
+    bool threw = false;
+    try { pedestrian::loadRiskConfig(kTmpPath); } catch (const std::runtime_error&) { threw = true; }
+    CHECK(threw);
+    std::remove(kTmpPath);
+
+    // up_danger <= down_warning -> 抛异常
+    writeFile(R"({"fsm": {"up_danger": 0.5, "down_warning": 0.55}})");
+    threw = false;
+    try { pedestrian::loadRiskConfig(kTmpPath); } catch (const std::runtime_error&) { threw = true; }
+    CHECK(threw);
+    std::remove(kTmpPath);
+}
+
+void test_fsm_invalid_weights() {
+    // 权重之和为 0
+    writeFile(R"({"fsm": {"w1": 0, "w2": 0, "w3": 0}})");
+    bool threw = false;
+    try { pedestrian::loadRiskConfig(kTmpPath); } catch (const std::runtime_error&) { threw = true; }
+    CHECK(threw);
+    std::remove(kTmpPath);
+
+    // 负权重
+    writeFile(R"({"fsm": {"w1": -0.1}})");
+    threw = false;
+    try { pedestrian::loadRiskConfig(kTmpPath); } catch (const std::runtime_error&) { threw = true; }
+    CHECK(threw);
+    std::remove(kTmpPath);
+
+    // 阈值为 1.5（越界）
+    writeFile(R"({"fsm": {"up_warning": 1.5}})");
+    threw = false;
+    try { pedestrian::loadRiskConfig(kTmpPath); } catch (const std::runtime_error&) { threw = true; }
+    CHECK(threw);
+    std::remove(kTmpPath);
+
+    // confirm_up < 1
+    writeFile(R"({"fsm": {"confirm_up": 0}})");
+    threw = false;
+    try { pedestrian::loadRiskConfig(kTmpPath); } catch (const std::runtime_error&) { threw = true; }
+    CHECK(threw);
+    std::remove(kTmpPath);
+}
+
 #if HAS_OPENCV
 void test_load_homography_file() {
     const char* kHPath = "tmp_ipm_homography_test.txt";
@@ -313,6 +400,10 @@ int main() {
     test_invalid_throws();
     test_load_or_fallback();
     test_homography_file_field();
+    test_fsm_config_loading();
+    test_fsm_missing_uses_default();
+    test_fsm_invalid_hysteresis();
+    test_fsm_invalid_weights();
     test_load_homography_file();
     test_risk_engine_config();
 
