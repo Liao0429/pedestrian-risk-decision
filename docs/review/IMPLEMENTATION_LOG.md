@@ -286,3 +286,36 @@
 - `ping 192.168.0.136` OK；SSH 可连；`pedestrian-watchdog.service` active。
 - 主服务 `pedestrian-risk.service` 当时未在运行列表（可能正被 watchdog 拉起/停止），为避免干扰设备，本轮**未部署**新二进制；
   阶段五已完成真机部署与 PROFILE 数据采集（见阶段五 §2），故无遗漏。
+
+### 5. 补充测量（稳态）与结论修正
+
+- 服务重启后进入稳态（相机帧已缓冲、CPU 升频）再次采集，耗时分布发生翻转：
+
+```
+[PROFILE] frames=90 avg_ms: vi_get=0.05 cvt_resize=12.40 letterbox=44.47 rknn=90.78 decision=0.18 draw=2.88 venc_send=4.87 venc_get_rtsp=2.51 total=158.13 fps=6.32
+```
+
+- **两次实测对比**（同一二进制、同一场景）：
+
+| 阶段 | 冷启动（01:16） | 稳态（01:26） | 解读 |
+|---|---|---|---|
+| vi_get | 12.6 ms | 0.05 ms | 冷启动相机缓冲为空需等帧；稳态帧已排队，立即返回 |
+| cvt_resize | 45.1 ms | 12.4 ms | CPU 调频：冷启动低频（标量 OpenCV 更慢），稳态满频 |
+| letterbox | 90.9 ms | 44.5 ms | 同上，CPU 预处理耗时随频率变化 |
+| rknn | 0.2 ms | 90.8 ms | NPU 推理：冷启动 NPU 空闲立即完成；稳态 NPU 成临界路径 |
+| total | 159.3 ms | 158.1 ms | **两种状态下总帧时几乎不变（≈159ms → 6.3FPS）** |
+
+- **修正结论**：瓶颈不是单一阶段，而是 **CPU 预处理（YUV→BGR+resize+letterbox）与 NPU 推理的串行组合**，
+  二者合计约 135-150ms/帧，各占比例随 CPU 调频/缓冲状态在 44/91 与 91/44 之间翻转。
+  无论哪种状态，`vi_get+decision+draw+venc+rtsp` 合计 <25ms，不是优化重点。
+- **优化方向更新**：① NEON 加速 YUV→RGB 与 letterbox（压缩 CPU 预处理，目标 <20ms）；
+  ② 评估更小/更低分辨率模型（320×320）压缩 NPU 耗时；③ 双缓冲/流水线让 CPU 预处理与 NPU 推理真正重叠。
+- **rknn 0.2ms 观察修正**：不是“NPU 不阻塞”，而是冷启动 NPU 空闲时的正常表现；稳态下 NPU 耗时 90.8ms 是主瓶颈之一。
+
+### 6. 部署事故记录（已修复）
+
+- **事故**：第二次部署时 SFTP 上传的 `.new` 文件默认 0644，`mv` 覆盖后丢失执行位，
+  运行中进程退出后 systemd 报 `status=203/EXEC` 重启循环（约 5 分钟无服务）。
+- **修复**：`chmod +x` + `systemctl restart pedestrian-risk`，服务恢复 active，PROFILE 持续输出。
+- **教训**：SFTP 上传二进制后必须 `chmod +x` 再 `mv` 覆盖（第一次部署做了，第二次漏掉）。
+- 已恢复运行，板端当前二进制即 P1-6 打点版本（md5 `e85051c0...`）。
