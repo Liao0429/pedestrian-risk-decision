@@ -21,6 +21,7 @@
 #include "risk_engine.h"
 #include "risk_config.h"
 #include "enhanced_decision.h"
+#include "preprocess.h"
 #include "ipm_transform.h"
 
 #include "opencv2/core/core.hpp"
@@ -85,27 +86,8 @@ float scale ;
 int leftPadding ;
 int topPadding  ;
 
-cv::Mat letterbox(cv::Mat input)
-{
-	float scaleX = (float)model_width  / (float)width; 
-	float scaleY = (float)model_height / (float)height; 
-	scale = scaleX < scaleY ? scaleX : scaleY;
-	
-	int inputWidth   = (int)((float)width * scale);
-	int inputHeight  = (int)((float)height * scale);
-
-	leftPadding = (model_width  - inputWidth) / 2;
-	topPadding  = (model_height - inputHeight) / 2;	
-	
-
-	cv::Mat inputScale;
-    cv::resize(input, inputScale, cv::Size(inputWidth,inputHeight), 0, 0, cv::INTER_LINEAR);	
-	cv::Mat letterboxImage(640, 640, CV_8UC3,cv::Scalar(0, 0, 0));
-    cv::Rect roi(leftPadding, topPadding, inputWidth, inputHeight);
-    inputScale.copyTo(letterboxImage(roi));
-
-	return letterboxImage; 	
-}
+// letterbox 预计算参数（阶段八：720x480 -> 640x640，几何与旧 letterbox() 一致）
+pedestrian::LetterboxParams g_lb_params;
 
 void mapCoordinates(int *x, int *y) {	
 	int mx = *x - leftPadding;
@@ -161,13 +143,13 @@ int main(int argc, char *argv[]) {
   pedestrian::EnhancedDecision enhancedDecision(enhancedCfg);
 
   // ---- 资源句柄与初始化状态（任一关键初始化失败时安全清理） ----
-  RK_S32 s32Ret = 0;
-  int sX, sY, eX, eY;
-  int ret = 0;
-  char text[32];
-  rknn_app_context_t rknn_app_ctx;
-  object_detect_result_list od_results;
-  memset(&rknn_app_ctx, 0, sizeof(rknn_app_context_t));
+    RK_S32 s32Ret = 0;
+    int sX, sY, eX, eY;
+    int ret = 0;
+    char text[32];
+    rknn_app_context_t rknn_app_ctx;
+        object_detect_result_list od_results;
+        memset(&rknn_app_ctx, 0, sizeof(rknn_app_context_t));
 
   VENC_STREAM_S stFrame;
   memset(&stFrame, 0, sizeof(stFrame));
@@ -207,8 +189,9 @@ int main(int argc, char *argv[]) {
     if (rtsp_ready && g_rtsplive) rtsp_del_demo(g_rtsplive);
     if (sys_ready)       RK_MPI_SYS_Exit();
     if (rknn_ready)      release_yolov5_model(&rknn_app_ctx);
-    if (postproc_ready)  deinit_post_process();
-  };
+        if (postproc_ready)  deinit_post_process();
+        pedestrian::letterbox_params_free(&g_lb_params);
+      };
 
   // ==== 初始化序列：任一关键初始化失败即打印明确错误并安全退出 ====
   ret = init_yolov5_model(model_path, &rknn_app_ctx);
@@ -218,7 +201,26 @@ int main(int argc, char *argv[]) {
     return -1;
   }
   rknn_ready = true;
-  printf("init rknn model success!\n");
+    printf("init rknn model success!\n");
+
+    // ---- 图像预处理参数预计算（P1-6 阶段八）----
+    // 模型输入尺寸以 RKNN 实际查询为准（不再是硬编码 640），letterbox 几何与
+    // 坐标映射表只计算一次，每帧仅执行定点插值。旧实现每帧重复 resize+颜色转换
+    // 共约 136ms（占帧间隔 85%），本模块合并为单次遍历并修复 NV12 颜色语义。
+    model_width  = rknn_app_ctx.model_width;
+    model_height = rknn_app_ctx.model_height;
+    if (pedestrian::letterbox_prepare(width, height, model_width, model_height,
+                                      &g_lb_params) != 0) {
+      fprintf(stderr, "[FATAL] letterbox_prepare 失败\n");
+      cleanup();
+      return -1;
+    }
+    scale        = (float)g_lb_params.roi_w / (float)width;
+    leftPadding  = g_lb_params.left_pad;
+    topPadding   = g_lb_params.top_pad;
+    printf("[PREPROCESS] model=%dx%d roi=%dx%d pads=(%d,%d) scale=%.6f\n",
+           model_width, model_height, g_lb_params.roi_w, g_lb_params.roi_h,
+           g_lb_params.left_pad, g_lb_params.top_pad, (double)scale);
 
   ret = init_post_process();
   if (ret != 0) {
@@ -336,8 +338,8 @@ int main(int argc, char *argv[]) {
     return -1;
   }
   venc_ready = true;
-  printf("venc init success\n");
-  	// ---- 主循环看门狗计数（取帧连续失败判定挂死；编码/RTSP 失败仅告警） ----
+    printf("venc init success\n");
+   	// ---- 主循环看门狗计数（取帧连续失败判定挂死；编码/RTSP 失败仅告警） ----
 	int vi_consec_fail = 0;
 	int venc_send_fail = 0;
 	int venc_stream_fail = 0;
@@ -355,34 +357,29 @@ int main(int argc, char *argv[]) {
 			vi_consec_fail = 0;
 			void *vi_data = RK_MPI_MB_Handle2VirAddr(stViFrame.stVFrame.pMbBlk);	
 
-			cv::Mat yuv420sp(height + height / 2, width, CV_8UC1, vi_data);
-			cv::Mat bgr(height, width, CV_8UC3, data);			
-			{
-				const unsigned long long t_now = profileNowUs();
-				g_prof.us_vi_get += t_now - t_mark;
-				t_mark = t_now;
-			}
-			
-			cv::cvtColor(yuv420sp, bgr, cv::COLOR_YUV420sp2BGR);
-			cv::resize(bgr, frame, cv::Size(width ,height), 0, 0, cv::INTER_LINEAR);
-			{
-				const unsigned long long t_now = profileNowUs();
-				g_prof.us_cvt_resize += t_now - t_mark;
-				t_mark = t_now;
-			}
-			
-			//letterbox
-						cv::Mat letterboxImage = letterbox(frame);
-						// RKNN 模型输入约定为 RGB；OpenCV Mat 为 BGR，需在送入前转换，
-						// 否则检测输入红蓝互换会降低检测精度（评审 Agent5/交叉C 发现）。
-						cv::cvtColor(letterboxImage, letterboxImage, cv::COLOR_BGR2RGB);
-						memcpy(rknn_app_ctx.input_mems[0]->virt_addr, letterboxImage.data, model_width*model_height*3);
-			{
-				const unsigned long long t_now = profileNowUs();
-				g_prof.us_letterbox += t_now - t_mark;
-				t_mark = t_now;
-			}
-			inference_yolov5_model(&rknn_app_ctx, &od_results);
+			// ---- 预处理（阶段八：NV12 单遍定点/NEON，替代 OpenCV 三遍流程）----
+						// 旧流程：cvtColor(YUV420sp2BGR 实为 NV21 语义，红蓝互换) + 恒等 resize
+						//        + letterbox(resize) + BGR2RGB + memcpy，实测 ~136ms/帧。
+						// 新流程：
+						//   1) yuv420sp_to_bgr：NV12 -> BGR 全帧（正确 NV12 语义，供画框/VENC）
+						//   2) yuv420sp_to_rgb_letterbox：直接从 NV12 采样生成 RKNN RGB 输入
+						// 均单遍处理，无 OpenCV 中间缓冲。
+						pedestrian::yuv420sp_to_bgr(static_cast<const uint8_t *>(vi_data),
+						                           width, height, data);
+						{
+							const unsigned long long t_now = profileNowUs();
+							g_prof.us_cvt_resize += t_now - t_mark;
+							t_mark = t_now;
+						}
+						pedestrian::yuv420sp_to_rgb_letterbox(
+						    static_cast<const uint8_t *>(vi_data), g_lb_params,
+						    static_cast<uint8_t *>(rknn_app_ctx.input_mems[0]->virt_addr));
+						{
+													const unsigned long long t_now = profileNowUs();
+													g_prof.us_letterbox += t_now - t_mark;
+													t_mark = t_now;
+												}
+												inference_yolov5_model(&rknn_app_ctx, &od_results);
 			{
 				const unsigned long long t_now = profileNowUs();
 				g_prof.us_rknn += t_now - t_mark;

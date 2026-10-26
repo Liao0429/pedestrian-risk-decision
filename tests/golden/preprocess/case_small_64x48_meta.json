@@ -1,0 +1,11 @@
+{
+  "name": "small_64x48",
+  "src_w": 64,
+  "src_h": 48,
+  "dst_w": 32,
+  "dst_h": 32,
+  "roi_w": 32,
+  "roi_h": 24,
+  "left_pad": 0,
+  "top_pad": 4
+}

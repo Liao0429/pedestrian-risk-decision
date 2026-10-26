@@ -30,7 +30,7 @@ all: test
 # ---------------------------------------------------------------------------
 # 主机单元测试
 # ---------------------------------------------------------------------------
-test: test-enhanced test-minijson test-risk-config test-golden
+test: test-enhanced test-minijson test-risk-config test-golden test-preprocess
 
 test-enhanced: $(TEST_DIR)/test_enhanced_decision.cc $(SRC_DIR)/enhanced_decision.cc $(ALGO_HEADERS)
 	$(CXX) $(CXXFLAGS) $(INC) $(TEST_DIR)/test_enhanced_decision.cc $(SRC_DIR)/enhanced_decision.cc \
@@ -62,6 +62,15 @@ test-golden: $(TEST_DIR)/test_golden_regression.cc ../algorithms/graph_laplacian
 	    -o $(TEST_DIR)/test_golden_regression
 	./$(TEST_DIR)/test_golden_regression ../../tests/golden
 
+# 图像预处理黄金回归：tests/golden/preprocess/*（由
+# scripts/generate_preprocess_golden.py 用 OpenCV 参考生成）。验证
+# preprocess.{h,cc} 的 NV12->BGR 与 NV12->RGB letterbox 与 OpenCV 流程一致。
+test-preprocess: $(TEST_DIR)/test_preprocess.cc $(SRC_DIR)/preprocess.cc \
+                 include/preprocess.h ../algorithms/minijson.h
+	$(CXX) $(CXXFLAGS) $(INC) $(TEST_DIR)/test_preprocess.cc $(SRC_DIR)/preprocess.cc \
+	    -o $(TEST_DIR)/test_preprocess
+	./$(TEST_DIR)/test_preprocess ../../tests/golden/preprocess
+
 # ---------------------------------------------------------------------------
 # 开发板交叉编译（需 Luckfox SDK）
 #
@@ -92,6 +101,7 @@ luckfox:
 	    $(SRC_DIR)/yolov5.cc \
 	    $(SRC_DIR)/postprocess.cc \
 	    $(SRC_DIR)/luckfox_mpi.cc \
+	    $(SRC_DIR)/preprocess.cc \
 	    -L$(LUCKFOX_SDK_ROOT)/lib -lrknnmrt -lrtsp_demo -lopencv_core -lopencv_imgproc \
 	    -lpthread -o luckfox_pico_rtsp_yolov5
 	@echo "产物: ./luckfox_pico_rtsp_yolov5（用 CROSS_COMPILE 前缀调用 $(CXX) 即交叉编译）"
@@ -101,6 +111,7 @@ clean:
 	      $(TEST_DIR)/test_minijson \
 	      $(TEST_DIR)/test_risk_config \
 	      $(TEST_DIR)/test_golden_regression \
+	      $(TEST_DIR)/test_preprocess \
 	      luckfox_pico_rtsp_yolov5
 
 help:

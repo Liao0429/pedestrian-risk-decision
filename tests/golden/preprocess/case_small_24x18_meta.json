@@ -1,0 +1,11 @@
+{
+  "name": "small_24x18",
+  "src_w": 24,
+  "src_h": 18,
+  "dst_w": 32,
+  "dst_h": 32,
+  "roi_w": 32,
+  "roi_h": 24,
+  "left_pad": 0,
+  "top_pad": 4
+}
