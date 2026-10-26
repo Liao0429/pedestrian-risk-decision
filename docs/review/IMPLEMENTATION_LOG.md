@@ -107,3 +107,27 @@
 ### 4. 测试结果
 - 全量 `pytest tests/ -q` → 141 passed。
 - 未改动实验数据/结果 JSON；未推送远程（CI 文件推送到 GitHub 后首次运行需人工确认）。
+
+
+---
+
+## 四、review-opt 合入 main + GitHub Actions CI 首次全绿（2026-10-26 深夜）
+
+> 对应提交：`9472a5a`（P0/P1 合入）、`85f20df`、`f407257`、`0bf8a46`、`1b33623`（CI 三轮修复）
+> 里程碑：**GitHub Actions CI 首次全绿**（run #40354391731 success，Python 141 passed + C++ 黄金回归通过）。
+
+### 1. review-opt 分支合入 main 并推送
+- `5c9d56e`（P0 数据可信度：消融 OR→AND、temporal→fsm、README 表述收敛）+ `9472a5a`（P1：画框过滤、CI 工作流、黄金独立断言）以 fast-forward 合入 main 并推送 `41194e2..9472a5a`。
+
+### 2. CI 首次运行失败 → 三轮修复
+| 提交 | 修复内容 | 失败原因 |
+|---|---|---|
+| `85f20df` | `crowd_test.py` 依赖延迟加载：cv2/ultralytics 缺失时置 `None`，仅 `main()` 报错（原 `sys.exit` 导致 pytest 收集阶段 INTERNALERROR） | CI 无 cv2/ultralytics |
+| `f407257` | CI Python job 安装 `opencv-python-headless` | `ipm_calibrate` 硬依赖 cv2；`ablation_study→crowd_test_enhanced` 直接 `import cv2` |
+| `0bf8a46` | **P1-9 完成**：`ablation_study`/`find_sparse_video`/`plot_results` 移除 `H:/` 硬编码路径（`os.chdir` 基于 `__file__`）；`ablation_study`/`crowd_test_enhanced` 的 cv2/ultralytics 延迟导入 | `os.chdir(r"H:/PedestrianRiskDecision")` 在 CI 不存在；`from ultralytics import YOLO` 无保护 |
+| `1b33623` | 补交 `rerun_video_baseline.py` 的 rule_level OR→AND 修正（5c9d56e 遗漏文件）+ ultralytics 延迟导入 | 工作区遗留的 P0 修复 |
+
+### 3. 验证
+- 本地模拟 CI（meta_path 屏蔽 ultralytics + 清空 PYTHONPATH）：**141 passed**。
+- GitHub Actions：**Python 141 passed + C++ 黄金回归 success**（run #40354391731 全绿）。
+- 网络备注：本轮 GitHub HTTPS 直连/7890 均不稳定，**7893 代理可用**（curl/API/push 均通）；推送前先 `curl -s -x http://127.0.0.1:7893 https://api.github.com/user` 探路。
