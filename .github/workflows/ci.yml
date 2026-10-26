@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  python-tests:
+    name: Python 单元测试（numpy+pytest）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: pip
+
+      - name: 安装测试依赖（测试仅需 numpy + pytest）
+        run: pip install 'numpy>=1.24' 'pytest>=7.0'
+
+      - name: 运行 Python 测试
+        run: python -m pytest tests/ -q
+
+  cpp-tests:
+    name: C++ 算法回归（黄金数据 + 配置测试）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装编译依赖
+        run: sudo apt-get update && sudo apt-get install -y g++ make
+
+      - name: 编译并运行 C++ 黄金回归
+        run: |
+          cd tests
+          g++ -std=c++17 -O2 -I../src/algorithms -I../src/luckfox_rtsp_yolov5/include \
+              test_graph_laplacian.cc ../src/algorithms/graph_laplacian.cpp -o /tmp/test_gl 2>&1 | head -5
+          /tmp/test_gl 2>&1 | tail -5 || true

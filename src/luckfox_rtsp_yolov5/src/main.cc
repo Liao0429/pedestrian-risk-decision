@@ -383,30 +383,34 @@ int main(int argc, char *argv[]) {
 			}
 
 			for(int i = 0; i < od_results.count; i++)
-			{					
-				if(od_results.count >= 1)
-				{
-					object_detect_result *det_result = &(od_results.results[i]);
-	
-					sX = (int)(det_result->box.left   );	
-					sY = (int)(det_result->box.top 	  );	
-					eX = (int)(det_result->box.right  );	
-					eY = (int)(det_result->box.bottom );
-					mapCoordinates(&sX,&sY);
-					mapCoordinates(&eX,&eY);
-					
-					printf("%s @ (%d %d %d %d) %.3f\n", coco_cls_to_name(det_result->cls_id),
-							 sX, sY, eX, eY, det_result->prop);
+						{					
+							if(od_results.count >= 1)
+							{
+								object_detect_result *det_result = &(od_results.results[i]);
+								// 只画/打印目标类别（与风险引擎 target_classes 过滤一致，避免画面框数与决策人数不一致）
+								if (std::find(riskCfg.target_classes.begin(), riskCfg.target_classes.end(), det_result->cls_id) == riskCfg.target_classes.end()) {
+									continue;
+								}
 
-					cv::rectangle(frame,cv::Point(sX ,sY),
-								        cv::Point(eX ,eY),
-										cv::Scalar(0,255,0),3);
-					snprintf(text, sizeof text, "%s %.1f%%", coco_cls_to_name(det_result->cls_id), det_result->prop * 100);
-					cv::putText(frame,text,cv::Point(sX, sY - 8),
-										   cv::FONT_HERSHEY_SIMPLEX,1,
-										   cv::Scalar(0,255,0),2);
-				}
-			}
+								sX = (int)(det_result->box.left   );	
+								sY = (int)(det_result->box.top 	  );
+								eX = (int)(det_result->box.right  );
+								eY = (int)(det_result->box.bottom );
+								mapCoordinates(&sX,&sY);
+								mapCoordinates(&eX,&eY);
+					
+								printf("%s @ (%d %d %d %d) %.3f\n", coco_cls_to_name(det_result->cls_id),
+										 sX, sY, eX, eY, det_result->prop);
+
+								cv::rectangle(frame,cv::Point(sX ,sY),
+										        cv::Point(eX ,eY),
+												cv::Scalar(0,255,0),3);
+								snprintf(text, sizeof text, "%s %.1f%%", coco_cls_to_name(det_result->cls_id), det_result->prop * 100);
+								cv::putText(frame,text,cv::Point(sX, sY - 8),
+												   cv::FONT_HERSHEY_SIMPLEX,1,
+												   cv::Scalar(0,255,0),2);
+							}
+						}
 
 			// ---- 叠加风险等级到画面 ----
 			{

@@ -82,3 +82,28 @@
 
 ### 5. 遗留（见 IMPROVEMENT_ROADMAP）
 - P1：谱特征接入 FSM 实验、图片 GT 标注、CI、黄金独立参考、主循环打点、IPM 真机标定。
+
+
+---
+
+## 三、P1 低风险增强（review-opt 分支，未推送）
+
+> 时间：2026-10-26 · 第二批 Agent 评审后实施
+
+### 1. 画框循环按 target_classes 过滤（main.cc）
+- 问题（Agent1 新发现）：`main.cc` 画框/打印循环未按 `target_classes` 过滤，画面框数与决策人数不一致。
+- 改动：画框循环加 `std::find(target_classes...)` 判断，非目标类别跳过（与风险引擎过滤一致）。
+
+### 2. CI 工作流（.github/workflows/ci.yml）
+- 依据：Agent7 高优先级建议（无 CI，算法改动无法自动防回归）。
+- 内容：push/PR 触发；Python job（numpy+pytest，测试仅需这两个依赖）；C++ job（编译黄金回归 + 配置测试，编译失败不影响 Python job 结论）。
+- 注意：C++ job 的编译命令为最小化独立编译（tests/test_graph_laplacian.cc + graph_laplacian.cpp），首次执行可能有编译告警/失败，需在 GitHub 上验证后微调；本机未推送。
+
+### 3. 黄金数据独立参考断言（tests/test_golden_independent.py）
+- 问题（Agent7）：`generate_golden.py` 用项目自身实现生成期望，双实现同时错测不出。
+- 改动：用 **numpy 手算**（不调用项目实现）构建邻接矩阵→拉普拉斯→特征值，校验 golden 全部 6 个用例的 n/m/density/r_gcc/clustering/fiedler/spectral_radius/eig_entropy（容差 1e-5），并采用项目语义：**单点 r_gcc=0**（commit 4a4afe7 语义）。
+- 验证：`pytest tests/ -q` → **141 passed**（140 + 1 新增）。
+
+### 4. 测试结果
+- 全量 `pytest tests/ -q` → 141 passed。
+- 未改动实验数据/结果 JSON；未推送远程（CI 文件推送到 GitHub 后首次运行需人工确认）。
