@@ -237,6 +237,50 @@ void yuv420sp_to_bgr_neon(const uint8_t *yuv, int w, int h, uint8_t *bgr_out) {
 }
 
 // YUV420sp -> RGB 全帧（NEON，RKNN letterbox 中间缓冲用；输出 RGB 顺序）
+// 与 yuv2bgr_neon8 相同定点核心，仅 vst3 通道顺序为 R,G,B。
+static inline void yuv2rgb_neon8(const uint8_t *yp, const uint8_t *uvp,
+                                 uint8_t *out) {
+    uint8x8_t y8 = vld1_u8(yp);
+    uint8x8_t uv = vld1_u8(uvp);
+    uint8x8x2_t uv_trn = vtrn_u8(uv, uv);
+    uint8x8_t u8 = uv_trn.val[0];
+    uint8x8_t v8 = uv_trn.val[1];
+
+    int16x8_t y16 = vreinterpretq_s16_u16(
+        vsubq_u16(vmovl_u8(y8), vdupq_n_u16(16)));
+    int16x8_t u16 = vreinterpretq_s16_u16(
+        vsubq_u16(vmovl_u8(u8), vdupq_n_u16(128)));
+    int16x8_t v16 = vreinterpretq_s16_u16(
+        vsubq_u16(vmovl_u8(v8), vdupq_n_u16(128)));
+
+    int32x4_t yv_lo = vmull_n_s16(vget_low_s16(y16), (int16_t)kC0);
+    int16x4_t u_lo  = vget_low_s16(u16);
+    int16x4_t v_lo  = vget_low_s16(v16);
+    int32x4_t r_lo  = vmlal_n_s16(yv_lo, v_lo, (int16_t)kC1);
+    int32x4_t g_lo  = vmlsl_n_s16(vmlsl_n_s16(yv_lo, u_lo, (int16_t)kC2),
+                                  v_lo, (int16_t)kC3);
+    int32x4_t b_lo  = vmlal_n_s16(yv_lo, u_lo, (int16_t)kC4);
+    int32x4_t yv_hi = vmull_n_s16(vget_high_s16(y16), (int16_t)kC0);
+    int16x4_t u_hi  = vget_high_s16(u16);
+    int16x4_t v_hi  = vget_high_s16(v16);
+    int32x4_t r_hi  = vmlal_n_s16(yv_hi, v_hi, (int16_t)kC1);
+    int32x4_t g_hi  = vmlsl_n_s16(vmlsl_n_s16(yv_hi, u_hi, (int16_t)kC2),
+                                  v_hi, (int16_t)kC3);
+    int32x4_t b_hi  = vmlal_n_s16(yv_hi, u_hi, (int16_t)kC4);
+
+    uint8x8_t r8 = neon_pack_u8x8(vshrq_n_s32(r_lo, kColorShift),
+                                  vshrq_n_s32(r_hi, kColorShift));
+    uint8x8_t g8 = neon_pack_u8x8(vshrq_n_s32(g_lo, kColorShift),
+                                  vshrq_n_s32(g_hi, kColorShift));
+    uint8x8_t b8 = neon_pack_u8x8(vshrq_n_s32(b_lo, kColorShift),
+                                  vshrq_n_s32(b_hi, kColorShift));
+    uint8x8x3_t rgb;
+    rgb.val[0] = r8;
+    rgb.val[1] = g8;
+    rgb.val[2] = b8;
+    vst3_u8(out, rgb);
+}
+
 void yuv420sp_to_rgb_neon(const uint8_t *yuv, int w, int h, uint8_t *rgb_out) {
     const uint8_t *Y  = yuv;
     const uint8_t *UV = yuv + (size_t)w * h;
@@ -247,15 +291,7 @@ void yuv420sp_to_rgb_neon(const uint8_t *yuv, int w, int h, uint8_t *rgb_out) {
         uint8_t *out = rgb_out + (size_t)y * w * 3;
         int x = 0;
         for (; x + 8 <= pixels_per_row; x += 8) {
-            // 复用 yuv2bgr_neon8 的定点核心：其内部输出为 BGR，这里需要 RGB。
-            // 直接调用再交换首尾通道（r<->b），避免复制整段 NEON 定点代码。
-            uint8_t tmp[24];
-            yuv2bgr_neon8(Yrow + x, UVrow + x, tmp);
-            for (int i = 0; i < 8; ++i) {
-                out[x * 3 + i * 3]     = tmp[i * 3 + 2];  // R = tmp[B]
-                out[x * 3 + i * 3 + 1] = tmp[i * 3 + 1];  // G
-                out[x * 3 + i * 3 + 2] = tmp[i * 3];      // B = tmp[R]
-            }
+            yuv2rgb_neon8(Yrow + x, UVrow + x, out + x * 3);
         }
         for (; x < pixels_per_row; ++x) {
             const int uoff = (x >> 1) * 2;
