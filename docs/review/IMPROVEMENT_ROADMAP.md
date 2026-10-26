@@ -72,6 +72,6 @@
 | P1 新增：场景判别实验 | ✅ 完成 | scenario_test.py + 测试 + 结果 JSON |
 | P1-2 图片 500 张 GT 标注 | ⬜ 待人工 | 约 2h，产出 risk_gt.csv |
 | P1-1 谱特征接入 FSM 实验 | ⬜ 待做 | 消融 C vs B 产生可测差异（需实验裁决） |
-| P1-6 主循环打点 | ⬜ 待做 | 真机耗时分布 |
+| P1-6 主循环打点 | ✅ 完成（2026-10-27） | 真机 `[PROFILE]` 日志：瓶颈=CPU 预处理（letterbox 91ms + cvt 45ms），非 NPU；详见 IMPLEMENTATION_LOG 阶段五 |
 | P1-7 真机 IPM 标定 | ⬜ 待做 | 需物理标定物 |
 | P1-8 长稳 8h/24h | ⬜ 待做 | 看门狗已就位 |

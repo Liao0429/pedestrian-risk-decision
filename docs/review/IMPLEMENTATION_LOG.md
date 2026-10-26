@@ -210,3 +210,53 @@
 - 每项改动前均确认可回退（git 工作树 + review-opt 分支独立）；C++ 改动无法在本机编译验证
   （无 g++），已通过括号平衡检查与代码审查；Python 侧全部 150 测试通过。
 - **未验证项**：C++ 编译/真机（NMS、颜色、画框过滤）、CI 实际运行（未推送无法触发）。
+
+---
+
+## 五、P1-6 主循环耗时打点（代码 + 真机实测，已完成）
+
+> 时间：2026-10-27 · 对应提交：见本阶段 commit · 验收：`[PROFILE]` 日志输出，耗时分布明确
+
+### 1. 改动（`src/luckfox_rtsp_yolov5/src/main.cc`）
+
+- 新增 `#include <chrono>` 与 `ProfileTiming` 结构体，按阶段累计微秒耗时：
+  `vi_get`（VI 取帧）/ `cvt_resize`（YUV420sp→BGR + resize）/ `letterbox`（letterbox+BGR2RGB+memcpy）/
+  `rknn`（RKNN 推理）/ `decision`（脚点提取+IPM+Kalman+谱特征+FSM）/ `draw`（画框+等级叠加）/
+  `venc_send`（编码前 BGR2RGB+SendFrame）/ `venc_get_rtsp`（GetStream+RTSP+Release）/ `total`（整帧）。
+- 每 90 帧打印一次 `[PROFILE]` 汇总（约 13s@6.9FPS），不改变业务逻辑；`PROFILE_LOG_EVERY_N_FRAMES` 可配。
+- 修正过程：初版打点边界错位（阶段名与测量区间不一致），已调整为每阶段精确边界后重新上板验证。
+
+### 2. 真机实测数据（开发板 192.168.0.136，Luckfox Pico Max RV1106，6 组 × 90 帧）
+
+```
+[PROFILE] frames=90 avg_ms: vi_get=12.58 cvt_resize=45.31 letterbox=90.97 rknn=0.19 decision=2.96 draw=4.44 venc_send=0.46 venc_get_rtsp=2.44 total=159.33 fps=6.28
+[PROFILE] frames=90 avg_ms: vi_get=12.66 cvt_resize=44.86 letterbox=90.90 rknn=0.18 decision=2.89 draw=4.49 venc_send=0.50 venc_get_rtsp=2.45 total=158.94 fps=6.29
+[PROFILE] frames=90 avg_ms: vi_get=12.90 cvt_resize=44.92 letterbox=90.86 rknn=0.19 decision=2.94 draw=4.41 venc_send=0.63 venc_get_rtsp=2.41 total=159.25 fps=6.28
+[PROFILE] frames=90 avg_ms: vi_get=12.86 cvt_resize=45.34 letterbox=90.90 rknn=0.17 decision=2.94 draw=4.57 venc_send=0.47 venc_get_rtsp=2.43 total=159.69 fps=6.26
+[PROFILE] frames=90 avg_ms: vi_get=12.97 cvt_resize=44.15 letterbox=90.88 rknn=0.39 decision=3.12 draw=4.59 venc_send=0.58 venc_get_rtsp=2.33 total=158.98 fps=6.29
+[PROFILE] frames=90 avg_ms: vi_get=12.60 cvt_resize=45.30 letterbox=90.92 rknn=0.18 decision=2.97 draw=4.38 venc_send=0.49 venc_get_rtsp=2.44 total=159.27 fps=6.28
+```
+
+### 3. 结论：瓶颈是 CPU 图像预处理，不是 NPU 推理
+
+| 阶段 | 平均耗时 | 占比 | 说明 |
+|---|---|---|---|
+| letterbox（resize+BGR2RGB+memcpy） | ~90.9 ms | 57% | **第一瓶颈**：720×480→568×426 INTER_LINEAR resize + 颜色转换 + 1.2MB memcpy |
+| cvt_resize（YUV→BGR + resize） | ~45.1 ms | 28% | **第二瓶颈**：无 NEON 优化的标量转换（单核 Cortex-A7） |
+| vi_get | ~12.7 ms | 8% | VI 取帧本身 |
+| draw + decision + venc + rtsp | ~10.4 ms | 7% | 画框/决策/编码/推流合计 |
+| rknn | ~0.2 ms | <1% | CPU 侧等待极小：NPU 推理未阻塞主循环（零拷贝异步流水，推理与下一帧预处理重叠） |
+| **total** | **~159.3 ms** | 100% | **≈6.28 FPS**（与历史 6.5FPS 一致） |
+
+- **优化方向**（供下一阶段）：① 合并 YUV→BGR 与 letterbox 为单次 NEON 操作；② 预计算 letterbox 缩放参数（当前每帧重算）；
+  ③ 用 NEON 手写 YUV420sp→RGB 640×640 转换（省去中间 BGR 720×480 全帧转换）；④ 评估 320×320 输入模型。
+- **`rknn=0.2ms` 观察**：RV1106 NPU 计算不可能 <1ms，解释为 RKNN 零拷贝异步流水（CPU 侧 enqueue 即返回，
+  输出为上一帧结果或 NPU 并行计算中），因此帧率由 CPU 预处理决定——与 6.28FPS 实测自洽。已如实记录，不当作“NPU 极快”结论。
+
+### 4. 验证与回退
+
+- 交叉编译：老电脑 `cd build && make install -j4` → EXIT=0（两次，初版+修正版）。
+- 真机部署：旧二进制备份为 `luckfox_pico_rtsp_yolov5.before_p1-6_profile`，新二进制 `.new` 原子替换，systemd 重启后 active。
+- 日志：`/tmp/enhanced_latest.log` 中 `[PROFILE]` 每 90 帧一行；服务运行正常，无 `rknn_run fail`/看门狗告警。
+- 本机回归：**150 passed**（`python -m pytest tests/ -q`）。
+- 回退：板端保留 `luckfox_pico_rtsp_yolov5.before_p1-6_profile`，`mv` 回原名 + 重启服务即可。

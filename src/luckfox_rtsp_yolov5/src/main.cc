@@ -12,6 +12,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <algorithm>
+#include <chrono>
 #include <vector>
 
 #include "rtsp_demo.h"
@@ -39,6 +40,39 @@
 #define WATCHDOG_MAX_CONSEC_VI_FAIL 30    // 连续取帧失败 N 次判定主链路挂死（约 30s），主动退出交由 systemd 重启
 #define WATCHDOG_LOG_EVERY_N_FAIL   10    // 失败日志节流：每 N 次打印一次，避免刷屏
 #define RTSP_CONSEC_TX_FAIL_WARN    60    // 连续推流失败 N 次打印汇总告警（非致命，等待新客户端连接）
+
+// ---- 主循环耗时打点（P1-6）：定位 ~6.5FPS 瓶颈的耗时分布 ----
+// 每 PROFILE_LOG_EVERY_N_FRAMES 帧打印一次各阶段平均耗时；不改变任何业务逻辑。
+#define PROFILE_LOG_EVERY_N_FRAMES  90    // 每 90 帧打印一次（约 13s @6.9FPS）
+struct ProfileTiming {
+    unsigned long long frames   = 0;
+    unsigned long long us_vi_get    = 0;  // RK_MPI_VI_GetChnFrame 取帧
+    unsigned long long us_cvt_resize= 0;  // YUV420sp->BGR + resize
+    unsigned long long us_letterbox = 0;  // letterbox + BGR2RGB + memcpy 送显存
+    unsigned long long us_rknn      = 0;  // RKNN 推理
+    unsigned long long us_decision  = 0;  // 脚点提取 + IPM + Kalman + 谱特征 + FSM
+    unsigned long long us_draw      = 0;  // 画框 + 等级叠加
+    unsigned long long us_venc_send = 0;  // 编码前 BGR2RGB + VENC_SendFrame
+    unsigned long long us_venc_get  = 0;  // VENC_GetStream + RTSP 推流 + Release
+    unsigned long long us_total     = 0;  // 整帧（含 VI 取帧）
+};
+static ProfileTiming g_prof;
+
+static inline unsigned long long profileNowUs() {
+    return (unsigned long long)std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+static void profileReport() {
+    if (g_prof.frames == 0) return;
+    const double f = (double)g_prof.frames;
+    printf("[PROFILE] frames=%llu avg_ms: vi_get=%.2f cvt_resize=%.2f letterbox=%.2f rknn=%.2f decision=%.2f draw=%.2f venc_send=%.2f venc_get_rtsp=%.2f total=%.2f fps=%.2f\n",
+           g_prof.frames,
+           g_prof.us_vi_get/1000.0/f, g_prof.us_cvt_resize/1000.0/f, g_prof.us_letterbox/1000.0/f,
+           g_prof.us_rknn/1000.0/f, g_prof.us_decision/1000.0/f, g_prof.us_draw/1000.0/f,
+           g_prof.us_venc_send/1000.0/f, g_prof.us_venc_get/1000.0/f, g_prof.us_total/1000.0/f,
+           f / ((double)g_prof.us_total / 1000000.0));
+    g_prof = ProfileTiming();
+}
 
 // disp size
 int width    = DISP_WIDTH;
@@ -309,7 +343,9 @@ int main(int argc, char *argv[]) {
 	int venc_stream_fail = 0;
 	int rtsp_consec_fail = 0;
 	while (!g_stop)
-	{	
+	{
+		const unsigned long long t_frame0 = profileNowUs();
+		unsigned long long t_mark = t_frame0;
 		// get vi frame
 		h264_frame.stVFrame.u32TimeRef = H264_TimeRef++;
 		h264_frame.stVFrame.u64PTS = TEST_COMM_GetNowUs(); 
@@ -321,9 +357,19 @@ int main(int argc, char *argv[]) {
 
 			cv::Mat yuv420sp(height + height / 2, width, CV_8UC1, vi_data);
 			cv::Mat bgr(height, width, CV_8UC3, data);			
+			{
+				const unsigned long long t_now = profileNowUs();
+				g_prof.us_vi_get += t_now - t_mark;
+				t_mark = t_now;
+			}
 			
 			cv::cvtColor(yuv420sp, bgr, cv::COLOR_YUV420sp2BGR);
 			cv::resize(bgr, frame, cv::Size(width ,height), 0, 0, cv::INTER_LINEAR);
+			{
+				const unsigned long long t_now = profileNowUs();
+				g_prof.us_cvt_resize += t_now - t_mark;
+				t_mark = t_now;
+			}
 			
 			//letterbox
 						cv::Mat letterboxImage = letterbox(frame);
@@ -331,7 +377,17 @@ int main(int argc, char *argv[]) {
 						// 否则检测输入红蓝互换会降低检测精度（评审 Agent5/交叉C 发现）。
 						cv::cvtColor(letterboxImage, letterboxImage, cv::COLOR_BGR2RGB);
 						memcpy(rknn_app_ctx.input_mems[0]->virt_addr, letterboxImage.data, model_width*model_height*3);
+			{
+				const unsigned long long t_now = profileNowUs();
+				g_prof.us_letterbox += t_now - t_mark;
+				t_mark = t_now;
+			}
 			inference_yolov5_model(&rknn_app_ctx, &od_results);
+			{
+				const unsigned long long t_now = profileNowUs();
+				g_prof.us_rknn += t_now - t_mark;
+				t_mark = t_now;
+			}
 
 			// ---- 行人空间网络：只取 person 类，提取脚点 ----
 			pedestrian::RiskLevel crowd = pedestrian::RISK_SAFE;
@@ -364,6 +420,11 @@ int main(int argc, char *argv[]) {
 				featFiedler = er.fiedler;
 				printf("[EnhancedDecision] level=%s n=%d rho=%.2f r_gcc=%.2f fiedler=%.3f\n",
 				       RiskEngine::levelName(crowd), featN, featRho, featGcc, featFiedler);
+			}
+			{
+				const unsigned long long t_now = profileNowUs();
+				g_prof.us_decision += t_now - t_mark;
+				t_mark = t_now;
 			}
 
 			// 经典决策旁路：默认关闭（enable_risk_engine_fallback=false）。
@@ -426,6 +487,11 @@ int main(int argc, char *argv[]) {
 				cv::putText(frame, info, cv::Point(10, 42),
 							cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0,0,0), 2);
 			}
+			{
+				const unsigned long long t_now = profileNowUs();
+				g_prof.us_draw += t_now - t_mark;
+				t_mark = t_now;
+			}
 
 		}
 		else
@@ -461,6 +527,11 @@ int main(int argc, char *argv[]) {
 			}
 		} else {
 			venc_send_fail = 0;
+		}
+		{
+			const unsigned long long t_now = profileNowUs();
+			g_prof.us_venc_send += t_now - t_mark;
+			t_mark = t_now;
 		}
 
 		// rtsp（有限超时；发送/事件返回值不再忽略）
@@ -511,6 +582,15 @@ int main(int argc, char *argv[]) {
 			s32Ret = RK_MPI_VI_ReleaseChnFrame(0, 0, &stViFrame);
 			if (s32Ret != RK_SUCCESS) {
 				RK_LOGE("RK_MPI_VI_ReleaseChnFrame fail %x", s32Ret);
+			}
+			{
+				const unsigned long long t_now = profileNowUs();
+				g_prof.us_venc_get += t_now - t_mark;
+				g_prof.us_total  += t_now - t_frame0;
+				++g_prof.frames;
+				if (g_prof.frames % PROFILE_LOG_EVERY_N_FRAMES == 0) {
+					profileReport();
+				}
 			}
 		}
 		memset(text, 0, sizeof text);
