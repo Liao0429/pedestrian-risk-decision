@@ -29,6 +29,17 @@
 #define DISP_WIDTH  720
 #define DISP_HEIGHT 480
 
+// ---- 主循环看门狗与有限超时配置 ----
+// 所有驱动调用使用有限超时（毫秒），避免 -1 无限阻塞导致进程假死（SIGTERM
+// 无法及时退出、外部看门狗无从自愈）。正常板端帧率约 6.9FPS（约 145ms/帧），
+// 1s 超时不会误伤正常取帧，仅在通道停滞时触发。
+#define VI_GET_FRAME_TIMEOUT_MS    1000   // 单帧取帧超时
+#define VENC_SEND_FRAME_TIMEOUT_MS 1000   // 编码输入超时
+#define VENC_GET_STREAM_TIMEOUT_MS 1000   // 编码输出超时
+#define WATCHDOG_MAX_CONSEC_VI_FAIL 30    // 连续取帧失败 N 次判定主链路挂死（约 30s），主动退出交由 systemd 重启
+#define WATCHDOG_LOG_EVERY_N_FAIL   10    // 失败日志节流：每 N 次打印一次，避免刷屏
+#define RTSP_CONSEC_TX_FAIL_WARN    60    // 连续推流失败 N 次打印汇总告警（非致命，等待新客户端连接）
+
 // disp size
 int width    = DISP_WIDTH;
 int height   = DISP_HEIGHT;
@@ -292,14 +303,20 @@ int main(int argc, char *argv[]) {
   }
   venc_ready = true;
   printf("venc init success\n");
-  	while (!g_stop)
+  	// ---- 主循环看门狗计数（取帧连续失败判定挂死；编码/RTSP 失败仅告警） ----
+	int vi_consec_fail = 0;
+	int venc_send_fail = 0;
+	int venc_stream_fail = 0;
+	int rtsp_consec_fail = 0;
+	while (!g_stop)
 	{	
 		// get vi frame
 		h264_frame.stVFrame.u32TimeRef = H264_TimeRef++;
 		h264_frame.stVFrame.u64PTS = TEST_COMM_GetNowUs(); 
-		s32Ret = RK_MPI_VI_GetChnFrame(0, 0, &stViFrame, -1);
+		s32Ret = RK_MPI_VI_GetChnFrame(0, 0, &stViFrame, VI_GET_FRAME_TIMEOUT_MS);
 		if(s32Ret == RK_SUCCESS)
 		{
+			vi_consec_fail = 0;
 			void *vi_data = RK_MPI_MB_Handle2VirAddr(stViFrame.stVFrame.pMbBlk);	
 
 			cv::Mat yuv420sp(height + height / 2, width, CV_8UC1, vi_data);
@@ -406,32 +423,82 @@ int main(int argc, char *argv[]) {
 			}
 
 		}
+		else
+		{
+			++vi_consec_fail;
+			if (vi_consec_fail == 1 || vi_consec_fail % WATCHDOG_LOG_EVERY_N_FAIL == 0) {
+				fprintf(stderr, "[WATCHDOG] VI 取帧失败 (ret=0x%x)，连续 %d 次（超时 %dms）\n",
+				        s32Ret, vi_consec_fail, VI_GET_FRAME_TIMEOUT_MS);
+			}
+			if (vi_consec_fail >= WATCHDOG_MAX_CONSEC_VI_FAIL) {
+				fprintf(stderr,
+				        "[WATCHDOG] VI 连续取帧失败 %d 次，主链路疑似挂死，主动退出交由 systemd 看门狗重启\n",
+				        vi_consec_fail);
+				cleanup();
+				return 1;
+			}
+		}
 		// ---- 取帧成功后才编码/推流/释放（失败时跳过本帧，避免陈旧帧编码与错误释放）----
 		if (s32Ret == RK_SUCCESS)
 		{
 			memcpy(data, frame.data, width * height * 3);
 
-			// encode H264
-			RK_MPI_VENC_SendFrame(0, &h264_frame,-1);
+		// encode H264（有限超时 + 返回值检查：编码通道拥塞/停止时不再无限阻塞）
+		RK_S32 send_ret = RK_MPI_VENC_SendFrame(0, &h264_frame, VENC_SEND_FRAME_TIMEOUT_MS);
+		if (send_ret != RK_SUCCESS) {
+			++venc_send_fail;
+			if (venc_send_fail == 1 || venc_send_fail % WATCHDOG_LOG_EVERY_N_FAIL == 0) {
+				fprintf(stderr, "[WARN] RK_MPI_VENC_SendFrame 失败 (ret=0x%x)，累计 %d 次\n",
+				        send_ret, venc_send_fail);
+			}
+		} else {
+			venc_send_fail = 0;
+		}
 
-			// rtsp
-			s32Ret = RK_MPI_VENC_GetStream(0, &stFrame, -1);
-			if(s32Ret == RK_SUCCESS)
+		// rtsp（有限超时；发送/事件返回值不再忽略）
+		RK_S32 stream_ret = RK_MPI_VENC_GetStream(0, &stFrame, VENC_GET_STREAM_TIMEOUT_MS);
+		if(stream_ret == RK_SUCCESS)
+		{
+			if(g_rtsplive && g_rtsp_session)
 			{
-				if(g_rtsplive && g_rtsp_session)
-				{
-					//printf("len = %d PTS = %d \n",stFrame.pstPack->u32Len, stFrame.pstPack->u64PTS);
-					void *pData = RK_MPI_MB_Handle2VirAddr(stFrame.pstPack->pMbBlk);
-					rtsp_tx_video(g_rtsp_session, (uint8_t *)pData, stFrame.pstPack->u32Len,
-								  stFrame.pstPack->u64PTS);
-					rtsp_do_event(g_rtsplive);
+				void *pData = RK_MPI_MB_Handle2VirAddr(stFrame.pstPack->pMbBlk);
+				// 注意：Rockchip rtsp_demo 中 rtsp_tx_video 成功时返回帧长度 len（正数），
+				// 失败时返回负数（如 -1）。不能以 !=0 判断失败（无客户端时也返回 len）。
+				int tx_ret = rtsp_tx_video(g_rtsp_session, (uint8_t *)pData, stFrame.pstPack->u32Len,
+										   stFrame.pstPack->u64PTS);
+				if (tx_ret < 0) {
+					++rtsp_consec_fail;
+					if (rtsp_consec_fail == 1 || rtsp_consec_fail % WATCHDOG_LOG_EVERY_N_FAIL == 0) {
+						fprintf(stderr, "[RTSP] rtsp_tx_video 失败 (ret=%d)，连续 %d 次\n",
+						        tx_ret, rtsp_consec_fail);
+					}
+					if (rtsp_consec_fail >= RTSP_CONSEC_TX_FAIL_WARN) {
+						fprintf(stderr,
+						        "[RTSP] 连续推流失败 %d 次（可能无客户端或网络异常），继续运行等待新连接\n",
+						        rtsp_consec_fail);
+						rtsp_consec_fail = 0;   // 已告警，重置计数避免重复刷屏
+					}
+				} else {
+					rtsp_consec_fail = 0;
 				}
-				s32Ret = RK_MPI_VENC_ReleaseStream(0, &stFrame);
-				if (s32Ret != RK_SUCCESS) {
-					RK_LOGE("RK_MPI_VENC_ReleaseStream fail %x", s32Ret);
+				int ev_ret = rtsp_do_event(g_rtsplive);
+				if (ev_ret < 0) {
+					fprintf(stderr, "[RTSP] rtsp_do_event 返回 %d\n", ev_ret);
 				}
 			}
-
+			RK_S32 rel_ret = RK_MPI_VENC_ReleaseStream(0, &stFrame);
+			if (rel_ret != RK_SUCCESS) {
+				RK_LOGE("RK_MPI_VENC_ReleaseStream fail %x", rel_ret);
+			}
+		}
+		else
+		{
+			++venc_stream_fail;
+			if (venc_stream_fail == 1 || venc_stream_fail % WATCHDOG_LOG_EVERY_N_FAIL == 0) {
+				fprintf(stderr, "[WARN] RK_MPI_VENC_GetStream 失败/超时 (ret=0x%x)，累计 %d 次\n",
+				        stream_ret, venc_stream_fail);
+			}
+		}
 			// release VI frame（成功取帧后必须释放）
 			s32Ret = RK_MPI_VI_ReleaseChnFrame(0, 0, &stViFrame);
 			if (s32Ret != RK_SUCCESS) {
