@@ -68,14 +68,20 @@ pedestrian-risk-decision/
 | 指标 | 结果 |
 |---|---|
 | 检出率（总体） | **82.5%** |
-| 高密度图（14+人）检出率 | **79.4%** |
+| 高密度图（14+人）检出率 | **76.7%** |
 | 等级分布 | SAFE 414 / WARNING 61 / DANGER 25 |
 
-### 视频增强（真实视频，Kalman+谱特征+FSM）
-- 密集人群（`mixkit_13192`，平均 14.9 人）：FSM 生效后输出 **DANGER 179 / WARNING 120 / SAFE 6**（305 帧），等级切换仅 4 次 → 稳定（修复前为逐帧规则判定 264/305 帧 DANGER，见 `docs/DATA_INTEGRITY.md`）
+![图片基线等级分布](docs/figures/fig1_level_dist.png)  
+![图片基线检出率](docs/figures/fig2_detect_rate.png)
+
+### 视频增强（真实视频，Kalman+谱特征+FSM，111 条全量重跑）
+- **全量 111 条真实视频（45021 帧）**：等级分布 **SAFE 25669 / WARNING 11545 / DANGER 7807**，平均每条等级切换 **4.00 次**（FSM 滞回稳定），40 条出现 DANGER，**31 条全程 SAFE（零误报）**
+- 密集人群（`mixkit_13192`）：**DANGER 179 / WARNING 120 / SAFE 6**（305 帧），等级切换仅 4 次 → 稳定（逐帧规则基线为 46 次/视频）
 - 稀疏/无人场景（`mixkit_13265`）：281 帧全程 SAFE，**零误报**
-- 瞬时聚集：被 FSM 滞回正确抑制，不闪跳
-- 修复后结果见 `results/video_enhanced_fsm/`
+- 算法前后对比见 `docs/COMPARISON.md`（含增强代价/下降方面）；全量明细见 `results/rerun/`
+
+![视频增强前后对比](docs/figures/fig3_before_after.png)  
+![视频增强等级分布](docs/figures/fig4_video_level.png)
 
 详见 `docs/PERFORMANCE_COMPARISON.md`。
 
@@ -119,6 +125,7 @@ make test        # 编译并运行增强决策/JSON 配置/阈值引擎单元测
 | `docs/WIFI_SETUP.md` | 答辩现场无线连接方案（USB WiFi 自动连手机热点） |
 | `docs/DEMO_SCRIPT.md` | 答辩现场演示脚本（讲稿/故障预案，8-10分钟） |
 | `docs/PERFORMANCE_COMPARISON.md` | 性能对比实验报告 |
+| `docs/COMPARISON.md` | 增强算法前后对比（真实数据 + 代价/下降方面） |
 | `docs/hardware/` | 硬件扩展（舵机/语音/大屏/开关/PCB） |
 | `docs/experiment_results.md` | 30 张图基线实验报告（早期） |
 
