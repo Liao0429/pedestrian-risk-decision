@@ -29,7 +29,7 @@
         "n": 1,
         "m": 0,
         "density": 0.0,
-        "r_gcc": 1.0,
+        "r_gcc": 0.0,
         "clustering": 0.0,
         "fiedler": 0.0,
         "spectral_radius": 0.0,

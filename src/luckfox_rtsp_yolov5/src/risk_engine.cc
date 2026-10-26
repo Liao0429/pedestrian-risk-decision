@@ -44,7 +44,7 @@ void RiskEngine::addPedestrian(int footX, int footY) {
 void RiskEngine::computeFeatures() {
     m_feat.n = (int)m_pts.size();
     m_feat.m = 0;
-    if (m_feat.n < 2) { m_feat.density = 0; m_feat.r_gcc = (m_feat.n>0)?1.0:0; m_feat.clustering = 0; return; }
+    if (m_feat.n < 2) { m_feat.density = 0; m_feat.r_gcc = (m_feat.n>1)?1.0:0; m_feat.clustering = 0; return; }
 
     // 距离矩阵 -> 邻接矩阵
     int n = m_feat.n;

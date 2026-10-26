@@ -54,7 +54,7 @@ def reference_compute_features(pts, edge_dist):
     n = len(pts)
     if n < 2:
         density = 0.0
-        r_gcc = 1.0 if n > 0 else 0.0
+        r_gcc = 1.0 if n > 1 else 0.0
         clustering = 0.0
         return n, 0, density, r_gcc, clustering
 

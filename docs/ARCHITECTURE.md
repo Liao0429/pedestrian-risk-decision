@@ -128,7 +128,6 @@ graph LR
 ## 9. 相关文档
 
 - `docs/SYSTEM_PRINCIPLE.md` — 系统实现原理与算法详解
-- `docs/ALGORITHM_OPTIMIZATION.md` — 算法优化建议
-- `docs/ALGORITHM_UPGRADE.md` — 升级说明（ByteTrack/DBSCAN/IPM/EMA）
-- `docs/INTEGRATION_PLAN.md` — 集成方案
-- `docs/PERFORMANCE_COMPARISON.md` — 性能对比实验报告
+- `docs/algorithms.md` — 算法设计（C++/Python 双实现、黄金回归说明）
+- `docs/WEB_VIEWER.md` — 网页观看
+- `docs/hardware/` — 硬件扩展（舵机/语音/大屏/开关/PCB）

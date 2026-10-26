@@ -159,7 +159,7 @@ def compute_laplacian_features(pts, edge_dist):
         density = (2.0 * m) / (n * (n - 1))
     else:
         density = 0.0
-    r_gcc = _largest_component_ratio(A) if n > 0 else 0.0
+    r_gcc = _largest_component_ratio(A) if n > 1 else 0.0
     clustering = _avg_clustering(A)
 
     # ---- 图拉普拉斯谱特征 ----

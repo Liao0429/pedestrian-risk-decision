@@ -75,10 +75,10 @@ pedestrian-risk-decision/
 ![图片基线检出率](docs/figures/fig2_detect_rate.png)
 
 ### 视频增强（真实视频，Kalman+谱特征+FSM，111 条全量重跑）
-- **全量 111 条真实视频（45021 帧）**：等级分布 **SAFE 25669 / WARNING 11545 / DANGER 7807**，平均每条等级切换 **4.00 次**（FSM 滞回稳定），40 条出现 DANGER，**31 条未触发风险报警**（含少量低照度场景检测器漏检，已核对说明，见 `docs/COMPARISON.md`）
+- **全量 111 条真实视频（45021 帧）**：等级分布 **SAFE 25669 / WARNING 11545 / DANGER 7807**，平均每条等级切换 **4.00 次**（FSM 滞回稳定），40 条出现 DANGER，**31 条未触发风险报警**（含少量低照度场景检测器漏检，已用亮度+检测人数双重核对）
 - 密集人群（`mixkit_13192`）：**DANGER 179 / WARNING 120 / SAFE 6**（305 帧），等级切换仅 4 次 → 稳定（逐帧规则基线为 46 次/视频）
 - 稀疏/无人场景（`mixkit_50134`，光照正常）：388 帧全程 SAFE，**零误报**
-- 算法前后对比见 `docs/COMPARISON.md`（含增强代价/下降方面）；全量明细见 `results/rerun/`
+- 算法前后对比与增强代价/下降方面见 `results/rerun/_comparison_summary.json`；全量明细见 `results/rerun/`
 
 ![视频增强前后对比](docs/figures/fig3_before_after.png) 
 ![视频增强等级分布](docs/figures/fig4_video_level.png)
@@ -87,7 +87,7 @@ pedestrian-risk-decision/
 
 ![消融实验](docs/figures/fig_ablation.png)
 
-- **Kalman 跟踪平滑**使平均切换次数下降约 67%（35.2 → 11.7），**FSM 时序决策**进一步稳定（→ 4.0）；谱特征提升风险语义准确性。详见 `docs/ABLATION_STUDY.md`。
+- **Kalman 跟踪平滑**使平均切换次数下降约 67%（35.2 → 11.7），**FSM 时序决策**进一步稳定（→ 4.0）；谱特征提升风险语义准确性。详见 `results/rerun/_ablation.json` 与 `docs/figures/fig_ablation.png`。
 
 ### 🎬 真实检测效果视频
 
@@ -101,7 +101,7 @@ pedestrian-risk-decision/
 
 > 视频为真实数据集（Mixkit）经 `scripts/crowd_test_enhanced.py`（Kalman + 谱特征 + FSM）处理生成；逐帧时间线 JSON 在 `results/rerun/video_enhanced/` 与 `results/video_enhanced_fsm/`。
 
-详见 `docs/PERFORMANCE_COMPARISON.md`。
+性能对比图表见 `docs/figures/`。
 
 ## 🚀 部署方法
 
@@ -114,7 +114,7 @@ python scripts/crowd_test_enhanced.py --input <video.mp4> --output results/video
 ```
 
 ### 开发板部署（Luckfox RV1106，C++/RKNN）
-1. 老电脑（Ubuntu）用交叉编译工具链编译 `src/luckfox_rtsp_yolov5/` 工程（见 `docs/INTEGRATION_PLAN.md`）
+1. 老电脑（Ubuntu）用交叉编译工具链编译 `src/luckfox_rtsp_yolov5/` 工程（架构见 `docs/ARCHITECTURE.md`，硬件方案见 `docs/hardware/`）
 2. 产物 scp 到开发板，`sudo ./luckfox_pico_rtsp_yolov5` 运行
 3. RTSP 推流：`rtsp://<板子IP>:554/live/0`
 4. 增强算法（谱特征/ByteTrack/FSM）的 C++ 头文件在 `src/algorithms/*.h`，可交叉编译集成
@@ -135,16 +135,14 @@ make test # 编译并运行增强决策/JSON 配置/阈值引擎单元测试（�
 
 | 文档 | 内容 |
 |---|---|
-| `docs/SYSTEM_PRINCIPLE.md` | 系统实现原理与算法详解（用） |
-| `docs/ALGORITHM_OPTIMIZATION.md` | 算法效率/准确度分析与升级建议 |
-| `docs/ALGORITHM_UPGRADE.md` | ByteTrack/DBSCAN/IPM标定/EMA 升级说明 |
-| `docs/INTEGRATION_PLAN.md` | 算法集成方案（Python+C++，四线程架构） |
+| `docs/SYSTEM_PRINCIPLE.md` | 系统实现原理与算法详解 |
+| `docs/ARCHITECTURE.md` | 系统架构与模块划分 |
+| `docs/algorithms.md` | 算法设计（C++/Python 双实现、黄金回归说明） |
 | `docs/WEB_VIEWER.md` | 网页免安装观看监控（go2rtc，手机/电脑浏览器） |
-| `docs/PERFORMANCE_COMPARISON.md` | 性能对比实验报告 |
-| `docs/COMPARISON.md` | 增强算法前后对比（真实数据 + 代价/下降方面） |
-| `docs/ABLATION_STUDY.md` | 消融实验（Kalman/谱特征/FSM 各组件贡献） |
+| `docs/DEMO_VIDEO.md` | 真实检测效果视频说明 |
+| `docs/AI_needle2_analysis.md` | 端侧 AI 智能体（Needle 2，linux-armv7）接入分析 |
+| `docs/LUCKFOX_VOICE_ASSISTANT_PLAN.md` | 语音对话大模型方案（网络/本地双方案） |
 | `docs/hardware/` | 硬件扩展（舵机/语音/大屏/开关/PCB） |
-| `docs/experiment_results.md` | 30 张图基线实验报告（早期） |
 
 ## 🧩 可扩展模块（后续）
 

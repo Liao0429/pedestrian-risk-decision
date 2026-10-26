@@ -225,7 +225,7 @@ inline SpectralFeatures GraphLaplacian::computeFeatures() const {
     if (n < 2) {
         feat.m = 0;
         feat.density = 0.0;
-        feat.r_gcc = (n > 0) ? 1.0 : 0.0;
+        feat.r_gcc = (n > 1) ? 1.0 : 0.0;
         feat.clustering = 0.0;
         feat.fiedler = 0.0;
         feat.spectral_radius = 0.0;

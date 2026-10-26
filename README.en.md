@@ -72,7 +72,7 @@ pedestrian-risk-decision/
 - Sparse/empty scenes: SAFE throughout, **zero false alarms**
 - Transient gathering: correctly suppressed by FSM hysteresis, no flicker
 
-See `docs/PERFORMANCE_COMPARISON.md`.
+See `docs/figures/` for performance comparison charts.
 
 ## 🚀 Deployment
 
@@ -85,7 +85,7 @@ python scripts/crowd_test_enhanced.py --input <video.mp4> --output results/video
 ```
 
 ### On-board deployment (Luckfox RV1106, C++/RKNN)
-1. Cross-compile `src/luckfox_rtsp_yolov5/` on an Ubuntu host (see `docs/INTEGRATION_PLAN.md`)
+1. Cross-compile `src/luckfox_rtsp_yolov5/` on an Ubuntu host (see `docs/ARCHITECTURE.md` and `docs/hardware/`)
 2. scp the binary to the board, run `sudo ./luckfox_pico_rtsp_yolov5`
 3. RTSP stream: `rtsp://<board-ip>:554/live/0`
 4. Enhanced algorithms (spectral/ByteTrack/FSM) C++ headers in `src/algorithms/*.h`, cross-compilable
@@ -94,13 +94,14 @@ python scripts/crowd_test_enhanced.py --input <video.mp4> --output results/video
 
 | Doc | Content |
 |---|---|
-| `docs/SYSTEM_PRINCIPLE.md` | System principle & algorithm details (for defense) |
-| `docs/ALGORITHM_OPTIMIZATION.md` | Algorithm efficiency/accuracy analysis & upgrade suggestions |
-| `docs/ALGORITHM_UPGRADE.md` | ByteTrack/DBSCAN/IPM-calibration/EMA upgrade notes |
-| `docs/INTEGRATION_PLAN.md` | Algorithm integration plan (Python+C++, 4-thread) |
-| `docs/PERFORMANCE_COMPARISON.md` | Performance comparison experiment report |
+| `docs/SYSTEM_PRINCIPLE.md` | System principle & algorithm details |
+| `docs/ARCHITECTURE.md` | System architecture & module overview |
+| `docs/algorithms.md` | Algorithm design (C++/Python dual impl, golden regression) |
+| `docs/WEB_VIEWER.md` | Browser-based live monitoring (go2rtc) |
+| `docs/DEMO_VIDEO.md` | Real detection demo videos |
+| `docs/AI_needle2_analysis.md` | Edge AI agent (Needle 2, linux-armv7) analysis |
+| `docs/LUCKFOX_VOICE_ASSISTANT_PLAN.md` | Voice assistant LLM plan (cloud/local) |
 | `docs/hardware/` | Hardware extensions (servo/voice/display/switch/PCB) |
-| `docs/experiment_results.md` | Early 30-image baseline report |
 
 ## 🧩 Extensible Modules
 
