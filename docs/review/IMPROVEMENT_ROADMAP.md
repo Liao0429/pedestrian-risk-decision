@@ -73,6 +73,6 @@
 | P1-2 图片 500 张 GT 标注 | ⬜ 待人工 | 约 2h，产出 risk_gt.csv |
 | P1-1 谱特征接入 FSM 实验 | ✅ 已完成（裁决：**不采纳**） | spectral_fsm_experiment.py + 8 测试 + 结果 JSON：M1 正反馈过度敏感（DANGER 视频 40→65+）；M2 抑制为整体阈值偏移（被降级帧 fiedler 中位数 0.83 ≥ 保留帧 0.69），非语义增益；FSM 本身已把链状压为 WARNING → 不接入生产，详见 IMPLEMENTATION_LOG 阶段七 |
 | P1-6 主循环打点 | ✅ 完成（2026-10-27） | 真机 `[PROFILE]` 日志：瓶颈=CPU 预处理+NPU 推理串行组合（合计 ~135-150ms/帧，比例随 CPU 调频在 44/91 与 91/44 间翻转）；详见 IMPLEMENTATION_LOG 阶段五 |
-| P1-6 NEON 预处理优化 | ✅ 代码+板端验证完成（待真机部署测速） | 新增 preprocess.{h,cc}：NV12→BGR（NEON）与 NV12→RGB letterbox（定点单遍）替代 OpenCV 三遍流程（~136ms）；修复 NV12/NV21 颜色语义 bug；黄金测试 174 项通过、交叉编译通过、板端 NEON vs 标量 max_diff=0（3 轮）、pytest 158 passed；详见 IMPLEMENTATION_LOG 阶段八 |
+| P1 新增：NEON 预处理优化（P1-6 后续） | ✅ 完成（2026-10-27） | `preprocess.{h,cc}` NV12→BGR（NEON）+ NV12→RGB letterbox（NEON），修复 NV12 颜色语义；真机黄金 174/174，NEON vs 标量 max_diff=0；CPU 预处理 136→33ms，**6.30→7.46 FPS（+18%）**，NPU ~91ms 成为唯一瓶颈；详见 IMPLEMENTATION_LOG 阶段八 |
 | P1-7 真机 IPM 标定 | ⬜ 待做 | 需物理标定物 |
 | P1-8 长稳 8h/24h | ⬜ 待做 | 看门狗已就位 |

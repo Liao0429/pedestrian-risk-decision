@@ -408,12 +408,10 @@
 | 板端 NEON vs 标量一致性（`test_preprocess_neon.cc`） | 开发板实测 **3 轮 max_diff=0 PASS** |
 | Python 回归 `pytest tests/` | **158 passed** |
 
-### 3. 遗留（如实）
+### 3. 遗留（如实，已部分关闭）
 
-- **真机部署与性能对比未做**：新预处理二进制尚未部署到开发板生产服务
-  （`pedestrian-risk.service`）。部署需要授权，且应选择低人流时段。
-  部署后通过 `[PROFILE]` 对比 `cvt_resize/letterbox` 耗时（阶段五基线：
-  44-91ms/44-91ms，合计 ~136ms），预期合计降至 30-50ms，帧率 6.3→10+ FPS。
+- ~~**真机部署与性能对比未做**~~：✅ 已完成（见 §5）——新预处理二进制已部署到
+  `pedestrian-risk.service`，CPU 预处理合计 ~33ms，帧率 6.30→7.46 FPS。
 - NEON 版本未覆盖 letterbox 内层（该路径为定点标量，已消除浮点与中间缓冲；
   NEON 化留作 P2）。
 - `90e3186` 提交中混入了本模块文件（并行会话误并），历史未重写（保持可追溯）。
@@ -428,4 +426,29 @@
   已修正为 `vrow[x0]*wx0 + vrow[x1]*wx`。
 - **验证**：交叉编译通过；板端多尺寸对比（720×480→640×640、110×75→48×48 尾部路径、
   24×18→32×32 放大路径）`worst_max_diff <= 2`，全部 PASS（容差内舍入差异）。
+
+### 5. 真机部署与最终性能（2026-10-27 凌晨完成）
+
+- **部署**：新二进制（含 NEON BGR + NEON letterbox）已替换开发板生产服务
+  `pedestrian-risk.service`，旧二进制备份 `luckfox_pico_rtsp_yolov5.before_p1-8_neon*`。
+- **板端黄金测试**：`test_preprocess.cc` 以 `-O2 -mfpu=neon -mfloat-abi=hard` 交叉编译后
+  在开发板运行，**174/174 通过**（BGR 与 RGB-letterbox 均 max_diff≤2）。
+- **板端 NEON vs 标量一致性**：`test_preprocess_neon.cc`（NEON 编译）720×480 与 128×96
+  多轮 **max_diff=0 PASS**——NEON 色度展开与输出序修正后与标量逐位一致。
+- **性能对比（`[PROFILE]` 稳态实测）**：
+
+| 阶段 | 基线（P1-6 打点） | NEON 优化后 | 降幅 |
+|---|---|---|---|
+| cvt_resize（YUV→BGR） | 12.4–45.1 ms | **~7.0 ms** | ~44%–84% |
+| letterbox（YUV→RGB） | 44.5–90.9 ms | **~26–31 ms** | ~30%–66% |
+| CPU 预处理合计 | ~136 ms | **~33 ms** | **~76%** |
+| rknn（NPU 推理） | ~90.8 ms | ~90.9 ms | 持平（新瓶颈） |
+| total / FPS | ~158 ms / **6.30** | **~134 ms / 7.46** | **FPS +18%** |
+
+- **结论修正**：NEON 化后 CPU 预处理不再是第一瓶颈；**NPU 推理（~91ms/帧，占 68%）成为
+  唯一瓶颈**。帧率 6.30→7.46 FPS（+18%），未达此前"10+ FPS"预期是因为 NPU 为硬下限
+  （若需更高帧率须换更小模型输入如 320×320，属 P2 评估项）。
+- **部署事故规避**：本次沿用 `chmod +x` + `mv` 原子替换 + `sudo systemctl restart`，
+  无 203/EXEC 循环；服务全程 active，无 `rknn_run fail`/看门狗告警。
+- 对应提交：`795a2ec`、`cf72a67`、`5743c16`、`fd47944`。
 - 主机黄金测试（标量路径）仍 **174 通过**；`pytest` **158 passed**。
