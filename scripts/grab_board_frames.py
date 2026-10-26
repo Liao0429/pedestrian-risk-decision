@@ -10,7 +10,8 @@ for _ in range(10):
     if not ret:
         time.sleep(0.1)
 
-out_dir = pathlib.Path(r"H:/PedestrianRiskDecision/results/edge_board/screenshots")
+PROJECT_ROOT = pathlib.Path(__file__).resolve().parent.parent
+out_dir = PROJECT_ROOT / "results" / "edge_board" / "screenshots"
 out_dir.mkdir(parents=True, exist_ok=True)
 frames = []
 start = time.time()

@@ -7,15 +7,16 @@
 """
 import sys, os, json, glob, argparse
 from collections import Counter
+from pathlib import Path
 
-PROJECT = r"H:/PedestrianRiskDecision"
+PROJECT = str(Path(__file__).resolve().parent.parent)
 os.chdir(PROJECT)
 sys.path.insert(0, os.path.join(PROJECT, "scripts"))
 
 import cv2  # noqa: E402
 from ultralytics import YOLO  # noqa: E402
 from crowd_test_enhanced import detect_pedestrians, compute_features, load_config  # noqa: E402
-from src.algorithms.ipm import get_homography  # noqa: E402
+from crowd_test import get_homography  # noqa: E402
 
 
 def rule_level(n, rho, gcc, cfg):

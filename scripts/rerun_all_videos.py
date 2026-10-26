@@ -7,8 +7,9 @@
 运行：python scripts/rerun_all_videos.py
 """
 import sys, os, glob, json, time
+from pathlib import Path
 
-PROJECT = r"H:/PedestrianRiskDecision"
+PROJECT = str(Path(__file__).resolve().parent.parent)
 os.chdir(PROJECT)
 sys.path.insert(0, os.path.join(PROJECT, "scripts"))
 

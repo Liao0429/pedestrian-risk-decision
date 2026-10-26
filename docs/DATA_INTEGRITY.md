@@ -1,7 +1,7 @@
 # 数据完整性与测试验证报告
 
 > 生成时间：2026-10-26
-> 项目：H:\PedestrianRiskDecision（边缘端轻量化行人感知与风险决策系统）
+> 项目：PedestrianRiskDecision（边缘端轻量化行人感知与风险决策系统）
 > 对应任务：t_b778ad43「Run tests and validate data integrity」
 
 ---
@@ -26,7 +26,7 @@
 ### 2.1 Python 单元测试（回归）
 
 ```bash
-cd H:\PedestrianRiskDecision
+cd <项目根目录>
 python -m pytest tests -q
 # 结果：121 passed（原有 6 个测试文件）
 ```
