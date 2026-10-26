@@ -14,18 +14,27 @@ os.chdir(PROJECT)
 sys.path.insert(0, os.path.join(PROJECT, "scripts"))
 
 import cv2  # noqa: E402
-from ultralytics import YOLO  # noqa: E402
+try:
+    from ultralytics import YOLO  # noqa: E402
+except ImportError:  # pragma: no cover
+    YOLO = None
 from crowd_test_enhanced import detect_pedestrians, compute_features, load_config  # noqa: E402
 from crowd_test import get_homography  # noqa: E402
 
 
 def rule_level(n, rho, gcc, cfg):
-    """无 FSM 的逐帧规则判定（算法前基线），与 C++ RiskEngine 阈值一致。"""
+    """无 FSM 的逐帧规则判定（算法前基线）。
+
+    必须与真实引擎 crowd_test.evaluate_level / C++ RiskEngine::evaluate 的
+    AND-OR 语义完全一致：DANGER 需要 n 达标 且 (rho 或 gcc 达标)。
+    旧版误用 OR（任一阈值即触发），会系统性高估基线风险帧，导致
+    “增强后 DANGER 大幅下降”的假象——已修正（2026-10-26 评审发现）。
+    """
     d = cfg["danger"]
     w = cfg["warning"]
-    if n >= d["n"] or rho >= d["rho"] or gcc >= d["gcc"]:
+    if n >= d["n"] and (rho >= d["rho"] or gcc >= d["gcc"]):
         return "DANGER"
-    if n >= w["n"] or rho >= w["rho"] or gcc >= w["gcc"]:
+    if n >= w["n"] and (rho >= w["rho"] or gcc >= w["gcc"]):
         return "WARNING"
     return "SAFE"
 
