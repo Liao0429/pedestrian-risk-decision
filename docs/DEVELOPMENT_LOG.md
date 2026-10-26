@@ -68,3 +68,14 @@
   - C++ 主机测试（旧电脑 192.168.0.68 `make test`）：enhanced_decision 26/26、minijson 28/28、risk_config **27/27**（含新增差异化阈值用例）全过
   - 交叉编译器（arm-none-linux-gnueabihf-g++）对 main.cc 做 `-fsyntax-only`：本次修改无新增错误；剩余 `rknn_app_context_t.input_mems` 报错为旧电脑 SDK include 环境差异（该行是既有代码，真实交叉编译以 SDK example CMake 构建为准，待真机部署最终验证）
 - 📌 待办：T6 答辩演示打磨（美观/预录视频最终确认）、单应矩阵外部标定文件加载、USB WiFi 采购实测
+
+## 后续推进（心跳第 6 轮，收口 T6 答辩演示打磨）
+
+- ✅ **新增 `docs/DEMO_SCRIPT.md` 现场答辩演示脚本**（响应 review2 demo_readiness 建议，落地为可直接照做的讲稿）：
+  - **演示前检查清单**：开发板/摄像头/USB WiFi/手机热点/移动电源/预录视频/浏览器，逐项打勾
+  - **8-10 分钟分步流程**：开场定位 → 网页实时观看 → 预录视频兜底（DANGER/WARNING 切换）→ 真机性能数据 → 算法流水线讲解（感知→IPM→图论→FSM）→ 硬件扩展方案 → 收尾
+  - **每环节含旁白话术 + 操作步骤 + 预期现象 + 数据支撑**（12.5MB/42.5%/6.9FPS、DANGER 179/WARNING 120/SAFE 6、零误报）
+  - **故障预案表**：网页打不开 / 一直 SAFE / 开发板不启动 / 现场无网线 / 时间不够，各给处理方案
+  - **引用文件逐一核实存在**：`start_demo.sh`、两段增强视频+timeline、4 张真机抓帧、架构图/硬件 3D 图
+- ✅ 同步更新：README 文档索引补 `DEMO_SCRIPT.md`；KANBAN **T6 标记完成**；FINAL_REPORT 完成度 **96% → 97%**、答辩准备段补现场讲稿
+- ✅ 看板全部任务（T0-T8）现已 **全部完成**，无进行中项
