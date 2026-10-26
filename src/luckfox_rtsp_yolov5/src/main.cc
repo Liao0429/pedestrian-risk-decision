@@ -326,8 +326,11 @@ int main(int argc, char *argv[]) {
 			cv::resize(bgr, frame, cv::Size(width ,height), 0, 0, cv::INTER_LINEAR);
 			
 			//letterbox
-			cv::Mat letterboxImage = letterbox(frame);	
-			memcpy(rknn_app_ctx.input_mems[0]->virt_addr, letterboxImage.data, model_width*model_height*3);		
+						cv::Mat letterboxImage = letterbox(frame);
+						// RKNN 模型输入约定为 RGB；OpenCV Mat 为 BGR，需在送入前转换，
+						// 否则检测输入红蓝互换会降低检测精度（评审 Agent5/交叉C 发现）。
+						cv::cvtColor(letterboxImage, letterboxImage, cv::COLOR_BGR2RGB);
+						memcpy(rknn_app_ctx.input_mems[0]->virt_addr, letterboxImage.data, model_width*model_height*3);
 			inference_yolov5_model(&rknn_app_ctx, &od_results);
 
 			// ---- 行人空间网络：只取 person 类，提取脚点 ----
@@ -383,33 +386,31 @@ int main(int argc, char *argv[]) {
 			}
 
 			for(int i = 0; i < od_results.count; i++)
-						{					
-							if(od_results.count >= 1)
-							{
-								object_detect_result *det_result = &(od_results.results[i]);
-								// 只画/打印目标类别（与风险引擎 target_classes 过滤一致，避免画面框数与决策人数不一致）
-								if (std::find(riskCfg.target_classes.begin(), riskCfg.target_classes.end(), det_result->cls_id) == riskCfg.target_classes.end()) {
-									continue;
-								}
+						{
+							object_detect_result *det_result = &(od_results.results[i]);
+							// 只画/打印目标类别（与风险引擎 target_classes 过滤一致，避免画面框数与决策人数不一致）
+							if (std::find(riskCfg.target_classes.begin(), riskCfg.target_classes.end(), det_result->cls_id) == riskCfg.target_classes.end()
+								// 与决策路径一致：若该类配置了差异化置信度阈值且当前置信度不足，也不画框
+								|| (riskCfg.class_conf_thresholds.count(det_result->cls_id) > 0
+									&& det_result->prop < riskCfg.class_conf_thresholds.at(det_result->cls_id)))
+								continue;
+							sX = (int)(det_result->box.left);
+							sY = (int)(det_result->box.top);
+							eX = (int)(det_result->box.right);
+							eY = (int)(det_result->box.bottom);
+							mapCoordinates(&sX,&sY);
+							mapCoordinates(&eX,&eY);
 
-								sX = (int)(det_result->box.left   );	
-								sY = (int)(det_result->box.top 	  );
-								eX = (int)(det_result->box.right  );
-								eY = (int)(det_result->box.bottom );
-								mapCoordinates(&sX,&sY);
-								mapCoordinates(&eX,&eY);
-					
-								printf("%s @ (%d %d %d %d) %.3f\n", coco_cls_to_name(det_result->cls_id),
-										 sX, sY, eX, eY, det_result->prop);
+							printf("%s @ (%d %d %d %d) %.3f\n", coco_cls_to_name(det_result->cls_id),
+								   sX, sY, eX, eY, det_result->prop);
 
-								cv::rectangle(frame,cv::Point(sX ,sY),
-										        cv::Point(eX ,eY),
-												cv::Scalar(0,255,0),3);
-								snprintf(text, sizeof text, "%s %.1f%%", coco_cls_to_name(det_result->cls_id), det_result->prop * 100);
-								cv::putText(frame,text,cv::Point(sX, sY - 8),
-												   cv::FONT_HERSHEY_SIMPLEX,1,
-												   cv::Scalar(0,255,0),2);
-							}
+							cv::rectangle(frame,cv::Point(sX ,sY),
+										  cv::Point(eX ,eY),
+										  cv::Scalar(0,255,0),3);
+							snprintf(text, sizeof text, "%s %.1f%%", coco_cls_to_name(det_result->cls_id), det_result->prop * 100);
+							cv::putText(frame,text,cv::Point(sX, sY - 8),
+										cv::FONT_HERSHEY_SIMPLEX,1,
+										cv::Scalar(0,255,0),2);
 						}
 
 			// ---- 叠加风险等级到画面 ----
@@ -443,9 +444,12 @@ int main(int argc, char *argv[]) {
 			}
 		}
 		// ---- 取帧成功后才编码/推流/释放（失败时跳过本帧，避免陈旧帧编码与错误释放）----
-		if (s32Ret == RK_SUCCESS)
-		{
-			memcpy(data, frame.data, width * height * 3);
+				if (s32Ret == RK_SUCCESS)
+				{
+					// VENC 声明为 RK_FMT_RGB888（见 luckfox_mpi.cc / h264_frame），
+					// 而 OpenCV 帧为 BGR，编码前必须原位转换，否则 RTSP 画面红蓝互换
+					// （此前 memcpy(data, frame.data, ...) 为同地址自拷贝，无实际作用）。
+					cv::cvtColor(frame, frame, cv::COLOR_BGR2RGB);
 
 		// encode H264（有限超时 + 返回值检查：编码通道拥塞/停止时不再无限阻塞）
 		RK_S32 send_ret = RK_MPI_VENC_SendFrame(0, &h264_frame, VENC_SEND_FRAME_TIMEOUT_MS);

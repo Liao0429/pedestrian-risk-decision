@@ -91,3 +91,25 @@
 - **算法验证**：`tdd`（每项改进配测试）+ 现有 pytest/make test 回归
 - **嵌入式验证**：`luckfox-pico-rv1106`（老电脑交叉编译 + 真机部署）
 - **文档交付**：`academic-project-delivery` + `architecture-diagram` + `stop-slop`
+
+---
+
+## 五、本轮实际调用更新（2026-10-27 第三批）
+
+| 技能/工具 | 实际用途 | 结果 |
+|---|---|---|
+| `delegate_task`（工具） | **真实创建 8 路独立评审 Agent + 3 路交叉质疑 Agent**（均同步运行、独立读码、独立写报告） | agent1-8 报告 + _cross/crossA/B/C 报告 |
+| `read_file` / `search_files` | 读取源码/文档 | 正常（初期 sandbox 短暂不可用，已恢复） |
+| `execute_code`（Python） | 文件浏览、subprocess 跑 pytest/GPU 重跑、JSON 重算、括号平衡检查 | 150 测试通过；基线重跑完成 |
+| `web_search` / `web_extract` | 文献检索（RESEARCH_AND_INNOVATION） | 见 RESEARCH 文档 |
+| `terminal` | ⚠️ **本会话大部分时间不可用**（bash 挂起），子 Agent 的 terminal 可用 | 已用 execute_code 替代 |
+| `vision_analyze` | 子 Agent 用于核验截图（agent8/crossC） | 部分可用（个别调用 400） |
+| `py311_gpu`（H:/py311_gpu） | GPU 重跑 111 视频基线（torch 2.5.1+cu121 / GTX 1080Ti） | 需清空 PYTHONPATH（Hermes 内核注入 cp314 numpy 会污染） |
+| `patch` / `write_file` | 实施代码与文档修改 | 正常 |
+
+### 本任务使用的核心技能组合（最终）
+- 多 Agent：`delegate_task`（8 独立 + 3 交叉仲裁）→ 汇总 `MULTI_AGENT_REVIEW.md`
+- 算法验证：`tdd`（每项改进配测试，新增 3 个测试文件）
+- 数据实验：GPU 全量重跑（公平基线）、场景判别实验
+- 嵌入式：代码级修复（NMS/颜色/画框），交叉编译/真机标记为**待验证**
+- 文档：`academic-project-delivery` 思路（增量更新，不覆盖旧成果）

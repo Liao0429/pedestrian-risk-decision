@@ -1,14 +1,15 @@
 {
+  "_note": "2026-10-27 由 results/rerun 全量重跑数据重新生成（旧版时间线已过期）。",
   "timelines": {
     "mixkit_13192": {
       "frames": 305,
       "dist": {
-        "SAFE": 1,
-        "WARNING": 40,
-        "DANGER": 264
+        "SAFE": 6,
+        "WARNING": 120,
+        "DANGER": 179
       },
       "switches": 4,
-      "avg_n": 14.9
+      "avg_n": 15.4
     },
     "mixkit_13265": {
       "frames": 281,
@@ -21,28 +22,29 @@
     "mixkit_134": {
       "frames": 600,
       "dist": {
-        "SAFE": 598,
-        "WARNING": 2
+        "SAFE": 259,
+        "WARNING": 101,
+        "DANGER": 240
       },
-      "switches": 2,
+      "switches": 10,
       "avg_n": 2.1
     },
     "mixkit_14084": {
       "frames": 255,
       "dist": {
-        "WARNING": 166,
-        "SAFE": 87,
-        "DANGER": 2
+        "SAFE": 85,
+        "WARNING": 170
       },
-      "switches": 30,
-      "avg_n": 6.0
+      "switches": 11,
+      "avg_n": 6.5
     },
     "mixkit_151": {
       "frames": 336,
       "dist": {
-        "SAFE": 336
+        "SAFE": 287,
+        "WARNING": 49
       },
-      "switches": 0,
+      "switches": 2,
       "avg_n": 1.4
     }
   },
@@ -57,7 +59,9 @@
     },
     "gt_total": 3089,
     "det_total": 2548,
-    "det_rate": 0.825,
-    "elapsed_s": 16.79
+    "det_rate": 0.8249,
+    "high_density_det_rate": 0.7943,
+    "high_density_images": 12,
+    "elapsed_s": null
   }
 }

@@ -67,10 +67,11 @@ pedestrian-risk-decision/
 | High-density (14+ people) detection rate | **79.4%** |
 | Level distribution | SAFE 414 / WARNING 61 / DANGER 25 |
 
-### Video enhancement (111 real videos, Kalman + spectral + FSM)
-- Dense crowd (avg 14.9 people): **sustained DANGER** (264/305 frames), only 4 level switches → stable
-- Sparse/empty scenes: SAFE throughout (no person present in scene, no alert triggered)
-- Transient gathering: correctly suppressed by FSM hysteresis, no flicker
+### Video enhancement (111 real videos, Kalman + spectral + FSM, full rerun)
+- **All 111 real videos (45021 frames)**: level distribution **SAFE 25669 / WARNING 11545 / DANGER 7807**, average **4.00 level switches per video** (FSM hysteresis stabilizes), 40 videos reached DANGER, **31 videos stayed SAFE throughout** (no alert; without ground truth we cannot judge whether these are correct no-alerts or missed alerts)
+- Dense crowd (`mixkit_13192`): **DANGER 179 / WARNING 120 / SAFE 6** (305 frames), only 4 switches (fair baseline AND-rule: 48 switches)
+- Sparse/empty scene (`mixkit_50134`, normal lighting): SAFE throughout, no alert (no person present)
+- **Before/after (fair baseline, same rule as real engine)**: average switches **23.2 → 4.0 (↓82.8%)**; 24 baseline videos reached DANGER vs 40 enhanced; DANGER frames 2190 → 7807 (FSM score includes density weight and hold mechanism — more sensitive and more stable than per-frame rule). Details: `results/rerun/_comparison_summary.json`
 
 See `docs/figures/` for performance comparison charts.
 

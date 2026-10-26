@@ -50,3 +50,28 @@
 - P1-1（谱特征接入）依赖 P0-4 的决策：先做文档收敛，再用实验裁决。
 - P1-6（打点）是 P1-7/P1-8 的性能前提。
 - P1-2（GT 标注）是计算准确率类指标的前提（Agent4/6）。
+
+
+---
+
+## 三、状态更新（2026-10-27）
+
+### 本轮已完成（P0 全部 + 部分 P1）
+| 项 | 状态 | 验收 |
+|---|---|---|
+| P0-1 消融基线 OR→AND（含 rerun_video_baseline） | ✅ 完成 | 全量 111 条重跑；`_comparison_summary.json` 重生成；`test_baseline_consistency.py`/`test_comparison_consistency.py` 通过 |
+| P0-2 配置键 temporal→fsm | ✅（前批完成） | test_ablation_consistency 覆盖 |
+| P0-3 README/文档表述收敛 + 数字统一 | ✅ 完成 | 79.4%/48次/31条/23.2→4.0 全统一；无“零误报”“谱特征提升准确性”残留 |
+| P0-4 谱特征定位收敛 | ✅ 完成（表述层） | README/论文建议已明确“未接入决策”，接入实验列 P1 |
+| P1-3 消融/配置一致性测试 | ✅（前批） | test_ablation_consistency.py |
+| P1-4 CI | ✅ 修复（未推送验证） | ci.yml 改为 make test；本机 150 测试通过 |
+| P1-5 黄金独立参考 | ✅（前批） | test_golden_independent.py |
+| P1 新增：NMS 跨类别修复 | ✅ 代码完成（待真机） | postprocess.cc classIds[j] |
+| P1 新增：颜色通道修复 | ✅ 代码完成（待真机） | main.cc BGR→RGB 两处 |
+| P1 新增：画框/决策过滤一致 | ✅ 完成 | main.cc 画框循环 |
+| P1 新增：场景判别实验 | ✅ 完成 | scenario_test.py + 测试 + 结果 JSON |
+| P1-2 图片 500 张 GT 标注 | ⬜ 待人工 | 约 2h，产出 risk_gt.csv |
+| P1-1 谱特征接入 FSM 实验 | ⬜ 待做 | 消融 C vs B 产生可测差异（需实验裁决） |
+| P1-6 主循环打点 | ⬜ 待做 | 真机耗时分布 |
+| P1-7 真机 IPM 标定 | ⬜ 待做 | 需物理标定物 |
+| P1-8 长稳 8h/24h | ⬜ 待做 | 看门狗已就位 |

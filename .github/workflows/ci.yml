@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, review-opt]
   pull_request:
 
 jobs:
@@ -14,7 +14,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
           cache: pip
 
       - name: 安装测试依赖（numpy + pytest + opencv-headless）
@@ -32,9 +32,7 @@ jobs:
       - name: 安装编译依赖
         run: sudo apt-get update && sudo apt-get install -y g++ make
 
-      - name: 编译并运行 C++ 黄金回归
+      - name: 编译并运行 C++ 主机单元测试
         run: |
-          cd tests
-          g++ -std=c++17 -O2 -I../src/algorithms -I../src/luckfox_rtsp_yolov5/include \
-              test_graph_laplacian.cc ../src/algorithms/graph_laplacian.cpp -o /tmp/test_gl 2>&1 | head -5
-          /tmp/test_gl 2>&1 | tail -5 || true
+          cd src/luckfox_rtsp_yolov5
+          make test

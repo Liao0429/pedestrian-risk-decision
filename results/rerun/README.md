@@ -17,7 +17,7 @@ python scripts/crowd_test.py --input dataset/images500 --output results/rerun/im
 | ground-truth 总人数 | 3089 |
 | 检测总人数 | 2548 |
 | **总体检出率** | **82.5%** |
-| 高密度（≥14人）图检出率 | **76.7%**（9 张） |
+| 高密度（≥14人）图检出率 | **79.4%**（12 张） |
 | 平均每图检测人数 | 5.10 |
 | 等级分布 | **SAFE 414（82.8%）/ WARNING 61（12.2%）/ DANGER 25（5.0%）** |
 
@@ -36,9 +36,13 @@ python scripts/rerun_all_videos.py
 - **增强结果（111/111 条成功，45021 帧）**：
   - 等级分布：**SAFE 25669 / WARNING 11545 / DANGER 7807**
   - 平均每条等级切换 **4.00 次**（FSM 滞回稳定）
-  - 出现 DANGER 视频 40 条；全程 SAFE（零误报）31/111 条
+  - 出现 DANGER 视频 40 条；全程输出 SAFE（系统未报警）31/111 条（无 GT，不称“零误报”）
   - 密集场景示例：mixkit_4519 DANGER 520/603 帧（86%）、mixkit_3428 99% 帧 DANGER 且切换仅 2 次
-- **基线对比（算法前逐帧规则判定）**：运行中，完成后在 `docs/COMPARISON.md` 给出前后对比表
+- **基线对比（算法前逐帧规则判定，AND 规则与真实引擎一致，2026-10-27 全量重跑）**：
+  - 基线：平均切换 **23.2 次/视频**（总 2578）、DANGER 帧 2190、24 条出现 DANGER、63 条全程 SAFE
+  - 增强：平均切换 **4.00 次/视频**（总 444，↓82.8%）、DANGER 帧 7807、40 条出现 DANGER、31 条全程 SAFE
+  - 说明：增强后 DANGER 帧/视频数上升，是因为 FSM 评分含密度权重且带保持机制（比逐帧规则更敏感、更稳定），
+    **不是**“增强后更保守”。逐视频对比见 `_comparison_summary.json`，汇总脚本 `scripts/regenerate_comparison.py`。
 
 ## 复现
 - `scripts/rerun_all_videos.py`：全量视频批量脚本（加载一次模型循环 111 条）

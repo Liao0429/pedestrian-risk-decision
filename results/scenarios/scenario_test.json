@@ -1,0 +1,142 @@
+{
+  "edge_dist_m": 2.0,
+  "method": "合成场景 -> 图网络特征 -> 规则分级 + RiskFSM（连续20帧）",
+  "scenarios": [
+    {
+      "name": "n8_dispersed",
+      "desc": "8 人完全分散（间距3m）",
+      "n": 8,
+      "m": 0,
+      "density": 0.0,
+      "r_gcc": 0.125,
+      "clustering": 0.0,
+      "fiedler": 0.0,
+      "rule_level": "SAFE",
+      "fsm_final_level": "SAFE",
+      "note": ""
+    },
+    {
+      "name": "n8_pairs",
+      "desc": "8 人=4个二人组（组间3m）",
+      "n": 8,
+      "m": 4,
+      "density": 0.1429,
+      "r_gcc": 0.25,
+      "clustering": 0.0,
+      "fiedler": 0.0,
+      "rule_level": "SAFE",
+      "fsm_final_level": "SAFE",
+      "note": ""
+    },
+    {
+      "name": "n8_cluster",
+      "desc": "8 人紧密网格（0.8m）",
+      "n": 8,
+      "m": 27,
+      "density": 0.9643,
+      "r_gcc": 1.0,
+      "clustering": 0.9643,
+      "fiedler": 6.0,
+      "rule_level": "WARNING",
+      "fsm_final_level": "DANGER",
+      "note": ""
+    },
+    {
+      "name": "n10_dispersed",
+      "desc": "10 人完全分散（间距3m）",
+      "n": 10,
+      "m": 0,
+      "density": 0.0,
+      "r_gcc": 0.1,
+      "clustering": 0.0,
+      "fiedler": 0.0,
+      "rule_level": "SAFE",
+      "fsm_final_level": "SAFE",
+      "note": ""
+    },
+    {
+      "name": "n10_two_clusters",
+      "desc": "10 人=两个5人簇（簇距4m）",
+      "n": 10,
+      "m": 20,
+      "density": 0.4444,
+      "r_gcc": 0.5,
+      "clustering": 1.0,
+      "fiedler": 0.0,
+      "rule_level": "WARNING",
+      "fsm_final_level": "WARNING",
+      "note": ""
+    },
+    {
+      "name": "n10_cluster",
+      "desc": "10 人紧密网格（0.8m）",
+      "n": 10,
+      "m": 37,
+      "density": 0.8222,
+      "r_gcc": 1.0,
+      "clustering": 0.885,
+      "fiedler": 4.3187,
+      "rule_level": "DANGER",
+      "fsm_final_level": "DANGER",
+      "note": ""
+    },
+    {
+      "name": "n10_chain",
+      "desc": "10 人链状（1.5m 间距）",
+      "n": 10,
+      "m": 9,
+      "density": 0.2,
+      "r_gcc": 1.0,
+      "clustering": 0.0,
+      "fiedler": 0.0979,
+      "rule_level": "DANGER",
+      "fsm_final_level": "WARNING",
+      "note": ""
+    },
+    {
+      "name": "n12_dispersed",
+      "desc": "12 人完全分散（间距3m）",
+      "n": 12,
+      "m": 0,
+      "density": 0.0,
+      "r_gcc": 0.0833,
+      "clustering": 0.0,
+      "fiedler": 0.0,
+      "rule_level": "SAFE",
+      "fsm_final_level": "SAFE",
+      "note": ""
+    },
+    {
+      "name": "n12_cluster",
+      "desc": "12 人紧密网格（0.8m）",
+      "n": 12,
+      "m": 53,
+      "density": 0.803,
+      "r_gcc": 1.0,
+      "clustering": 0.8662,
+      "fiedler": 5.1322,
+      "rule_level": "DANGER",
+      "fsm_final_level": "DANGER",
+      "note": ""
+    },
+    {
+      "name": "n12_two_clusters",
+      "desc": "12 人=两个6人簇（簇距5m）",
+      "n": 12,
+      "m": 30,
+      "density": 0.4545,
+      "r_gcc": 0.5,
+      "clustering": 1.0,
+      "fiedler": 0.0,
+      "rule_level": "WARNING",
+      "fsm_final_level": "WARNING",
+      "note": ""
+    }
+  ],
+  "conclusions": [
+    "n8：同人数不同分布产生不同等级（['SAFE', 'WARNING']），判别有效",
+    "n10：同人数不同分布产生不同等级（['DANGER', 'SAFE', 'WARNING']），判别有效",
+    "n12：同人数不同分布产生不同等级（['DANGER', 'SAFE', 'WARNING']），判别有效",
+    "注意：n10_chain（1.5m 链状）与 n10_cluster 均为 DANGER——规则引擎的 gcc≥0.8 把链状连通也判为高聚集，这是当前阈值设计的已知局限（可改用 clustering/谱特征区分链与团）"
+  ]
+}

@@ -48,3 +48,22 @@
 8. P2-5：修复 RkLunch-stop.sh 启动噪音。
 
 每项完成后跑 `pytest tests/` + 老电脑 `make test`，通过才继续。
+
+
+---
+
+## 六、阶段 C 完成情况（2026-10-27 更新）
+
+### 已完成并验证
+- **P0 数据可信度修复闭环**：基线 OR→AND + 111 条全量重跑 + `_comparison_summary.json`/图表/README/实验摘要全部重生成；
+  高密度 79.4% 统一、mixkit_13192 基线 48 次、31 条表述修正。
+- **CI 修复**：cpp job 改为真实 `make test`（原引用不存在的文件）。
+- **代码缺陷修复**：NMS 跨类别抑制（classIds[j]）、颜色通道（BGR→RGB 两处）、画框/决策过滤一致（main.cc）。
+- **场景判别实验**：新增脚本+结果+测试，证明同人数不同分布可产生不同风险等级。
+- **测试**：150 passed（新增 test_baseline_consistency / test_comparison_consistency / test_scenario_discrimination）。
+
+### 待办（如实）
+- C++ 改动**未在板端重编译/真机验证**（NMS、颜色、画框）——需老电脑交叉编译 + 真机冒烟（放红/蓝色卡）。
+- CI 修复未推送运行验证（未授权推送）。
+- 谱特征真正接入 FSM 的消融实验未做（P1）。
+- 图片 500 张 GT 标注、IPM 真机标定、主循环打点、8h/24h 长稳未做。

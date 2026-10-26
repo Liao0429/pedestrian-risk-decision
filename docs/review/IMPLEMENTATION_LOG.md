@@ -131,3 +131,82 @@
 - 本地模拟 CI（meta_path 屏蔽 ultralytics + 清空 PYTHONPATH）：**141 passed**。
 - GitHub Actions：**Python 141 passed + C++ 黄金回归 success**（run #40354391731 全绿）。
 - 网络备注：本轮 GitHub HTTPS 直连/7890 均不稳定，**7893 代理可用**（curl/API/push 均通）；推送前先 `curl -s -x http://127.0.0.1:7893 https://api.github.com/user` 探路。
+
+
+---
+
+## 五、第三批优化（2026-10-27，review-opt 分支，本轮 cron 实施）
+
+> 依据：本批 8 路 Agent 独立评审（agent1_architect / agent2_vision_tracking / agent3_algorithm_review2 /
+> agent4_dataset_experiments / agent5_embedded / agent6_paper_reviewer / agent7_qa / agent8_defense_demo）
+> + 3 路交叉质疑（_cross/crossA/B/C）裁决后实施。全部改动在 review-opt 分支，**未推送远程**。
+
+### 1. 视频基线 OR→AND 修正（P0，评审重点）
+
+- **文件**：`scripts/rerun_video_baseline.py`
+- **问题**：基线规则误用 OR（`n>=d.n or rho>=d.rho or gcc>=d.gcc`），真实引擎是 AND-OR
+  （`n>=dn and (rho>=drho or gcc>=dgcc)`）。OR 基线把 DANGER 帧系统性高估（旧值 21969 帧/102 条视频）。
+- **改动**：`rule_level` 改为与 `crowd_test.evaluate_level` / C++ `RiskEngine::evaluate` 完全一致；ultralytics 延迟导入。
+- **重跑**：用 `H:/py311_gpu`（清空 PYTHONPATH，torch 2.5.1+cu121，GTX 1080Ti）全量重跑 111 条视频
+  （45021 帧），输出 `results/rerun/video_baseline/*/*_baseline.json` + `_summary.json`。
+- **新基线结果（真实重跑）**：`base_sw=2578`（均值 23.2）、DANGER 帧 **2190**、出现 DANGER 视频 **24** 条、
+  全程 SAFE 视频 **63** 条。对比旧 OR 基线（5147 / 21969 / 102 / 9），差异巨大，证明旧对比结论失真。
+- **新对比结论**：增强后平均切换 23.2→4.0（↓82.8%）；DANGER 帧 2190→7807、视频 24→40（**上升**，
+  FSM 评分含密度权重+保持机制，更敏感更稳定）。README 中“增强后 DANGER 下降”类表述已全部删除。
+
+### 2. 对比汇总重新生成 + 绘图更新
+
+- **新增**：`scripts/regenerate_comparison.py`（从新基线 + 增强时间线重新生成 `_comparison_summary.json`）。
+- **更新**：`scripts/plot_results.py` 图3 标题方向自适应（上升/下降均正确显示）、删除“零误报”字样。
+- **重新生成**：`docs/figures/fig3_before_after.png` 等图表。
+- **更新**：`results/experiment_summary.json`（旧时间线过期，用 rerun 数据重算：13192 为 SAFE6/WARNING120/DANGER179、
+  切换 4 次；图片基线 det_rate=0.8249、高密度 0.7943/12 张）。
+
+### 3. README / 结果文档数字与表述修正（P0）
+
+- `README.md` / `README.en.md` / `results/rerun/README.md`：
+  - 高密度检出率统一 **79.4%**（12 张；删除无法复现的 76.7% 孤儿数字）；
+  - “31 条未触发风险报警”改为“31 条全程输出 SAFE（系统未报警），无 GT 无法判定漏报”；
+  - mixkit_13192 基线引用新值 **48 次**（原“46 次”是 111 条均值被误挂到单视频）；
+  - 新增公平基线前后对比段落（23.2→4.0、24→40 条 DANGER 等）。
+
+### 4. CI 修复（P0，原 CI 不可用）
+
+- `.github/workflows/ci.yml`：cpp job 原引用不存在的 `tests/test_graph_laplacian.cc` 与
+  `src/algorithms/graph_laplacian.cpp`（graph_laplacian 是 header-only），改为 `cd src/luckfox_rtsp_yolov5 && make test`；
+  Python job 保持 numpy+pytest+opencv-headless（当前 150 测试无需 ultralytics 即可收集通过）。
+
+### 5. postprocess NMS 跨类别抑制 bug（P1）
+
+- `src/luckfox_rtsp_yolov5/src/postprocess.cc`：`nms()` 内层条件 `classIds[i]` → `classIds[j]`，
+  修复跨类别混合 NMS（person 与车辆重叠框互相误抑制）。需板端重编译后真机冒烟验证。
+
+### 6. 颜色通道修复（P1，需真机验证）
+
+- `src/luckfox_rtsp_yolov5/src/main.cc`：
+  - letterbox 送入 RKNN 前 `cv::COLOR_BGR2RGB`（模型输入约定 RGB，原为 BGR 降低检测精度）；
+  - 编码前 `cv::cvtColor(frame, frame, cv::COLOR_BGR2RGB)`（VENC 声明 RK_FMT_RGB888，原 BGR 数据导致 RTSP 红蓝互换）。
+- **状态**：代码已改，**待板端重新交叉编译 + 真机放红/蓝色卡验证**（无开发板交互，如实标注未验证）。
+
+### 7. 画框与决策过滤一致（P1）
+
+- `main.cc` 画框循环补上 `class_conf_thresholds` 精筛（与决策路径一致），同时清理了冗余嵌套括号。
+
+### 8. 场景判别实验（新增，回应“风险判断是否真正有效”）
+
+- **新增**：`scripts/scenario_test.py` + `tests/test_scenario_discrimination.py` + `results/scenarios/scenario_test.json`。
+- 结果：同人数（8/10/12）不同分布产生不同等级（分散 SAFE / 两簇 WARNING / 紧密团 DANGER）；
+  同时暴露规则引擎对链状连通（1.5m 串排）因 r_gcc=1 判 DANGER 的已知局限，FSM（含密度权重）对链状更保守（WARNING）。
+
+### 9. 新增回归测试（4 个文件，全部通过）
+
+- `tests/test_baseline_consistency.py`：基线 rule_level 与 evaluate_level 全边界一致 + OR 回归点。
+- `tests/test_comparison_consistency.py`：对比汇总必须为 AND 量级（防 OR 复发）+ 逐帧重算复现抽查。
+- `tests/test_scenario_discrimination.py`：同人数不同分布判别。
+- 全量：**150 passed**（`python -m pytest tests/ -q`，prd_venv）。
+
+### 10. 验证与回退
+
+- 每项改动前均确认可回退（git 工作树 + review-opt 分支独立）；C++ 改动无法在本机编译验证
+  （无 g++），已通过括号平衡检查与代码审查；Python 侧全部 150 测试通过。
+- **未验证项**：C++ 编译/真机（NMS、颜色、画框过滤）、CI 实际运行（未推送无法触发）。

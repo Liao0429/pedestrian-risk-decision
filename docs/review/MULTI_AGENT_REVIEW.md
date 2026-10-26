@@ -54,3 +54,34 @@
 ## 四、诚实标注
 - Agent5 原评审被中断，其报告由总负责人补写（基于 Agent1/2/8 + IMPLEMENTATION_LOG），**不代表原 Agent 的独立执行**。
 - 本阶段所有 Agent 均为只读审查，未修改任何源码/数据。
+
+
+---
+
+## 三、第二轮交叉质疑（2026-10-27，真实 3 路仲裁 Agent）
+
+> 依据报告：`docs/review/_cross/crossA_algorithm_experiment.md`（算法/实验仲裁）、
+> `crossB_paper_data.md`（论文/数据仲裁）、`crossC_engineering.md`（工程/演示仲裁）。
+
+### 关键仲裁结论
+
+| 争议 | 仲裁结论 | 处置 |
+|---|---|---|
+| 归一化拉普拉斯 L_sym 值域 | Agent3_review2 正确：μ₂∈(0,2]，前批“(0,1]”错误；4 点全分散 μ₂=1.0 语义污染属实。接入 FSM 前需加 0/0 守卫，λ₂/λmax 更稳 | 写入 RESEARCH/ROADMAP，暂不改代码 |
+| 消融 B==C 的含义 | 是“谱特征**未接入**决策”而非“谱特征**无效**”——ablation_study 只把谱值写入未消费的 feat 字典。要证明无效必须真正接入后重跑 | 修正论文表述；接入实验列为 P1 |
+| FSM 与规则阈值双标准 | n8_cluster 规则 WARNING/FSM DANGER；n10_chain 规则 DANGER/FSM WARNING。论文必须声明 FSM 为唯一决策源，规则仅对照 | 已写入 EXPERIMENT_PLAN 与论文建议 |
+| “增强后 DANGER -64%” | 建立在 OR 失真基线上，必须撤回。公平基线（AND）重跑后：切换 23.2→4.0（↓82.8%），DANGER 帧 2190→7807（↑）、视频 24→40 | **已修复**：rerun_video_baseline.py 改 AND 并重跑，_comparison_summary.json 重生成，README 更新 |
+| 阈值标定批评 | 部分成立：标定集仅 30 图、文档数值错误属实；但“SAFE 最高分 0.66>0.65”本质是“规则标签 vs FSM 评分”双标准 + 漏检放大，应弱化表述 | 论文收敛表述 |
+| “稳定性代替准确性” | 无 GT 时切换次数是唯一可诚实报告的稳定性指标，但绝不能当准确率；删除“零误报/未触发报警”暗示 | README 已改 |
+| 高密度检出率 76.7 vs 79.4 | 79.4%（12 张）可由 results/rerun JSON 复现（0.7943）；76.7% 是孤儿数字 | results/rerun/README 已改为 79.4% |
+| mixkit_13192 基线 46 vs 18 | 46 是 111 条均值被误挂；新 AND 基线为 48 | README 已改为 48 |
+| NMS 跨类别 bug | 修复方向正确（classIds[j]），需板端重编译冒烟 | 已修复，待真机验证 |
+| VENC 颜色格式 | BGR 数据 + RK_FMT_RGB888 确为红蓝互换 bug；首选方案改为编码前 BGR→RGB 原位转换 | 已修复，待真机验证 |
+| CI | make test 在 Ubuntu 无 OpenCV 时通过（risk_config 测试有 __has_include 守卫），预判全绿 | CI 已改为 make test |
+| Jacobi 是否瓶颈 | n=50 也仅亚毫秒~毫秒级，不是瓶颈；“先打点再优化”正确 | 采纳 |
+| 演示投入 | 砍 PCB/LVGL/语音大方案；P0-1 真机 DANGER 视频 > P0-2 风险曲线图 > P0-3 IPM-BEV/网络图 | 写入 DEFENSE/ROADMAP |
+
+### 本轮裁决汇总（总负责人）
+1. **P0 全部落地**：基线 OR→AND + 全量重跑 + 对比汇总重生成 + README/文档数字统一 + CI 修复 + 表述收敛。
+2. **P1 落地**：NMS 修复、颜色通道修复（待真机验证）、画框过滤一致、场景判别实验与测试。
+3. **P1 待做**：谱特征真正接入 FSM 并重跑消融（需实验裁决）、图片 GT 标注、真机 IPM 标定、主循环打点、长稳。

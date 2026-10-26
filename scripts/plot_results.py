@@ -70,7 +70,7 @@ b_sw = cmp["base_sw"] / n; e_sw = cmp["enh_sw"] / n
 b_danger = cmp["base_danger"]; e_danger = cmp["enh_danger"]
 b_safe = cmp["base_safe"]; e_safe = cmp["enh_safe"]
 
-# 图3：前后对比（切换次数 / DANGER视频数 / 零误报）
+# 图3：前后对比（切换次数 / DANGER视频数 / 全程SAFE视频数）
 fig, axes = plt.subplots(1, 3, figsize=(14, 4.5))
 bc = "#95a5a6"; ec = "#2ecc71"
 axes[0].bar(["基线", "增强"], [b_sw, e_sw], color=[bc, ec], edgecolor="black")
@@ -78,10 +78,12 @@ axes[0].set_title(f"平均切换次数/视频\n(↓{(1-e_sw/b_sw)*100:.1f}%)")
 axes[0].set_ylabel("次数")
 for i, val in enumerate([b_sw, e_sw]): axes[0].text(i, val + 0.5, f"{val:.1f}", ha="center")
 axes[1].bar(["基线", "增强"], [b_danger, e_danger], color=[bc, ec], edgecolor="black")
-axes[1].set_title(f"出现 DANGER 视频数\n(↓{(1-e_danger/b_danger)*100:.1f}%)")
+d_delta = (e_danger / b_danger - 1) * 100
+axes[1].set_title(f"出现 DANGER 视频数\n({'↑' if d_delta >= 0 else '↓'}{abs(d_delta):.1f}%)")
 for i, val in enumerate([b_danger, e_danger]): axes[1].text(i, val + 0.5, str(val), ha="center")
 axes[2].bar(["基线", "增强"], [b_safe, e_safe], color=[bc, ec], edgecolor="black")
-axes[2].set_title(f"全程 SAFE(零误报)视频数\n(↑{(e_safe/b_safe-1)*100:.1f}%)")
+s_delta = (e_safe / b_safe - 1) * 100
+axes[2].set_title(f"全程 SAFE 视频数\n({'↑' if s_delta >= 0 else '↓'}{abs(s_delta):.1f}%)")
 for i, val in enumerate([b_safe, e_safe]): axes[2].text(i, val + 0.5, str(val), ha="center")
 for a in axes:
     a.set_ylim(0, max(b_sw, e_sw, b_danger, e_danger, b_safe, e_safe) * 1.25)

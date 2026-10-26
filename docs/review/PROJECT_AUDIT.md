@@ -51,3 +51,20 @@
 - IPM 真机 4 点标定（需打印标定物）
 - 非人目标（车辆/动物）阈值重标定
 - CI 自动化
+
+
+---
+
+## 三、第三批评审新增发现与处置（2026-10-27）
+
+| # | 新增/确认问题 | 证据 | 严重度 | 处置 |
+|---|---|---|---|---|
+| 11 | 视频基线误用 OR 规则（与真实引擎 AND 不符），导致“增强后 DANGER 大幅下降”结论失真 | `scripts/rerun_video_baseline.py` 旧 rule_level；旧 `_comparison_summary.json`（base_sw=5147/DANGER 21969/102条） | **高（已修复）** | 改 AND + 全量重跑（base_sw=2578/DANGER 2190/24条）；对比汇总重生成；README 更新 |
+| 12 | 高密度检出率存在两个互相矛盾的孤儿数字 76.7%（9张）与 79.4%（12张） | `README.md` vs `results/rerun/README.md` | 高（已修复） | 核验 results/rerun JSON 为 79.4%/12张；统一文档 |
+| 13 | mixkit_13192 “基线 46 次” 实为 111 条均值误挂；公平基线重跑后为 48 次 | `README.md` vs `_comparison_summary.json` | 中（已修复） | README 改为 48 |
+| 14 | postprocess NMS 跨类别抑制（`classIds[i]` 应为 `classIds[j]`） | `postprocess.cc:126` | 高（已修复，待真机） | 已改；需板端重编译验证 |
+| 15 | VENC 声明 RGB888 但数据为 BGR → RTSP 红蓝互换；RKNN 输入同样 BGR 降精度 | `main.cc:231/325/448`、`luckfox_mpi.cc:111` | 高（已修复，待真机） | letterbox 前/编码前 BGR→RGB 转换 |
+| 16 | 画框未按 class_conf_thresholds 精筛（与决策人数可能不一致） | `main.cc` 画框循环 | 中（已修复） | 补过滤 + 清理冗余括号 |
+| 17 | CI cpp job 引用不存在的文件，python job 在无 ultralytics 时收集失败 | `.github/workflows/ci.yml` | 高（已修复） | cpp job 改 `make test`；python job 依赖已满足 |
+| 18 | “31 条未触发风险报警”隐含正确性结论，无 GT 不可支持 | `README.md` | 高（已修复） | 改为“31 条全程输出 SAFE（系统未报警）” |
+| 19 | 风险判别有效性缺少直接证据（同人数不同分布） | 无 | 中（已补齐） | 新增 `scripts/scenario_test.py` + 结果 + 测试 |

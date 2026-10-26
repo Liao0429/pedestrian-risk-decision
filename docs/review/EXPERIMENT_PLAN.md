@@ -55,3 +55,17 @@
 - `tests/test_risk_gt.py`：GT CSV/JSON schema 校验。
 - C++ 补测：单人 `r_gcc=0.0`、DANGER 恰好达标边界、OpenCV 分支。
 - 性能基准：Python/C++ 双侧耗时断言（防止算法改慢）。
+
+
+---
+
+## 七、基线修正已完成（2026-10-27）
+
+- `scripts/rerun_video_baseline.py` 已改 AND 规则并全量重跑 111 条视频（45021 帧）：
+  - 基线：平均切换 **23.2 次/视频**、DANGER 帧 **2190**、24 条出现 DANGER、63 条全程 SAFE。
+  - 增强：平均切换 **4.00 次/视频**、DANGER 帧 7807、40 条出现 DANGER、31 条全程 SAFE。
+- `results/rerun/_comparison_summary.json` 已重生成；`scripts/regenerate_comparison.py` 可复现。
+- **注意**：公平基线下“增强后 DANGER 帧/视频数上升”是 FSM 评分（含密度权重 + 保持机制）更敏感所致，
+  论文不得再写“增强后 DANGER 下降”。
+- 新增场景判别实验（`scripts/scenario_test.py`）作为“空间分布→风险等级”判别有效性的可复现证据；
+  链状连通（1.5m 串排）在规则引擎下 r_gcc=1 判 DANGER 的局限已在结果中如实记录。

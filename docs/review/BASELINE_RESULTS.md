@@ -61,3 +61,30 @@
 3. 涉及核心算法/阈值/IPM 的改动，保留原版本（main 分支 + 分支对比），可回退。
 4. 未验证项（真机行人、长稳等）明确标注状态，不编造结果。
 5. 全部过程文档写入 `docs/review/`。
+
+---
+
+## 六、基线更新（2026-10-27，第三批优化后）
+
+### Python 测试
+- **150 passed**（原 137 → 新增 test_baseline_consistency / test_comparison_consistency / test_scenario_discrimination 等 13 项）。
+- 运行环境：`H:/Hermes Portable/data/home/cache/scratch/prd_venv`（Python 3.14 + numpy + pytest + opencv-headless + matplotlib）。
+
+### 视频基线（公平 AND 规则，111 条全量重跑）
+| 指标 | 旧 OR 基线（失真） | **新 AND 基线** | 增强 |
+|---|---|---|---|
+| 总切换次数 | 5147 | **2578** | 444 |
+| 平均切换/视频 | 46.4 | **23.2** | 4.00 |
+| DANGER 帧 | 21969 | **2190** | 7807 |
+| 出现 DANGER 视频 | 102 | **24** | 40 |
+| 全程 SAFE 视频 | 9 | **63** | 31 |
+
+- 结论变化：增强主要收益是**时序稳定性**（切换 ↓82.8%）；DANGER 帧/视频数上升是 FSM 更敏感+保持机制所致。
+- 数据文件：`results/rerun/video_baseline/*/*_baseline.json`、`results/rerun/_summary.json`、`results/rerun/_comparison_summary.json`。
+
+### 图片基线（不变，重新核验）
+- 检出率 82.5%（2548/3089）；高密度（≥14 人，12 张）79.4%；等级分布 SAFE 414 / WARNING 61 / DANGER 25。
+
+### 真机基线（未变，仍待补充）
+- 板端 6-6.9 FPS、内存约 12.5MB、CPU 约 42.5%；真机日志仍为 SAFE n=0（无行人）。
+- C++ 改动（NMS/颜色/画框）**待老电脑交叉编译 + 真机验证**。
