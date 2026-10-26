@@ -30,7 +30,7 @@ all: test
 # ---------------------------------------------------------------------------
 # 主机单元测试
 # ---------------------------------------------------------------------------
-test: test-enhanced test-minijson test-risk-config test-golden
+test: test-enhanced test-minijson test-risk-config test-golden test-preprocess
 
 test-enhanced: $(TEST_DIR)/test_enhanced_decision.cc $(SRC_DIR)/enhanced_decision.cc $(ALGO_HEADERS)
 	$(CXX) $(CXXFLAGS) $(INC) $(TEST_DIR)/test_enhanced_decision.cc $(SRC_DIR)/enhanced_decision.cc \
@@ -61,6 +61,15 @@ test-golden: $(TEST_DIR)/test_golden_regression.cc ../algorithms/graph_laplacian
 	$(CXX) $(CXXFLAGS) $(INC) $(TEST_DIR)/test_golden_regression.cc \
 	    -o $(TEST_DIR)/test_golden_regression
 	./$(TEST_DIR)/test_golden_regression ../../tests/golden
+
+# 图像预处理黄金回归：tests/golden/preprocess/*（由
+# scripts/generate_preprocess_golden.py 用 OpenCV 参考生成）。验证
+# preprocess.{h,cc} 的 NV12->BGR 与 NV12->RGB letterbox 与 OpenCV 流程一致。
+test-preprocess: $(TEST_DIR)/test_preprocess.cc $(SRC_DIR)/preprocess.cc \
+                 include/preprocess.h ../algorithms/minijson.h
+	$(CXX) $(CXXFLAGS) $(INC) $(TEST_DIR)/test_preprocess.cc $(SRC_DIR)/preprocess.cc \
+	    -o $(TEST_DIR)/test_preprocess
+	./$(TEST_DIR)/test_preprocess ../../tests/golden/preprocess
 
 # ---------------------------------------------------------------------------
 # 开发板交叉编译（需 Luckfox SDK）

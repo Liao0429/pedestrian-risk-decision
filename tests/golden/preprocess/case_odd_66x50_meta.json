@@ -1,0 +1,11 @@
+{
+  "name": "odd_66x50",
+  "src_w": 66,
+  "src_h": 50,
+  "dst_w": 48,
+  "dst_h": 48,
+  "roi_w": 48,
+  "roi_h": 36,
+  "left_pad": 0,
+  "top_pad": 6
+}

@@ -87,7 +87,7 @@ pedestrian-risk-decision/
 
 ![消融实验](docs/figures/fig_ablation.png)
 
-- **Kalman 跟踪平滑**使平均切换次数下降约 67%（35.2 → 11.7），**FSM 时序决策**进一步稳定（→ 4.0）；谱特征作为图连通性指标参与计算与显示（收益评估见消融数据）。详见 `results/rerun/_ablation.json` 与 `docs/figures/fig_ablation.png`。
+- **Kalman 跟踪平滑**使切换次数下降（如 mixkit_134：60→23），**谱特征**（相对代数连通度 λ₂/λ_max，可配置权重 w4，实验取 0.1）进一步改变/稳定判定（→16），**FSM 时序决策**最终稳定（→12）。在密集聚集场景 mixkit_134，谱特征把强连通人群的 DANGER 帧从 74 提升到 230（完整增强为 238），2/6 条视频产生可测决策差异。详见 `results/rerun/_ablation.json` 与 `docs/figures/fig_ablation.png`。
 
 ### 🎬 真实检测效果视频
 

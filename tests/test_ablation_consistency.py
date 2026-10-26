@@ -64,6 +64,21 @@ def test_scripts_do_not_read_temporal_key():
             assert '"temporal"' not in text and "temporal" not in text, f"{fp.name} 仍引用 temporal 键"
 
 
+def test_score_level_spectral_changes_decision():
+    """谱特征接入后能改变判级（C 组 ≠ B 组的合成证据）。"""
+    from ablation_study import score_level
+
+    cfg = {"fsm": {"w1": 0.4, "w2": 0.3, "w3": 0.3, "w4": 0.0,
+                    "n_ref": 20, "up_warning": 0.40, "up_danger": 0.65}}
+    # n=10,density=0.3,gcc=0.4 → base score = 0.4*0.5 + 0.3*0.3 + 0.3*0.4 = 0.41 → WARNING
+    lvl_b = score_level(10, 0.3, 0.4, fiedler=0.0, spectral_radius=0.0, cfg=cfg, w4=0.0)
+    assert lvl_b == "WARNING", f"B 组应为 WARNING，实际 {lvl_b}"
+    # 谱项：w4=0.3 * clamp(4/4,0,1)=0.3 → score=0.71 → DANGER
+    lvl_c = score_level(10, 0.3, 0.4, fiedler=4.0, spectral_radius=4.0, cfg=cfg, w4=0.3)
+    assert lvl_c == "DANGER", f"C 组应为 DANGER，实际 {lvl_c}"
+    assert lvl_c != lvl_b, "谱特征未改变决策（消融 C 组仍等于 B 组）"
+
+
 if __name__ == "__main__":
     test_rule_level_matches_evaluate_level()
     test_config_uses_fsm_key()

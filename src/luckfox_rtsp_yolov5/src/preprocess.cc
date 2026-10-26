@@ -1,0 +1,330 @@
+#include "preprocess.h"
+
+#include <math.h>
+#include <stdlib.h>
+#include <string.h>
+
+#if defined(__ARM_NEON)
+#include <arm_neon.h>
+#endif
+
+namespace pedestrian {
+
+namespace {
+
+// ---------------------------------------------------------------------------
+// 颜色转换：BT.601 limited range（与 cv::COLOR_YUV2BGR_NV12 一致）
+//   R = 1.164*(Y-16) + 1.596*(V-128)
+//   G = 1.164*(Y-16) - 0.391*(U-128) - 0.813*(V-128)
+//   B = 1.164*(Y-16) + 2.018*(U-128)
+// 系数用 12 位定点（误差 < 0.5/像素，黄金测试容差 2）。
+// ---------------------------------------------------------------------------
+static const int32_t kC0 = 4768;   //  1.164 * 4096
+static const int32_t kC1 = 6537;   //  1.596 * 4096
+static const int32_t kC2 = 1602;   //  0.391 * 4096
+static const int32_t kC3 = 3330;   //  0.813 * 4096
+static const int32_t kC4 = 8266;   //  2.018 * 4096
+static const int     kColorShift = 12;
+static const int32_t kWeightOne  = 32768;  // 插值权重定点（15 位）
+
+// 单个源像素 YUV->BGR（标量；输出已 clamp 到 [0,255]）
+inline void yuv2bgr_scalar(int32_t y, int32_t u, int32_t v,
+                           int32_t *b, int32_t *g, int32_t *r) {
+    const int32_t yv = (y - 16) * kC0;
+    int32_t rr = yv + (v - 128) * kC1;
+    int32_t gg = yv - (u - 128) * kC2 - (v - 128) * kC3;
+    int32_t bb = yv + (u - 128) * kC4;
+    rr >>= kColorShift;
+    gg >>= kColorShift;
+    bb >>= kColorShift;
+    if (rr < 0) rr = 0; else if (rr > 255) rr = 255;
+    if (gg < 0) gg = 0; else if (gg > 255) gg = 255;
+    if (bb < 0) bb = 0; else if (bb > 255) bb = 255;
+    *r = rr; *g = gg; *b = bb;
+}
+
+// ---------------------------------------------------------------------------
+// letterbox 核心（标量定点版）：对 ROI 内每个输出像素，取 4 个源像素的
+// Y/U/V（NV12 块共享），各自转 BGR 并 clamp，再做 bilinear 插值（与 OpenCV
+// "uint8 中间缓冲 + INTER_LINEAR" 数学等价），最后 BGR->RGB 写入。
+// ---------------------------------------------------------------------------
+void yuv420sp_to_rgb_letterbox_scalar(const uint8_t *yuv,
+                                      const LetterboxParams &p,
+                                      uint8_t *rgb_out) {
+    const int src_w = p.src_w, src_h = p.src_h;
+    const int dst_w = p.dst_w, dst_h = p.dst_h;
+    const int roi_w = p.roi_w, roi_h = p.roi_h;
+    const int left_pad = p.left_pad, top_pad = p.top_pad;
+    const uint8_t *Y  = yuv;
+    const uint8_t *UV = yuv + (size_t)src_w * src_h;
+    const size_t row_bytes = (size_t)dst_w * 3;
+
+    // 顶部/底部黑边（letterbox 填充 0，RGB 黑色仍为 0）
+    for (int oy = 0; oy < top_pad; ++oy)
+        memset(rgb_out + (size_t)oy * row_bytes, 0, row_bytes);
+    const int bottom_start = top_pad + roi_h;
+    for (int oy = bottom_start; oy < dst_h; ++oy)
+        memset(rgb_out + (size_t)oy * row_bytes, 0, row_bytes);
+
+    for (int ry = 0; ry < roi_h; ++ry) {
+        const int oy = top_pad + ry;
+        uint8_t *row = rgb_out + (size_t)oy * row_bytes;
+        // 左右黑边
+        for (int ox = 0; ox < left_pad; ++ox) {
+            row[ox * 3] = 0; row[ox * 3 + 1] = 0; row[ox * 3 + 2] = 0;
+        }
+        const int right_start = left_pad + roi_w;
+        for (int ox = right_start; ox < dst_w; ++ox) {
+            row[ox * 3] = 0; row[ox * 3 + 1] = 0; row[ox * 3 + 2] = 0;
+        }
+
+        const int32_t y0 = p.row_y0[ry], y1 = p.row_y1[ry];
+        const int32_t wy = p.row_wy[ry];
+        const int32_t wy0 = kWeightOne - wy;
+        const uint8_t *Y0 = Y + (size_t)y0 * src_w;
+        const uint8_t *Y1 = Y + (size_t)y1 * src_w;
+        // NV12：UV 平面每 2 行共享一行（块采样）
+        const int uv_row0 = y0 >> 1, uv_row1 = y1 >> 1;
+        const uint8_t *UV0 = UV + (size_t)uv_row0 * src_w;
+        const uint8_t *UV1 = UV + (size_t)uv_row1 * src_w;
+
+        for (int rx = 0; rx < roi_w; ++rx) {
+            const int ox = left_pad + rx;
+            const int32_t x0 = p.col_x0[rx], x1 = p.col_x1[rx];
+            const int32_t wx = p.col_wx[rx];
+            const int32_t wx0 = kWeightOne - wx;
+            const int uoff0 = (x0 >> 1) * 2;   // NV12 交错：偶数偏移为 U，+1 为 V
+            const int uoff1 = (x1 >> 1) * 2;
+
+            const int32_t y00 = Y0[x0], y01 = Y0[x1], y10 = Y1[x0], y11 = Y1[x1];
+            const int32_t u00 = UV0[uoff0],     v00 = UV0[uoff0 + 1];
+            const int32_t u01 = UV0[uoff1],     v01 = UV0[uoff1 + 1];
+            const int32_t u10 = UV1[uoff0],     v10 = UV1[uoff0 + 1];
+            const int32_t u11 = UV1[uoff1],     v11 = UV1[uoff1 + 1];
+
+            int32_t b00, g00, r00, b01, g01, r01, b10, g10, r10, b11, g11, r11;
+            yuv2bgr_scalar(y00, u00, v00, &b00, &g00, &r00);
+            yuv2bgr_scalar(y01, u01, v01, &b01, &g01, &r01);
+            yuv2bgr_scalar(y10, u10, v10, &b10, &g10, &r10);
+            yuv2bgr_scalar(y11, u11, v11, &b11, &g11, &r11);
+
+            const int32_t w00 = (wx0 * wy0) >> 15;
+            const int32_t w01 = (wx  * wy0) >> 15;
+            const int32_t w10 = (wx0 * wy ) >> 15;
+            const int32_t w11 = (wx  * wy ) >> 15;
+
+            int32_t b = (b00 * w00 + b01 * w01 + b10 * w10 + b11 * w11) >> 15;
+            int32_t g = (g00 * w00 + g01 * w01 + g10 * w10 + g11 * w11) >> 15;
+            int32_t r = (r00 * w00 + r01 * w01 + r10 * w10 + r11 * w11) >> 15;
+            if (b < 0) b = 0; else if (b > 255) b = 255;
+            if (g < 0) g = 0; else if (g > 255) g = 255;
+            if (r < 0) r = 0; else if (r > 255) r = 255;
+            // BGR -> RGB（RKNN 输入约定 RGB）
+            row[ox * 3]     = (uint8_t)r;
+            row[ox * 3 + 1] = (uint8_t)g;
+            row[ox * 3 + 2] = (uint8_t)b;
+        }
+    }
+}
+
+// YUV420sp -> BGR 全帧（标量参考）
+void yuv420sp_to_bgr_scalar(const uint8_t *yuv, int w, int h, uint8_t *bgr_out) {
+    const uint8_t *Y  = yuv;
+    const uint8_t *UV = yuv + (size_t)w * h;
+    for (int y = 0; y < h; ++y) {
+        const uint8_t *Yrow  = Y  + (size_t)y * w;
+        const uint8_t *UVrow = UV + (size_t)(y >> 1) * w;
+        uint8_t *out = bgr_out + (size_t)y * w * 3;
+        for (int x = 0; x < w; ++x) {
+            const int uoff = (x >> 1) * 2;
+            int32_t b, g, r;
+            yuv2bgr_scalar(Yrow[x], UVrow[uoff], UVrow[uoff + 1], &b, &g, &r);
+            out[x * 3]     = (uint8_t)b;
+            out[x * 3 + 1] = (uint8_t)g;
+            out[x * 3 + 2] = (uint8_t)r;
+        }
+    }
+}
+
+#if defined(__ARM_NEON)
+// ---------------------------------------------------------------------------
+// NEON 加速：YUV420sp -> BGR（每 8 像素一批，vld2 解交织 UV，int32 定点乘加）
+// 输出 R/G/B 各 8 字节，vst3 交织写入 24 字节。
+// ---------------------------------------------------------------------------
+static inline uint8x8_t neon_pack_u8x8(int32x4_t lo, int32x4_t hi) {
+    const int32x4_t zero = vdupq_n_s32(0);
+    const int32x4_t maxv = vdupq_n_s32(255);
+    lo = vminq_s32(vmaxq_s32(lo, zero), maxv);
+    hi = vminq_s32(vmaxq_s32(hi, zero), maxv);
+    int16x4_t l16 = vmovn_s32(lo);
+    int16x4_t h16 = vmovn_s32(hi);
+    return vmovn_s16(vcombine_s16(l16, h16));
+}
+
+static inline void yuv2bgr_neon8(const uint8_t *yp, const uint8_t *uvp,
+                                 uint8_t *out) {
+    uint8x8_t y8 = vld1_u8(yp);
+    uint8x8x2_t uv_a = vld2_u8(uvp);          // 前 4 像素 U/V
+    uint8x8x2_t uv_b = vld2_u8(uvp + 8);      // 后 4 像素 U/V
+    uint8x8_t u8 = vcombine_u8(uv_a.val[0], uv_b.val[0]);
+    uint8x8_t v8 = vcombine_u8(uv_a.val[1], uv_b.val[1]);
+
+    int16x8_t y16 = vreinterpretq_s16_u16(
+        vsubq_u16(vmovl_u8(y8), vdupq_n_u16(16)));
+    int16x8_t u16 = vreinterpretq_s16_u16(
+        vsubq_u16(vmovl_u8(u8), vdupq_n_u16(128)));
+    int16x8_t v16 = vreinterpretq_s16_u16(
+        vsubq_u16(vmovl_u8(v8), vdupq_n_u16(128)));
+
+    // 低 4 像素
+    int32x4_t yv_lo = vmull_n_s16(vget_low_s16(y16), kC0);
+    int32x4_t u_lo  = vget_low_s16(u16);
+    int32x4_t v_lo  = vget_low_s16(v16);
+    int32x4_t r_lo  = vmlal_n_s16(yv_lo, v_lo, kC1);
+    int32x4_t g_lo  = vmls_n_s16(vmls_n_s16(yv_lo, u_lo, kC2), v_lo, kC3);
+    int32x4_t b_lo  = vmlal_n_s16(yv_lo, u_lo, kC4);
+    // 高 4 像素
+    int32x4_t yv_hi = vmull_n_s16(vget_high_s16(y16), kC0);
+    int32x4_t u_hi  = vget_high_s16(u16);
+    int32x4_t v_hi  = vget_high_s16(v16);
+    int32x4_t r_hi  = vmlal_n_s16(yv_hi, v_hi, kC1);
+    int32x4_t g_hi  = vmls_n_s16(vmls_n_s16(yv_hi, u_hi, kC2), v_hi, kC3);
+    int32x4_t b_hi  = vmlal_n_s16(yv_hi, u_hi, kC4);
+
+    uint8x8_t r8 = neon_pack_u8x8(vshrq_n_s32(r_lo, kColorShift),
+                                 vshrq_n_s32(r_hi, kColorShift));
+    uint8x8_t g8 = neon_pack_u8x8(vshrq_n_s32(g_lo, kColorShift),
+                                 vshrq_n_s32(g_hi, kColorShift));
+    uint8x8_t b8 = neon_pack_u8x8(vshrq_n_s32(b_lo, kColorShift),
+                                 vshrq_n_s32(b_hi, kColorShift));
+    uint8x8x3_t rgb;
+    rgb.val[0] = r8;
+    rgb.val[1] = g8;
+    rgb.val[2] = b8;
+    vst3_u8(out, rgb);
+}
+
+void yuv420sp_to_bgr_neon(const uint8_t *yuv, int w, int h, uint8_t *bgr_out) {
+    const uint8_t *Y  = yuv;
+    const uint8_t *UV = yuv + (size_t)w * h;
+    const int pixels_per_row = w;
+    for (int y = 0; y < h; ++y) {
+        const uint8_t *Yrow  = Y  + (size_t)y * w;
+        const uint8_t *UVrow = UV + (size_t)(y >> 1) * w;
+        uint8_t *out = bgr_out + (size_t)y * w * 3;
+        int x = 0;
+        // NEON 主循环：8 像素一批
+        for (; x + 8 <= pixels_per_row; x += 8) {
+            yuv2bgr_neon8(Yrow + x, UVrow + x, out + x * 3);
+        }
+        // 尾部标量
+        for (; x < pixels_per_row; ++x) {
+            const int uoff = (x >> 1) * 2;
+            int32_t b, g, r;
+            yuv2bgr_scalar(Yrow[x], UVrow[uoff], UVrow[uoff + 1], &b, &g, &r);
+            out[x * 3]     = (uint8_t)b;
+            out[x * 3 + 1] = (uint8_t)g;
+            out[x * 3 + 2] = (uint8_t)r;
+        }
+    }
+}
+#endif // __ARM_NEON
+
+}  // namespace
+
+// ---------------------------------------------------------------------------
+// 对外接口
+// ---------------------------------------------------------------------------
+int letterbox_prepare(int src_w, int src_h, int dst_w, int dst_h,
+                      LetterboxParams *p) {
+    if (!p || src_w <= 0 || src_h <= 0 || dst_w <= 0 || dst_h <= 0)
+        return -1;
+    if (p->row_y0 || p->row_y1 || p->row_wy || p->col_x0 || p->col_x1 || p->col_wx)
+        return -1;  // 未释放或重复调用
+
+    // 与旧 main.cc letterbox() 相同的几何：保持宽高比缩放到模型输入
+    const double scale_x = (double)dst_w / src_w;
+    const double scale_y = (double)dst_h / src_h;
+    const double scale = scale_x < scale_y ? scale_x : scale_y;
+    const int roi_w = (int)((double)src_w * scale);
+    const int roi_h = (int)((double)src_h * scale);
+    const int left_pad = (dst_w - roi_w) / 2;
+    const int top_pad  = (dst_h - roi_h) / 2;
+
+    int32_t *row_y0 = (int32_t *)calloc((size_t)roi_h, sizeof(int32_t));
+    int32_t *row_y1 = (int32_t *)calloc((size_t)roi_h, sizeof(int32_t));
+    int32_t *row_wy = (int32_t *)calloc((size_t)roi_h, sizeof(int32_t));
+    int32_t *col_x0 = (int32_t *)calloc((size_t)roi_w, sizeof(int32_t));
+    int32_t *col_x1 = (int32_t *)calloc((size_t)roi_w, sizeof(int32_t));
+    int32_t *col_wx = (int32_t *)calloc((size_t)roi_w, sizeof(int32_t));
+    if (!row_y0 || !row_y1 || !row_wy || !col_x0 || !col_x1 || !col_wx) {
+        free(row_y0); free(row_y1); free(row_wy);
+        free(col_x0); free(col_x1); free(col_wx);
+        return -1;
+    }
+
+    // OpenCV INTER_LINEAR 中心对齐映射：src = (dst + 0.5) * scale - 0.5
+    for (int ry = 0; ry < roi_h; ++ry) {
+        const double src_y = (ry + 0.5) * ((double)src_h / roi_h) - 0.5;
+        int32_t y0 = (int32_t)floor(src_y);
+        if (y0 < 0) y0 = 0;
+        int32_t y1 = y0 + 1;
+        if (y1 >= src_h) y1 = src_h - 1;
+        double wy = src_y - y0;
+        if (wy < 0) wy = 0; else if (wy > 1) wy = 1;
+        row_y0[ry] = y0;
+        row_y1[ry] = y1;
+        row_wy[ry] = (int32_t)(wy * kWeightOne + 0.5);
+    }
+    for (int rx = 0; rx < roi_w; ++rx) {
+        const double src_x = (rx + 0.5) * ((double)src_w / roi_w) - 0.5;
+        int32_t x0 = (int32_t)floor(src_x);
+        if (x0 < 0) x0 = 0;
+        int32_t x1 = x0 + 1;
+        if (x1 >= src_w) x1 = src_w - 1;
+        double wx = src_x - x0;
+        if (wx < 0) wx = 0; else if (wx > 1) wx = 1;
+        col_x0[rx] = x0;
+        col_x1[rx] = x1;
+        col_wx[rx] = (int32_t)(wx * kWeightOne + 0.5);
+    }
+
+    p->src_w = src_w;
+    p->src_h = src_h;
+    p->dst_w = dst_w;
+    p->dst_h = dst_h;
+    p->roi_w = roi_w;
+    p->roi_h = roi_h;
+    p->left_pad = left_pad;
+    p->top_pad  = top_pad;
+    p->row_y0 = row_y0;
+    p->row_y1 = row_y1;
+    p->row_wy = row_wy;
+    p->col_x0 = col_x0;
+    p->col_x1 = col_x1;
+    p->col_wx = col_wx;
+    return 0;
+}
+
+void letterbox_params_free(LetterboxParams *p) {
+    if (!p) return;
+    free(p->row_y0); free(p->row_y1); free(p->row_wy);
+    free(p->col_x0); free(p->col_x1); free(p->col_wx);
+    p->row_y0 = p->row_y1 = p->row_wy = nullptr;
+    p->col_x0 = p->col_x1 = p->col_wx = nullptr;
+}
+
+void yuv420sp_to_rgb_letterbox(const uint8_t *yuv, const LetterboxParams &p,
+                               uint8_t *rgb_out) {
+    yuv420sp_to_rgb_letterbox_scalar(yuv, p, rgb_out);
+}
+
+void yuv420sp_to_bgr(const uint8_t *yuv, int w, int h, uint8_t *bgr_out) {
+#if defined(__ARM_NEON)
+    yuv420sp_to_bgr_neon(yuv, w, h, bgr_out);
+#else
+    yuv420sp_to_bgr_scalar(yuv, w, h, bgr_out);
+#endif
+}
+
+}  // namespace pedestrian

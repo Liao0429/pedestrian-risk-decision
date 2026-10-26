@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """消融实验（Ablation Study）——论文核心工作量章节。
 对代表性视频，分别关闭/开启 Kalman / 谱特征 / FSM，量化各组件的贡献。
-配置组合：
-  A. 基线（无 Kalman、无谱特征、无 FSM）：逐帧规则判定
+配置组合（C 组通过 --w4 启用谱特征权重，D 组用完整 FSM）：
+  A. 基线（无 Kalman、无谱特征、无 FSM）：连续评分判级（w4=0）
   B. +Kalman（仅跟踪平滑）
-  C. +Kalman + 谱特征
-  D. +Kalman + 谱特征 + FSM（完整增强）
+  C. +Kalman + 谱特征（连续评分判级，w4>0）
+  D. +Kalman + 谱特征 + FSM（完整增强，含滞回/确认帧/保持）
 输出：每视频每组等级分布/切换次数 + 汇总图 docs/figures/fig_ablation.png
-运行：python scripts/ablation_study.py
+运行：python scripts/ablation_study.py [--w4 0.1]
 """
 import sys, os, json, time
 
@@ -34,10 +34,10 @@ from src.algorithms.graph_laplacian import compute_laplacian_features  # noqa: E
 VIDEOS = ["mixkit_134", "mixkit_13192", "mixkit_3428", "mixkit_4519",
           "mixkit_4178", "mixkit_50134"]
 COMBOS = [
-    ("A 基线(无增强)", False, False, False),
-    ("B +Kalman",      True,  False, False),
-    ("C +Kalman+谱特征", True, True,  False),
-    ("D 完整(增强)",    True,  True,  True),
+    ("A 基线(无增强)", False, False, False, 0.0),
+    ("B +Kalman",      True,  False, False, 0.0),
+    ("C +Kalman+谱特征", True, True,  False, None),
+    ("D 完整(增强)",    True,  True,  True,  None),
 ]
 
 
@@ -51,7 +51,38 @@ def rule_level(n, rho, gcc, cfg):
     return "SAFE"
 
 
-def run_one(model, video, H, cfg, edge_dist, use_kalman, use_spectral, use_fsm):
+def score_level(n, rho, gcc, fiedler, spectral_radius, cfg, w4=0.0):
+    """连续评分 + 阈值判级（无滞回；A/B/C 消融组共用）。
+
+    评分公式与 RiskFSM 一致：score = w1*norm(n) + w2*density + w3*r_gcc + w4*spectral_ratio
+    C 组（+谱特征）通过 w4>0 使谱特征真正参与决策；A/B 组 w4=0。
+    """
+    from src.algorithms.risk_fsm import _clamp
+
+    f = (cfg or {}).get("fsm", {})
+    w1 = f.get("w1", 0.4)
+    w2 = f.get("w2", 0.3)
+    w3 = f.get("w3", 0.3)
+    n_ref = max(int(f.get("n_ref", 20)), 1)
+    up_warning = f.get("up_warning", 0.40)
+    up_danger = f.get("up_danger", 0.65)
+
+    norm_n = min(max(int(n), 0) / float(n_ref), 1.0)
+    score = w1 * norm_n + w2 * _clamp(float(rho), 0.0, 1.0) + w3 * _clamp(float(gcc), 0.0, 1.0)
+    if w4 > 0.0:
+        ratio = 0.0
+        sr = float(spectral_radius)
+        if abs(sr) > 1e-6:
+            ratio = _clamp(float(fiedler) / sr, 0.0, 1.0)
+        score += w4 * ratio
+    if score >= float(up_danger):
+        return "DANGER"
+    if score >= float(up_warning):
+        return "WARNING"
+    return "SAFE"
+
+
+def run_one(model, video, H, cfg, edge_dist, use_kalman, use_spectral, use_fsm, w4=0.0):
     cap = cv2.VideoCapture(video)
     fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
     tracker = KalmanTracker(dt=1.0 / max(fps, 1), gate_dist=edge_dist) if use_kalman else None
@@ -78,10 +109,14 @@ def run_one(model, video, H, cfg, edge_dist, use_kalman, use_spectral, use_fsm):
             except Exception:
                 pass
         if use_fsm and fsm is not None:
-            fsm.update({"n": n, "density": density, "r_gcc": r_gcc}, now_ms)
+            fsm.update({"n": n, "density": density, "r_gcc": r_gcc,
+                         "fiedler": feat.get("fiedler", 0.0),
+                         "spectral_radius": feat.get("spectral_radius", 0.0)}, now_ms)
             lv = fsm.level
         else:
-            lv = rule_level(n, density, r_gcc, cfg)
+            lv = score_level(n, density, r_gcc,
+                            feat.get("fiedler", 0.0), feat.get("spectral_radius", 0.0),
+                            cfg, w4)
         levels.append(lv)
         now_ms += int(1000.0 / max(fps, 1))
     cap.release()
@@ -96,6 +131,12 @@ def main():
         sys.exit("[ablation_study] 缺少 opencv，请先安装: pip install opencv-python-headless")
     if YOLO is None:
         sys.exit("[ablation_study] 缺少 ultralytics，请先安装: pip install ultralytics")
+    import argparse
+    parser = argparse.ArgumentParser(description="消融实验")
+    parser.add_argument("--w4", type=float, default=0.1,
+                    help="谱特征权重（消融 C/D 组启用，默认 0.1）")
+    args = parser.parse_args()
+
     model = YOLO("yolov8n.pt")
     cfg = load_config("config/default_config.json")
     edge_dist = cfg.get("edge_dist_m", 2.0)
@@ -114,8 +155,9 @@ def main():
     for name in VIDEOS:
         summary["results"][name] = {}
         vp = f"dataset/videos50/{name}.mp4"
-        for label, uk, us, uf in COMBOS:
-            r = run_one(model, vp, H_cache[name], cfg, edge_dist, uk, us, uf)
+        for label, uk, us, uf, w4 in COMBOS:
+            w4 = w4 if w4 is not None else args.w4
+            r = run_one(model, vp, H_cache[name], cfg, edge_dist, uk, us, uf, w4)
             summary["results"][name][label] = r
             print(f"{name:14s} {label:16s} 切换{r['switches']:3d} 分布{r['dist']}", flush=True)
         print("---", flush=True)
