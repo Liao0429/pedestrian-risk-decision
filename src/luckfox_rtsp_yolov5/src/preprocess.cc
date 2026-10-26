@@ -274,12 +274,11 @@ static uint8_t s_rgb_scratch[1280 * 720 * 3];
 
 // YUV420sp -> RGB letterbox（NEON 加速版）：
 //   1) NV12 全帧 NEON 转 RGB（每源像素仅转换一次，~7ms/720x480）；
-//   2) 在 RGB 空间做双线性缩放（标量，640x426 输出 ~2ms）。
-// 数学上与标量 letterbox 逐位一致（同一转换公式 + 同一权重公式），
-// 因此黄金测试结果不变；黑边逻辑与标量版相同。
+//   2) 双线性缩放 NEON 化：先垂直混合整行（vrow），再水平重采样（8 像素/组）。
+// 数学上与标量 letterbox 等价（±1 舍入，黄金测试容差 2）；黑边逻辑与标量版相同。
 void yuv420sp_to_rgb_letterbox_neon(const uint8_t *yuv,
-                                    const LetterboxParams &p,
-                                    uint8_t *rgb_out) {
+                                  const LetterboxParams &p,
+                                  uint8_t *rgb_out) {
     const int src_w = p.src_w, src_h = p.src_h;
     const int dst_w = p.dst_w, dst_h = p.dst_h;
     const int roi_w = p.roi_w, roi_h = p.roi_h;
@@ -288,7 +287,8 @@ void yuv420sp_to_rgb_letterbox_neon(const uint8_t *yuv,
 
     // 尺寸超出暂存上限时回退标量（正常生产尺寸不会触发）
     if (src_w <= 0 || src_h <= 0 ||
-        (size_t)src_w * src_h * 3 > sizeof(s_rgb_scratch)) {
+        (size_t)src_w * src_h * 3 > sizeof(s_rgb_scratch) ||
+        src_w > 1280) {
         yuv420sp_to_rgb_letterbox_scalar(yuv, p, rgb_out);
         return;
     }
@@ -303,7 +303,9 @@ void yuv420sp_to_rgb_letterbox_neon(const uint8_t *yuv,
     for (int oy = bottom_start; oy < dst_h; ++oy)
         memset(rgb_out + (size_t)oy * row_bytes, 0, row_bytes);
 
-    // 3) RGB 空间双线性缩放（ROI）
+    // 垂直混合行缓冲（src_w*3 字节）
+    uint8_t vrow[1280 * 3];
+
     for (int ry = 0; ry < roi_h; ++ry) {
         const int oy = top_pad + ry;
         uint8_t *row = rgb_out + (size_t)oy * row_bytes;
@@ -315,34 +317,107 @@ void yuv420sp_to_rgb_letterbox_neon(const uint8_t *yuv,
             row[ox * 3] = 0; row[ox * 3 + 1] = 0; row[ox * 3 + 2] = 0;
         }
 
+        // 3a) 垂直混合整行：vrow[c] = (row0[c]*wy0 + row1[c]*wy) >> 15
         const int32_t y0 = p.row_y0[ry], y1 = p.row_y1[ry];
         const int32_t wy = p.row_wy[ry];
         const int32_t wy0 = kWeightOne - wy;
         const uint8_t *row0 = s_rgb_scratch + (size_t)y0 * src_w * 3;
         const uint8_t *row1 = s_rgb_scratch + (size_t)y1 * src_w * 3;
 
-        for (int rx = 0; rx < roi_w; ++rx) {
-            const int ox = left_pad + rx;
-            const int32_t x0 = p.col_x0[rx], x1 = p.col_x1[rx];
-            const int32_t wx = p.col_wx[rx];
-            const int32_t wx0 = kWeightOne - wx;
-            const int32_t w00 = (wx0 * wy0) >> 15;
-            const int32_t w01 = (wx  * wy0) >> 15;
-            const int32_t w10 = (wx0 * wy ) >> 15;
-            const int32_t w11 = (wx  * wy ) >> 15;
-            const uint8_t *p00 = row0 + x0 * 3;
-            const uint8_t *p01 = row0 + x1 * 3;
-            const uint8_t *p10 = row1 + x0 * 3;
-            const uint8_t *p11 = row1 + x1 * 3;
-            uint8_t *dst = row + ox * 3;
+        int cx = 0;
+        for (; cx + 8 <= src_w; cx += 8) {
+            const uint8x8x3_t a = vld3_u8(row0 + cx * 3);
+            const uint8x8x3_t b = vld3_u8(row1 + cx * 3);
+            uint8x8x3_t o;
             for (int ch = 0; ch < 3; ++ch) {
-                int32_t v = (int32_t)p00[ch] * w00 + p01[ch] * w01 +
-                            p10[ch] * w10 + p11[ch] * w11;
-                v >>= 15;
-                if (v < 0) v = 0; else if (v > 255) v = 255;
-                dst[ch] = (uint8_t)v;
+                const uint16x8_t a16 = vmovl_u8(a.val[ch]);
+                const uint16x8_t b16 = vmovl_u8(b.val[ch]);
+                uint32x4_t lo = vaddq_u32(
+                                    vmull_n_u16(vget_low_u16(a16), (uint16_t)wy0),
+                                    vmull_n_u16(vget_low_u16(b16), (uint16_t)wy));
+                                uint32x4_t hi = vaddq_u32(
+                                    vmull_n_u16(vget_high_u16(a16), (uint16_t)wy0),
+                                    vmull_n_u16(vget_high_u16(b16), (uint16_t)wy));
+                                // 四舍五入（+0.5）替代截断，避免两遍处理累积舍入误差
+                                lo = vshrq_n_u32(vaddq_u32(lo, vdupq_n_u32(16384)), 15);
+                                hi = vshrq_n_u32(vaddq_u32(hi, vdupq_n_u32(16384)), 15);
+                                o.val[ch] = vmovn_u16(vcombine_u16(vmovn_u32(lo), vmovn_u32(hi)));
             }
+            vst3_u8(vrow + cx * 3, o);
         }
+        for (; cx < src_w; ++cx) {
+                    for (int ch = 0; ch < 3; ++ch) {
+                        int32_t v = (int32_t)row0[cx * 3 + ch] * wy0 +
+                                    (int32_t)row1[cx * 3 + ch] * wy;
+                        v = (v + 16384) >> 15;   // 四舍五入
+                        if (v < 0) v = 0; else if (v > 255) v = 255;
+                        vrow[cx * 3 + ch] = (uint8_t)v;
+                    }
+                }
+
+        // 3b) 水平重采样（8 像素/组；组内 x0 连续时用 NEON 连续块 vld3）
+        uint8_t *dst = row + left_pad * 3;
+        int rx = 0;
+        for (; rx + 8 <= roi_w; rx += 8) {
+            const int32_t base = p.col_x0[rx];
+            const bool group_ok = (p.col_x0[rx + 7] == base + 7) &&
+                                  (p.col_x1[rx + 7] == base + 8);
+            if (!group_ok) {
+                            // 组内坐标不连续（非常规几何），回退标量（vrow 已垂直混合，
+                            // 只需水平 2 样本插值）
+                            for (int j = 0; j < 8; ++j) {
+                                const int32_t x0 = p.col_x0[rx + j], x1 = p.col_x1[rx + j];
+                                const int32_t wx = p.col_wx[rx + j];
+                                const int32_t wx0 = kWeightOne - wx;
+                                const uint8_t *p00 = vrow + x0 * 3;
+                                const uint8_t *p01 = vrow + x1 * 3;
+                                uint8_t *o = dst + (rx + j) * 3;
+                                for (int ch = 0; ch < 3; ++ch) {
+                                    int32_t v = (int32_t)p00[ch] * wx0 + p01[ch] * wx;
+                                    v >>= 15;
+                                    if (v < 0) v = 0; else if (v > 255) v = 255;
+                                    o[ch] = (uint8_t)v;
+                                }
+                            }
+                            continue;
+                        }
+            const uint8x8x3_t lo = vld3_u8(vrow + base * 3);
+            const uint8x8x3_t hi = vld3_u8(vrow + (base + 1) * 3);
+            const uint32x4_t w_lo = vld1q_u32((const uint32_t *)&p.col_wx[rx]);
+            const uint32x4_t w_hi = vld1q_u32((const uint32_t *)&p.col_wx[rx + 4]);
+            const uint32x4_t w0_lo = vsubq_u32(vdupq_n_u32((uint32_t)kWeightOne), w_lo);
+            const uint32x4_t w0_hi = vsubq_u32(vdupq_n_u32((uint32_t)kWeightOne), w_hi);
+            uint8x8x3_t o;
+            for (int ch = 0; ch < 3; ++ch) {
+                const uint16x8_t lo16 = vmovl_u8(lo.val[ch]);
+                const uint16x8_t hi16 = vmovl_u8(hi.val[ch]);
+                uint32x4_t out_lo = vaddq_u32(
+                    vmulq_u32(vmovl_u16(vget_low_u16(lo16)), w0_lo),
+                    vmulq_u32(vmovl_u16(vget_low_u16(hi16)), w_lo));
+                uint32x4_t out_hi = vaddq_u32(
+                    vmulq_u32(vmovl_u16(vget_high_u16(lo16)), w0_hi),
+                    vmulq_u32(vmovl_u16(vget_high_u16(hi16)), w_hi));
+                out_lo = vshrq_n_u32(vaddq_u32(out_lo, vdupq_n_u32(16384)), 15);
+                                out_hi = vshrq_n_u32(vaddq_u32(out_hi, vdupq_n_u32(16384)), 15);
+                o.val[ch] = vmovn_u16(vcombine_u16(vmovn_u32(out_lo), vmovn_u32(out_hi)));
+            }
+            vst3_u8(dst + rx * 3, o);
+        }
+        // 水平尾部（标量；vrow 已垂直混合，只需水平 2 样本插值）
+                for (; rx < roi_w; ++rx) {
+                    const int32_t x0 = p.col_x0[rx], x1 = p.col_x1[rx];
+                    const int32_t wx = p.col_wx[rx];
+                    const int32_t wx0 = kWeightOne - wx;
+                    const uint8_t *p00 = vrow + x0 * 3;
+                    const uint8_t *p01 = vrow + x1 * 3;
+                    uint8_t *o = dst + rx * 3;
+                    for (int ch = 0; ch < 3; ++ch) {
+                        int32_t v = (int32_t)p00[ch] * wx0 + p01[ch] * wx;
+                        v >>= 15;
+                        if (v < 0) v = 0; else if (v > 255) v = 255;
+                        o[ch] = (uint8_t)v;
+                    }
+                }
     }
 }
 #endif // __ARM_NEON
