@@ -84,7 +84,7 @@ def process_video(model, video_path, out_dir, conf, imgsz, H, scale_mpp, device,
     writer = cv2.VideoWriter(out_path, cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height))
 
     tracker = KalmanTracker(dt=1.0 / max(fps, 1), gate_dist=edge_dist)
-    fsm_cfg = RiskFSMConfig(**(cfg.get("temporal", {}) if cfg else {}))
+    fsm_cfg = RiskFSMConfig(**(cfg.get("fsm", {}) if cfg else {}))
     fsm = RiskFSM(fsm_cfg)
 
     timeline = []

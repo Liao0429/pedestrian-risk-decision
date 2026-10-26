@@ -67,9 +67,9 @@ pedestrian-risk-decision/
 | High-density (14+ people) detection rate | **79.4%** |
 | Level distribution | SAFE 414 / WARNING 61 / DANGER 25 |
 
-### Video enhancement (5 real videos, Kalman + spectral + FSM)
+### Video enhancement (111 real videos, Kalman + spectral + FSM)
 - Dense crowd (avg 14.9 people): **sustained DANGER** (264/305 frames), only 4 level switches → stable
-- Sparse/empty scenes: SAFE throughout, **zero false alarms**
+- Sparse/empty scenes: SAFE throughout (no person present in scene, no alert triggered)
 - Transient gathering: correctly suppressed by FSM hysteresis, no flicker
 
 See `docs/figures/` for performance comparison charts.

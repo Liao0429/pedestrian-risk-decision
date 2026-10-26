@@ -31,10 +31,11 @@ COMBOS = [
 
 
 def rule_level(n, rho, gcc, cfg):
-    d, w = cfg["danger"], cfg["warning"]
-    if n >= d["n"] or rho >= d["rho"] or gcc >= d["gcc"]:
+    """规则阈值分级（与 crowd_test.evaluate_level 的 AND 逻辑一致，避免消融基线失真）。"""
+    d, w = cfg.get("danger", {}), cfg.get("warning", {})
+    if n >= d.get("n", 10) and (rho >= d.get("rho", 0.55) or gcc >= d.get("gcc", 0.80)):
         return "DANGER"
-    if n >= w["n"] or rho >= w["rho"] or gcc >= w["gcc"]:
+    if n >= w.get("n", 5) and (rho >= w.get("rho", 0.28) or gcc >= w.get("gcc", 0.55)):
         return "WARNING"
     return "SAFE"
 
@@ -43,7 +44,7 @@ def run_one(model, video, H, cfg, edge_dist, use_kalman, use_spectral, use_fsm):
     cap = cv2.VideoCapture(video)
     fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
     tracker = KalmanTracker(dt=1.0 / max(fps, 1), gate_dist=edge_dist) if use_kalman else None
-    fsm = RiskFSM(RiskFSMConfig(**(cfg.get("temporal", {}) if cfg else {}))) if use_fsm else None
+    fsm = RiskFSM(RiskFSMConfig(**(cfg.get("fsm", {}) if cfg else {}))) if use_fsm else None
     levels = []
     now_ms = 0
     while True:

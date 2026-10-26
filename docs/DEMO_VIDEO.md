@@ -7,7 +7,7 @@
 | 视频 | 场景 | 增强结果 | 用途 |
 |---|---|---|---|
 | `results/video_enhanced_fsm/mixkit_13192_enhanced.mp4` | 密集人群（平均 14.9 人） | **DANGER 179 / WARNING 120 / SAFE 6**，FSM 切换仅 4 次 | 展示 DANGER/WARNING 切换（说服力最强） |
-| `results/video_enhanced_fsm/mixkit_13265_enhanced.mp4` | 稀疏/无人场景 | 全程 SAFE，**零误报** | 展示误报抑制 |
+| `results/video_enhanced_fsm/mixkit_13265_enhanced.mp4` | 稀疏/无人场景 | 全程 SAFE（该场景无行人，未触发告警） | 展示误报抑制 |
 | `results/video_enhanced/mixkit_134_enhanced.mp4` 等 | 其他场景 | 增强对比 | 备选 |
 
 ## 数据真实性

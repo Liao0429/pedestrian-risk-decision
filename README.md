@@ -68,7 +68,7 @@ pedestrian-risk-decision/
 | 指标 | 结果 |
 |---|---|
 | 检出率（总体） | **82.5%** |
-| 高密度图（14+人）检出率 | **76.7%** |
+| 高密度图（14+人）检出率 | **79.4%** |
 | 等级分布 | SAFE 414 / WARNING 61 / DANGER 25 |
 
 ![图片基线等级分布](docs/figures/fig1_level_dist.png) 
@@ -77,7 +77,7 @@ pedestrian-risk-decision/
 ### 视频增强（真实视频，Kalman+谱特征+FSM，111 条全量重跑）
 - **全量 111 条真实视频（45021 帧）**：等级分布 **SAFE 25669 / WARNING 11545 / DANGER 7807**，平均每条等级切换 **4.00 次**（FSM 滞回稳定），40 条出现 DANGER，**31 条未触发风险报警**（含少量低照度场景检测器漏检，已用亮度+检测人数双重核对）
 - 密集人群（`mixkit_13192`）：**DANGER 179 / WARNING 120 / SAFE 6**（305 帧），等级切换仅 4 次 → 稳定（逐帧规则基线为 46 次/视频）
-- 稀疏/无人场景（`mixkit_50134`，光照正常）：388 帧全程 SAFE，**零误报**
+- 稀疏/无人场景（`mixkit_50134`，光照正常）：388 帧全程 SAFE（该场景无行人，未触发告警）
 - 算法前后对比与增强代价/下降方面见 `results/rerun/_comparison_summary.json`；全量明细见 `results/rerun/`
 
 ![视频增强前后对比](docs/figures/fig3_before_after.png) 
@@ -87,7 +87,7 @@ pedestrian-risk-decision/
 
 ![消融实验](docs/figures/fig_ablation.png)
 
-- **Kalman 跟踪平滑**使平均切换次数下降约 67%（35.2 → 11.7），**FSM 时序决策**进一步稳定（→ 4.0）；谱特征提升风险语义准确性。详见 `results/rerun/_ablation.json` 与 `docs/figures/fig_ablation.png`。
+- **Kalman 跟踪平滑**使平均切换次数下降约 67%（35.2 → 11.7），**FSM 时序决策**进一步稳定（→ 4.0）；谱特征作为图连通性指标参与计算与显示（收益评估见消融数据）。详见 `results/rerun/_ablation.json` 与 `docs/figures/fig_ablation.png`。
 
 ### 🎬 真实检测效果视频
 
@@ -96,7 +96,7 @@ pedestrian-risk-decision/
 - 人群聚集场景（SAFE → WARNING → DANGER 风险过渡，FSM 稳定）：
  [![人群聚集增强演示](docs/figures/demo_mixkit_134.png)](results/demo/mixkit_134_enhanced.mp4)
 
-- 稀疏/无人场景（真实少人，零误报）：
+- 稀疏/无人场景（真实少人，未触发告警）：
  [![稀疏场景增强](docs/figures/demo_mixkit_50134.png)](results/demo/mixkit_50134_enhanced.mp4)
 
 > 视频为真实数据集（Mixkit）经 `scripts/crowd_test_enhanced.py`（Kalman + 谱特征 + FSM）处理生成；逐帧时间线 JSON 在 `results/rerun/video_enhanced/` 与 `results/video_enhanced_fsm/`。

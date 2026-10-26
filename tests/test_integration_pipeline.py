@@ -158,7 +158,7 @@ def make_enhanced_pipeline(edge_dist=crowd_test.EDGE_DIST_M):
     """构造增强流水线的核心组件（与 crowd_test_enhanced.process_video 一致）。"""
     tracker = KalmanTracker(dt=1.0 / 30.0, gate_dist=edge_dist)
     cfg = crowd_test.load_config(CONFIG_PATH)
-    fsm_cfg = RiskFSMConfig(**cfg.get("temporal", {}))
+    fsm_cfg = RiskFSMConfig(**cfg.get("fsm", {}))
     fsm = RiskFSM(fsm_cfg)
     return tracker, fsm, cfg
 
