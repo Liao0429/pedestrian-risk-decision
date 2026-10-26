@@ -75,4 +75,5 @@
 | P1-6 主循环打点 | ✅ 完成（2026-10-27） | 真机 `[PROFILE]` 日志：瓶颈=CPU 预处理+NPU 推理串行组合（合计 ~135-150ms/帧，比例随 CPU 调频在 44/91 与 91/44 间翻转）；详见 IMPLEMENTATION_LOG 阶段五 |
 | P1 新增：NEON 预处理优化（P1-6 后续） | ✅ 完成（2026-10-27） | `preprocess.{h,cc}` NV12→BGR（NEON）+ NV12→RGB letterbox（NEON），修复 NV12 颜色语义；真机黄金 174/174，NEON vs 标量 max_diff=0；CPU 预处理 136→33ms，**6.30→7.46 FPS（+18%）**，NPU ~91ms 成为唯一瓶颈；详见 IMPLEMENTATION_LOG 阶段八 |
 | P1-7 真机 IPM 标定 | ⬜ 待做 | 需物理标定物 |
-| P1-8 长稳 8h/24h | ⬜ 待做 | 看门狗已就位 |
+| P1-8 长稳 8h/24h | 🟡 采集中（t0–t4，1h16m 零错误） | 看门狗已就位，cron 每 4h 自动采集 |
+| P2-6 风险阈值速查页 | ✅ 完成（2026-10-27） | docs/RISK_THRESHOLD_CHEATSHEET.md（真实配置值 + 标定依据 + 答辩口径） |
