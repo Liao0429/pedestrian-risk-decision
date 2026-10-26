@@ -43,3 +43,4 @@ docs/thesis/
 results/rerun/**/*.mp4
 results/rerun/**/vis/
 results/rerun/video_enhanced/*/
+results/rerun/video_baseline/*/
