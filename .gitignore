@@ -38,3 +38,8 @@ src/luckfox_rtsp_yolov5/tests/*.o
 !results/edge_board/*.log
 
 docs/thesis/
+
+# 真实数据集重跑：忽略大体积视频/可视化图/每视频时间线，只保留汇总 JSON 与 README
+results/rerun/**/*.mp4
+results/rerun/**/vis/
+results/rerun/video_enhanced/*/

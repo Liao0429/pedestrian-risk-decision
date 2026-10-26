@@ -20,10 +20,10 @@
 | `src/luckfox_rtsp_yolov5/src/main.cc` | **单线程** while 循环（L160）：取帧→letterbox→推理→`riskEngine.clear()`（L182）→`addPedestrian`（L189）→`computeFeatures`（L192）→`evaluate`（L193）→画框/OSD→H264→RTSP | 线程化改造：拆出“采集推理 / 决策 / 编码推流 / 外设”四线程；Kalman 放决策线程推理后处理，FSM 放决策线程末段 |
 | `src/algorithms/` | 目录存在但**为空**（已核实） | 新增 `graph_laplacian.py`、`kalman_tracker.py`、`risk_fsm.py`（Python）；对应 C++ 头/实现 |
 | `config/default_config.json` | 含 `edge_dist_m`、`danger{n,rho,gcc}`、`warning{n,rho,gcc}` | 扩展 `spectral`、`temporal`（FSM 参数）、`tracker` 配置段 |
-| `docs/optimization_review.md` | 明确指出当前单线程、无跟踪/滞回；R3（滞回+EMA）、R4（跟踪）为 P0 建议 | 本方案即为 R3/R4 的落地实现 |
+| `docs/ALGORITHM_OPTIMIZATION.md` | 明确指出当前单线程、无跟踪/滞回；R3（滞回+EMA）、R4（跟踪）为 P0 建议 | 本方案即为 R3/R4 的落地实现 |
 | `docs/hardware/system_integration.md` | 定义了 1 主线程 + 4 扩展线程模型与 `SystemState` 共享结构（L214-280） | 本方案的四线程拆分与之兼容，并扩展 `SystemState` 字段 |
 
-> **说明**：现有 `main.cc` 是单线程串行流水线（`optimization_review.md` L37 已指出），本方案把它拆成四线程，与 `system_integration.md` 的线程化方向一致。`src/algorithms/` 为空，以下文件均为**新增**。
+> **说明**：现有 `main.cc` 是单线程串行流水线（`ALGORITHM_OPTIMIZATION.md` L37 已指出），本方案把它拆成四线程，与 `system_integration.md` 的线程化方向一致。`src/algorithms/` 为空，以下文件均为**新增**。
 
 ---
 
@@ -57,7 +57,7 @@
 - 降级：需**连续 `deescalate_frames`（默认 5）帧**满足更低等级；
 - **无数据保持**：推理返回 0 检测时不立即回 SAFE，保持当前等级最多 `no_data_hold`（默认 5）帧。
 
-对应 `optimization_review.md` 的 R3（滞回 + 无数据保持）建议。
+对应 `ALGORITHM_OPTIMIZATION.md` 的 R3（滞回 + 无数据保持）建议。
 
 ---
 
@@ -604,7 +604,7 @@ T4 外设:     读 SystemState → OLED / 语音告警 / 云台
 | **阶段 2** | Python 视频/多帧时序验证 | 写 `kalman_tracker.py`、`risk_fsm.py`；`crowd_test.py` 加 `--video/--sequence` 路径 | 用一段行人视频生成带轨迹+稳定等级的输出视频；对比“平滑前后等级翻转次数”，验证 FSM 消除单帧闪烁；验证瞬时误检被 `min_hits` 过滤 | 1~2 天 |
 | **阶段 3** | C++ 谱特征 + Kalman（决策线程雏形） | 写 3 个 `.h/.cc`；`risk_engine.h/.cc` 扩展谱特征与 `addPedestrianGround`；先不拆线程，在现主循环里串行跑 Kalman+谱特征 | 板端 OSD 显示 λ₂；实测 `computeSpectralFeatures` 在 n≤64 时 <1ms（打时间戳验证）；RTSP 画面稳定 | 2~3 天 |
 | **阶段 4** | C++ 四线程 + FSM 落地 | 按 §3.6 拆 T1~T4；`RiskFSM` 挂决策线程；`SystemState` 扩展字段；OSD 显示 FSM 稳定等级 | 视频流等级不再逐帧闪烁；0 检测时等级保持 5 帧不闪绿；长跑 30 分钟无崩溃、不掉流 | 2~3 天 |
-| **阶段 5** | 标定 + 消融 + 论文图表 | 真机地面标定 H（`optimization_review.md` R1）；用 Python 链路做“有无谱特征/有无Kalman/有无FSM”消融 | 论文得到：① 谱特征 vs 拓扑特征对比表；② 平滑前后等级翻转统计表；③ FSM 去抖前后时间线图 | 2~3 天 |
+| **阶段 5** | 标定 + 消融 + 论文图表 | 真机地面标定 H（`ALGORITHM_OPTIMIZATION.md` R1）；用 Python 链路做“有无谱特征/有无Kalman/有无FSM”消融 | 论文得到：① 谱特征 vs 拓扑特征对比表；② 平滑前后等级翻转统计表；③ FSM 去抖前后时间线图 | 2~3 天 |
 
 > **排序理由**：先 Python 验证算法有效性（成本最低、可快速出图），再移植板端；板端先串行跑通算法（阶段 3），最后才做线程化（阶段 4），避免“算法没验证就先上多线程”的调试困难。
 
@@ -626,7 +626,7 @@ T4 外设:     读 SystemState → OLED / 语音告警 / 云台
    答：不冗余。r_gcc 是 0/1 连通分量占比，只区分“是否连通”；λ₂ 给出**连通强度**（连通的群体 λ₂>0，越大越难拆开）。完全图 n=10 的 λ₂ 与链状 n=10 的 λ₂ 不同，但 r_gcc 可能都为 1。实验可用“同 r_gcc 不同 λ₂”样本证明增量价值（阶段 5 消融）。
 
 2. **“板端算特征值会不会太慢？”**
-   答：用 Jacobi 特征分解，n≤64 时与现有聚类系数同量级（约 1ms 内，见 `optimization_review.md` §7.1 的估算方法），决策线程 1~5Hz 下 CPU 占用可忽略。
+   答：用 Jacobi 特征分解，n≤64 时与现有聚类系数同量级（约 1ms 内，见 `ALGORITHM_OPTIMIZATION.md` §7.1 的估算方法），决策线程 1~5Hz 下 CPU 占用可忽略。
 
 3. **“Kalman 的测量噪声/过程噪声怎么定？”**
    答：测量噪声 R 取脚点经 IPM 后在地面坐标的典型抖动（约 0.25m²），过程噪声 Q 反映行人速度突变；实际用留一法或现场视频标定。答辩时说明这是**可调参数**，来自 `config/default_config.json` 的 `tracker` 段。
@@ -642,7 +642,7 @@ T4 外设:     读 SystemState → OLED / 语音告警 / 云台
 ## 7. 风险与注意事项
 
 - **不引入外部库依赖**：谱特征用自包含 Jacobi 分解（~50 行），避免在 RV1106 上引入 Eigen 的编译/内存负担。若 SDK 已带 Eigen 也可直接 `SelfAdjointEigenSolver`。
-- **内存**：`computeFeatures()` 每帧堆分配 n×n 的 `adj/dist`（`optimization_review.md` §7.2 已指出）。谱特征复用同一邻接矩阵，不额外重复分配。
+- **内存**：`computeFeatures()` 每帧堆分配 n×n 的 `adj/dist`（`ALGORITHM_OPTIMIZATION.md` §7.2 已指出）。谱特征复用同一邻接矩阵，不额外重复分配。
 - **数据一致性**：Python 与 C++ 的谱特征算法、建边规则、FSM 参数必须一致；阶段 1 的 Python 结果作为阶段 3 C++ 实现的回归基准（同一输入应得到相同 λ₂）。
-- **阈值语义**：本方案不改动现有 `danger/warning` 阈值宏（`risk_engine.cc` L7-13），只**新增**谱特征与 FSM 配置；避免与论文表 5-1 的数值一致性讨论（见 `optimization_review.md` §6）发生冲突。
+- **阈值语义**：本方案不改动现有 `danger/warning` 阈值宏（`risk_engine.cc` L7-13），只**新增**谱特征与 FSM 配置；避免与论文表 5-1 的数值一致性讨论（见 `ALGORITHM_OPTIMIZATION.md` §6）发生冲突。
 - **四线程改造风险**：线程化是重构，建议阶段 3 先在单线程串行跑通 Kalman+谱特征，验证算法正确后再拆线程；每个阶段保持可运行可演示。

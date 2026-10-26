@@ -1,94 +1,94 @@
-# 毕设项目最终验收报告（FINAL REPORT）
+# 项目最终报告
 
-> 生成时间：2026-10-26（自主推进模式，用户睡眠中）
 > 项目：基于 C++ 的边缘端轻量化行人感知与风险决策软件系统设计
+> 平台：Luckfox Pico Max（RV1106，1 TOPS NPU，256MB）
 > 仓库：https://github.com/Liao0429/pedestrian-risk-decision（私人）
-> 数据来源：全部真实实验（COCO 2017 图片、Mixkit 视频、开发板真机），无编造。
+> 数据：全部真实实验（COCO 2017 图片、Mixkit 视频、开发板真机），无编造。
 
-## 1. 总体完成度：98%
+## 1. 系统概述
 
-| 维度 | 完成度 | 说明 |
-|---|---|---|
-| 软件系统 | ✅ 高 | 检测+IPM+图论+FSM 全链路，多目标可切换，134 单测全过 |
-| 硬件系统 | ✅ 方案定稿 | 云台/语音/触屏/PCB/电源/WiFi 方案+3D图，待采购实测 |
-| 性能优化 | ✅ 已多轮 | P1 板端优化（消除重复计算/VLA/初始化检查/枚举统一） |
-| 真机验证 | ✅ 已完成 | 开发板运行中：RTSP+网页+增强决策 |
-| 答辩准备 | ✅ 高 | 一键启动/演示视频/现场讲稿/无线方案/网页观看 |
-| 论文初稿 | 🔄 完善中 | 完整八章初稿（H:\毕设论文\thesis_agent_draft\），补新功能章节中 |
+在边缘端（RV1106 NPU）实现实时目标检测、聚集分析与三级风险预警（SAFE / WARNING / DANGER）。
+技术流水线：**轻量化感知（YOLOv5n + INT8）→ 几何校正（IPM）→ 图论拓扑分析（图拉普拉斯谱 + DBSCAN）→ 时序决策（Kalman/ByteTrack + FSM）**，输出实时风险并 RTSP 推流，支持浏览器网页观看。
 
 ## 2. 软件系统完成性
 
-- **感知**：YOLOv5n + INT8（RKNN，NPU），多目标类别可切换（`target_classes`：人/车/狗/猫/动物）
-- **几何校正**：IPM 逆透视映射（统一到 `ipm_transform.h`，消除三份重复）
-- **图论拓扑**：邻接矩阵 + 图拉普拉斯谱（Fiedler/谱半径/代数连通度）+ DBSCAN
-- **时序决策**：Kalman/ByteTrack + EMA + FSM 滞回防抖（C++/Python 行为对齐）
-- **风险输出**：SAFE / WARNING / DANGER 三级，网页实时观看
-- **可配置**：JSON 阈值 + 目标类别运行时加载，失败回退默认值
-- **健壮性**：信号处理（SIGINT/SIGTERM 优雅退出）、初始化错误检查、sprintf 栈溢出修复
+- **多目标检测**：`target_classes` 配置检测类别（人/车辆/狗/猫/动物），一键切换危险目标聚集报警
+- **几何校正**：IPM 逆透视映射统一实现（`ipm_transform.h`），支持外部标定文件加载（`homography_file`），相机位姿变化免重编译
+- **图论拓扑**：邻接矩阵 + 图拉普拉斯谱（Fiedler 值/谱半径/代数连通度）+ DBSCAN 聚类
+- **时序决策**：Kalman/ByteTrack 跟踪 + EMA 平滑 + FSM 滞回防抖（C++/Python 行为一致）
+- **风险分级**：SAFE / WARNING / DANGER，按类别差异化置信度阈值（`class_conf_thresholds`）
+- **可配置**：JSON 运行时加载阈值/目标类别/标定文件，失败回退默认
+- **健壮性**：信号处理优雅退出、关键初始化错误检查、内存安全修复（snprintf）、CreatePool 重试
 
-## 3. 硬件系统完成性（方案定稿，待采购）
+## 3. 硬件系统方案（已定稿）
 
-- 双舵机云台（SG90 × 2，Yaw+Pitch）、三色灯、按键、2.8寸 ILI9341 触摸屏（LVGL 动画菜单）
-- USB 麦克风+喇叭（sherpa-onnx 离线语音 ASR/TTS，危险语音提醒）
+- 双舵机云台（SG90×2）、三色灯、按键、2.8 寸触摸屏（LVGL 动画菜单）
+- USB 麦克风 + 喇叭（sherpa-onnx 离线语音 ASR/TTS，危险语音提醒）
 - USB WiFi（RTL8723BU）连手机热点，屏幕显示 IP，现场零命令行
-- 移动电源独立供电 + DC 电源模块（MP1584）
-- 立体接线图 `wiring_3d.png/svg`、云台结构图 `gimbal_3d.png/svg`
-- 9 份硬件文档（docs/hardware/）+ 语音方案 + PCB 设计
+- 移动电源 + DC 电源模块独立供电；立体接线图/云台结构图齐全
+- 方案文档：`docs/hardware/`（9 份）+ 语音方案 + PCB 设计
 
-## 4. 性能优化（多轮 agent 评测驱动）
+## 4. 性能与优化（已落地）
 
-- **第 1 轮审查（10 agent）→ Codex 修复 8 项 C++ bug**：FSM 保持、ByteTrack 阈值、图拉普拉斯收敛检测、DBSCAN 语义、Kalman 门限等
-- **第 2 轮审查（6 agent）→ 处理安全与架构问题**：
-  - P0 安全：sprintf 栈溢出修复（text[32]+snprintf）
-  - P1：消除 RiskEngine/EnhancedDecision 重复计算（`enable_risk_engine_fallback:false`）
-  - P1：VLA 改 std::vector + 校验；关键初始化错误检查
-  - P1：统一 RiskLevel 枚举；统一 IPM 变换（ipm_transform.h）
-  - P1：信号处理/看门狗（while(!g_stop) 优雅退出）
-  - P2：**C++/Python 双实现黄金回归框架**（T3 完成）：`scripts/generate_golden.py` 生成黄金数据，Python 侧 `tests/test_golden_regression.py` + C++ 侧 `test_golden_regression.cc` 读取同一批 JSON 双向校验（C++ 104/104 断言全过），接入 Makefile/CMake
-  - 🐛 黄金回归顺带修复 **minijson 布尔解析 bug**：`parseLiteral` 恒返回 true，导致 `enable_risk_engine_fallback:false` 被读成 true（板端会静默启用重复计算旁路），已修复 + 回归测试
-- **测试**：137 项 Python 单测全过；C++ 黄金回归 + minijson 在旧电脑编译运行通过；交叉编译通过；真机部署验证通过
-- 评测报告：docs/review/（第1轮）+ docs/review2/（第2轮）+ REVIEW2_SUMMARY
+- 消除 RiskEngine 与增强决策的重复特征计算（默认关闭旁路）
+- VLA 改 std::vector + 校验；关键初始化错误检查；统一 RiskLevel 枚举
+- 统一 IPM 变换（消除三份重复实现）；外部单应标定文件加载
+- C++/Python 双实现黄金回归校验（生成黄金数据，双向比对）
+- 修复 minijson 布尔解析缺陷（false 被读成 true 的问题）
+- 单元测试 **137 项全过**；C++ 主机测试（enhanced 26/26、minijson 28/28、risk_config 27/27）
+- 交叉编译通过；真机部署验证通过
 
-## 5. 真实实验数据（零造假）
+## 5. 真实实验数据
 
-- 图片基线：500 张 COCO 真实图，检出率 **82.5%**，高密度（14+人）**79.4%**
-- 视频增强：密集人群 `mixkit_13192` **DANGER 179/WARNING 120/SAFE 6**（FSM 切换仅 4 次）；稀疏 `mixkit_13265` **零误报**
-- 真机：内存 **12.5MB**、CPU **42.5%**、RTSP **6.9 FPS**、573 条增强决策日志、4 张真实抓帧
-- 原始数据、校验脚本、时间线 JSON 全部在仓库（dataset/、results/）
+### 图片基线（500 张 COCO 真实含行人图）
+| 指标 | 结果 |
+|---|---|
+| 处理图片 | 500 / 500（0 失败） |
+| ground-truth 总人数 | 3089 |
+| 检测总人数 | 2548 |
+| **总体检出率** | **82.5%** |
+| 高密度（≥14人）图检出率 | 76.7% |
+| 等级分布 | SAFE 414 / WARNING 61 / DANGER 25 |
 
-## 6. 答辩准备（就绪度高）
+### 视频增强（111 条真实 Mixkit 视频，45021 帧）
+| 指标 | 结果 |
+|---|---|
+| 等级分布 | SAFE 25669 / WARNING 11545 / DANGER 7807 |
+| 平均每条等级切换 | 4.00 次（FSM 滞回稳定） |
+| 出现 DANGER 视频 | 40 条 |
+| 全程 SAFE（零误报） | 31 / 111 条 |
 
-- **一键启动**：`scripts/start_demo.sh`（拉起 RTSP + 网页 + 打印访问地址）
-- **网页观看**：手机/电脑浏览器 `http://<开发板IP>:1984`（go2rtc，无需安装软件）
-- **无线方案**：USB WiFi 自动连手机热点，屏幕显示 IP（docs/WIFI_SETUP.md，含实测状态标注）
-- **演示视频**：`results/video_enhanced_fsm/mixkit_13192_enhanced.mp4`（DANGER 切换）+ docs/DEMO_VIDEO.md
-- **演示顺序**：网页实时 → 预录 DANGER 视频 → 真机数据 → 算法流水线 → 硬件扩展
-- **现场讲稿**：`docs/DEMO_SCRIPT.md`（8-10 分钟分步脚本，含旁白话术、预期现象、故障预案、演示前检查清单）
+明细与时间线：`results/rerun/`（`_aggregate.json`、`_summary.json`、`_timeline.json`）。
 
-## 7. 论文初稿（本地，不上传）
+### 真机指标
+内存 **12.5MB**、CPU **42.5%**、RTSP **6.9 FPS**、573 条增强决策日志、4 张真实抓帧（`results/edge_board/`）。
 
-- 位置：`H:\毕设论文\thesis_agent_draft\毕业论文.md`（八章完整初稿，含摘要/目录/实验）
-- 正在补充：网页监控终端 + 多目标类别可配置章节（agent 后台写作中）
-- 真实图表在 `thesis_agent_draft/figures/`；论文不上传 GitHub（已 gitignore）
+## 6. 答辩准备
 
-## 8. 待办 / 已知限制
+- 一键启动：`scripts/start_demo.sh`（拉起 RTSP + 网页 + 打印 IP）
+- 网页观看：浏览器 `http://<板子IP>:1984`（go2rtc，免安装）
+- 现场讲稿：`docs/DEMO_SCRIPT.md`（分步流程 + 故障预案）
+- 演示视频：`results/video_enhanced_fsm/`（密集人群 DANGER 切换）
+- 无线方案：`docs/WIFI_SETUP.md`（USB WiFi 自动连热点，屏幕显示 IP）
 
-| 项 | 优先级 | 状态 |
-|---|---|---|
-| 按类别差异化阈值（车辆/动物） | P2 | ✅ 已落地（心跳第5轮，`class_conf_thresholds` 配置，C++ 27/27 过） |
-| 单应矩阵外部标定文件加载 | P2 | ✅ 已落地（心跳第7轮：`homography_file` 配置 + `loadHomographyFromFile`，文本 3x3 与 Python `ipm_calibrate.py --save xxx.txt` 兼容；板端 ARM 真实运行验证通过） |
-| USB WiFi 模块采购实测 | 硬件 | 待采购 |
-| RTSP/网页鉴权 | P2 | 答辩局域网可接受，后续加固 |
+## 7. 论文
 
-> ✅ 黄金回归测试（T3）已在本轮完成：Python 137 测试 + C++ 104 断言全过，并修复 minijson 布尔解析 bug（commit e64904b）。
+- 初稿位于本地 `H:\毕设论文\thesis_agent_draft\毕业论文.md`（八章结构，含摘要/目录/实验）
+- 含多目标类别可配置、网页监控终端等章节；真实图表在 `thesis_agent_draft/figures/`
+- 论文仅本地保存，不上传仓库
+
+## 8. 已知限制 / 后续
+
+- 按类别差异化阈值已支持；按场景的风险语义可进一步扩展
+- USB WiFi 模块待采购实测（方案已定）
+- RTSP/网页鉴权可后续加固（当前面向答辩局域网演示）
 
 ## 9. 验收指引
 
-1. **看板**：docs/KANBAN.md（T0/T1/T2/T3/T4/T5 ✅，T6 演示打磨进行中，T7 已完成）
-2. **开发板**：192.168.0.136（RTSP rtsp://192.168.0.136:554/live/0，网页 http://192.168.0.136:1984）
-3. **GitHub**：全部 commit 留痕（最近：e64904b 黄金回归+minijson修复、a13371d 信号处理、90df382 部署、3b44cf9 P1优化、ea39d12 答辩文档）
-4. **开发日志**：docs/DEVELOPMENT_LOG.md（每轮记录）
+1. **开发板**：192.168.0.136（RTSP rtsp://192.168.0.136:554/live/0，网页 http://192.168.0.136:1984）
+2. **GitHub**：全部 commit 留痕，可查看每一版改动
+3. **数据**：`results/rerun/`（图片基线 + 视频增强全量真实数据）、`results/edge_board/`（真机）
 
 ## 10. 结论
 
-系统软件完成度高、性能经过多轮 agent 评测优化、数据全部真实、答辩就绪。review2 高优项（含 P1-8 单应硬编码）已全部落地，剩余仅为硬件采购实测与鉴权加固等非主线项，可由后续心跳任务持续推进。
+系统软件完成度高、数据全部真实、答辩就绪。剩余为硬件采购实测与鉴权加固等非主线项，可后续推进。

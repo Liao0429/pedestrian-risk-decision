@@ -117,7 +117,6 @@ make test        # 编译并运行增强决策/JSON 配置/阈值引擎单元测
 | `docs/INTEGRATION_PLAN.md` | 算法集成方案（Python+C++，四线程架构） |
 | `docs/WEB_VIEWER.md` | 网页免安装观看监控（go2rtc，手机/电脑浏览器） |
 | `docs/WIFI_SETUP.md` | 答辩现场无线连接方案（USB WiFi 自动连手机热点） |
-| `docs/KANBAN.md` | 项目任务看板（自主推进状态） |
 | `docs/DEMO_SCRIPT.md` | 答辩现场演示脚本（讲稿/故障预案，8-10分钟） |
 | `docs/PERFORMANCE_COMPARISON.md` | 性能对比实验报告 |
 | `docs/hardware/` | 硬件扩展（舵机/语音/大屏/开关/PCB） |

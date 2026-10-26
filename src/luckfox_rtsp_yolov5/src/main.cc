@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
   pedestrian::RiskConfig riskCfg =
       pedestrian::loadRiskConfigOr("./config/default_config.json", pedestrian::RiskConfig());
   // 若配置了外部 IPM 标定文件（homography_file），则用其替换默认硬编码单应，
-  // 相机位姿变化后无需重编译（响应 review2 P1-8：单应矩阵硬编码）。
+  // 相机位姿变化后无需重编译（单应矩阵外部标定）。
   if (!riskCfg.homography_file.empty()) {
       cv::Mat H_ext;
       if (pedestrian::loadHomographyFromFile(riskCfg.homography_file, H_ext)) {

@@ -12,7 +12,7 @@
 //     src/algorithms/ipm_calibrate.py 的 save_homography(..., .txt/.csv) 输出兼容），
 //     成功返回 true，失败返回 false（不抛异常，便于调用方回退默认）。
 //   loadHomographyOr(path, fallback) — 便捷回退：文件可加载则用文件，否则用 fallback。
-// 这样相机位姿变化后只需重新标定保存文件，无需重编译（响应 review2 P1-8）。
+// 这样相机位姿变化后只需重新标定保存文件，无需重编译。
 //
 // 依赖：OpenCV core（cv::Mat），C++11。
 // =============================================================================

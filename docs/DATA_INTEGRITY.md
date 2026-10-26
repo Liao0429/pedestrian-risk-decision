@@ -69,7 +69,7 @@ cd ~/prd_verify/src/luckfox_rtsp_yolov5 && make test
 ```
 
 > 说明：该 Ubuntu 环境无 OpenCV，故 `test_risk_engine_config`（17/17）在上一任务中已用
-> fake-OpenCV 验证通过（见 `docs/review/` 与 git 历史）。本次源码未改动 C++，复跑通过。
+> fake-OpenCV 验证通过（见 git 历史）。本次源码未改动 C++，复跑通过。
 
 ---
 

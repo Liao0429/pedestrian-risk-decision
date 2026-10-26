@@ -6,7 +6,7 @@
 - 现有能力：YOLOv5(RKNN) 行人检测 → 复杂网络风险决策（SAFE / WARNING / DANGER）→ H264 编码 + RTSP 推流
 - 本次扩展：**双舵机云台追踪 + 语音告警 + OLED(SSD1306) 显示 + 物理开关**
 - 文档日期：2026-10-25
-- 关联文档：`docs/optimization_review.md`（算法审查与优化建议，本方案的跟踪/云台策略需与之对齐）
+- 关联文档：`docs/ALGORITHM_OPTIMIZATION.md`（算法审查与优化建议，本方案的跟踪/云台策略需与之对齐）
 
 ---
 
@@ -301,7 +301,7 @@ void     ss_set_running(SystemState *s, bool running);
   - 或选**离图像中心最近的已检行人**；
   - 若 `risk == DANGER`，优先跟踪危险聚类中心对应的行人（视觉线程计算）。
   - 代码在 main.cc 检测循环里选出后调用 `ss_set_target`。
-- **后续增强（可选）**：按 `optimization_review.md` 第 5 节加入 IoU 匹配的轻量跟踪器 + Kalman 平滑，云台跟踪会更稳（毕设可写进"下一步工作"）。
+- **后续增强（可选）**：按 `ALGORITHM_OPTIMIZATION.md` 第 5 节加入 IoU 匹配的轻量跟踪器 + Kalman 平滑，云台跟踪会更稳（毕设可写进"下一步工作"）。
 
 #### 4.3.2 语音告警（`voice_alarm.h/.cc`）
 
