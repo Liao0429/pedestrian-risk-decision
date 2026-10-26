@@ -9,10 +9,21 @@
 输出：每视频每组等级分布/切换次数 + 汇总图 docs/figures/fig_ablation.png
 运行：python scripts/ablation_study.py
 """
-import sys, os, json, cv2, time
-sys.path.insert(0, r"H:/PedestrianRiskDecision/scripts")
-os.chdir(r"H:/PedestrianRiskDecision")
-from ultralytics import YOLO  # noqa: E402
+import sys, os, json, time
+
+# 延迟导入：rule_level 等纯函数不依赖 cv2/YOLO，缺失时仅 main() 报错
+try:
+    import cv2
+except ImportError:  # pragma: no cover
+    cv2 = None
+
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "scripts"))
+os.chdir(PROJECT_ROOT)
+try:
+    from ultralytics import YOLO  # noqa: E402
+except ImportError:  # pragma: no cover
+    YOLO = None
 from crowd_test import get_homography  # noqa: E402
 from crowd_test_enhanced import (detect_pedestrians, compute_features,
                                  load_config)  # noqa: E402
@@ -81,6 +92,10 @@ def run_one(model, video, H, cfg, edge_dist, use_kalman, use_spectral, use_fsm):
 
 
 def main():
+    if cv2 is None:
+        sys.exit("[ablation_study] 缺少 opencv，请先安装: pip install opencv-python-headless")
+    if YOLO is None:
+        sys.exit("[ablation_study] 缺少 ultralytics，请先安装: pip install ultralytics")
     model = YOLO("yolov8n.pt")
     cfg = load_config("config/default_config.json")
     edge_dist = cfg.get("edge_dist_m", 2.0)

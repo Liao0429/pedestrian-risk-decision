@@ -12,8 +12,17 @@ crowd_test_enhanced.py - 增强版测试脚本
 """
 import argparse, json, os, sys, time
 import numpy as np
-import cv2
-from ultralytics import YOLO
+
+# 延迟导入：cv2/YOLO 仅 CLI 检测需要，缺失时置 None，main() 统一报错
+try:
+    import cv2
+except ImportError:  # pragma: no cover
+    cv2 = None
+
+try:
+    from ultralytics import YOLO
+except ImportError:  # pragma: no cover
+    YOLO = None
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -148,6 +157,10 @@ def process_video(model, video_path, out_dir, conf, imgsz, H, scale_mpp, device,
     print("时间线已保存:", tl_path)
 
 def main():
+    if cv2 is None:
+        sys.exit("[crowd_test_enhanced] 缺少 opencv，请先安装: pip install opencv-python-headless")
+    if YOLO is None:
+        sys.exit("[crowd_test_enhanced] 缺少 ultralytics，请先安装: pip install ultralytics")
     parser = argparse.ArgumentParser(description="crowd_test 增强版：谱特征 + Kalman + FSM")
     parser.add_argument("--input", required=True, help="视频文件路径")
     parser.add_argument("--output", default="output_enhanced")

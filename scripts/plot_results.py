@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 plt.rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimHei", "DejaVu Sans"]
 plt.rcParams["axes.unicode_minus"] = False
 
-PROJECT = r"H:/PedestrianRiskDecision"
+PROJECT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(PROJECT)
 FIG = "docs/figures"
 os.makedirs(FIG, exist_ok=True)

@@ -4,8 +4,9 @@
 运行：python scripts/find_sparse_video.py
 """
 import sys, os, json, cv2
-sys.path.insert(0, r"H:/PedestrianRiskDecision/scripts")
-os.chdir(r"H:/PedestrianRiskDecision")
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(PROJECT_ROOT, "scripts"))
+os.chdir(PROJECT_ROOT)
 from ultralytics import YOLO  # noqa: E402
 from crowd_test import get_homography  # noqa: E402
 from crowd_test_enhanced import detect_pedestrians  # noqa: E402
