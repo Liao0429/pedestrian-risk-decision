@@ -235,6 +235,116 @@ void yuv420sp_to_bgr_neon(const uint8_t *yuv, int w, int h, uint8_t *bgr_out) {
         }
     }
 }
+
+// YUV420sp -> RGB 全帧（NEON，RKNN letterbox 中间缓冲用；输出 RGB 顺序）
+void yuv420sp_to_rgb_neon(const uint8_t *yuv, int w, int h, uint8_t *rgb_out) {
+    const uint8_t *Y  = yuv;
+    const uint8_t *UV = yuv + (size_t)w * h;
+    const int pixels_per_row = w;
+    for (int y = 0; y < h; ++y) {
+        const uint8_t *Yrow  = Y  + (size_t)y * w;
+        const uint8_t *UVrow = UV + (size_t)(y >> 1) * w;
+        uint8_t *out = rgb_out + (size_t)y * w * 3;
+        int x = 0;
+        for (; x + 8 <= pixels_per_row; x += 8) {
+            // 复用 yuv2bgr_neon8 的定点核心：其内部输出为 BGR，这里需要 RGB。
+            // 直接调用再交换首尾通道（r<->b），避免复制整段 NEON 定点代码。
+            uint8_t tmp[24];
+            yuv2bgr_neon8(Yrow + x, UVrow + x, tmp);
+            for (int i = 0; i < 8; ++i) {
+                out[x * 3 + i * 3]     = tmp[i * 3 + 2];  // R = tmp[B]
+                out[x * 3 + i * 3 + 1] = tmp[i * 3 + 1];  // G
+                out[x * 3 + i * 3 + 2] = tmp[i * 3];      // B = tmp[R]
+            }
+        }
+        for (; x < pixels_per_row; ++x) {
+            const int uoff = (x >> 1) * 2;
+            int32_t b, g, r;
+            yuv2bgr_scalar(Yrow[x], UVrow[uoff], UVrow[uoff + 1], &b, &g, &r);
+            out[x * 3]     = (uint8_t)r;
+            out[x * 3 + 1] = (uint8_t)g;
+            out[x * 3 + 2] = (uint8_t)b;
+        }
+    }
+}
+
+// letterbox 全帧 RGB 暂存（NEON 路径用；主循环单线程，静态缓冲避免每帧 malloc）。
+// 上限 1280x720（实际 720x480=1.0MB，余量充足）。
+static uint8_t s_rgb_scratch[1280 * 720 * 3];
+
+// YUV420sp -> RGB letterbox（NEON 加速版）：
+//   1) NV12 全帧 NEON 转 RGB（每源像素仅转换一次，~7ms/720x480）；
+//   2) 在 RGB 空间做双线性缩放（标量，640x426 输出 ~2ms）。
+// 数学上与标量 letterbox 逐位一致（同一转换公式 + 同一权重公式），
+// 因此黄金测试结果不变；黑边逻辑与标量版相同。
+void yuv420sp_to_rgb_letterbox_neon(const uint8_t *yuv,
+                                    const LetterboxParams &p,
+                                    uint8_t *rgb_out) {
+    const int src_w = p.src_w, src_h = p.src_h;
+    const int dst_w = p.dst_w, dst_h = p.dst_h;
+    const int roi_w = p.roi_w, roi_h = p.roi_h;
+    const int left_pad = p.left_pad, top_pad = p.top_pad;
+    const size_t row_bytes = (size_t)dst_w * 3;
+
+    // 尺寸超出暂存上限时回退标量（正常生产尺寸不会触发）
+    if (src_w <= 0 || src_h <= 0 ||
+        (size_t)src_w * src_h * 3 > sizeof(s_rgb_scratch)) {
+        yuv420sp_to_rgb_letterbox_scalar(yuv, p, rgb_out);
+        return;
+    }
+
+    // 1) 全帧 NV12 -> RGB（NEON）
+    yuv420sp_to_rgb_neon(yuv, src_w, src_h, s_rgb_scratch);
+
+    // 2) 黑边
+    for (int oy = 0; oy < top_pad; ++oy)
+        memset(rgb_out + (size_t)oy * row_bytes, 0, row_bytes);
+    const int bottom_start = top_pad + roi_h;
+    for (int oy = bottom_start; oy < dst_h; ++oy)
+        memset(rgb_out + (size_t)oy * row_bytes, 0, row_bytes);
+
+    // 3) RGB 空间双线性缩放（ROI）
+    for (int ry = 0; ry < roi_h; ++ry) {
+        const int oy = top_pad + ry;
+        uint8_t *row = rgb_out + (size_t)oy * row_bytes;
+        for (int ox = 0; ox < left_pad; ++ox) {
+            row[ox * 3] = 0; row[ox * 3 + 1] = 0; row[ox * 3 + 2] = 0;
+        }
+        const int right_start = left_pad + roi_w;
+        for (int ox = right_start; ox < dst_w; ++ox) {
+            row[ox * 3] = 0; row[ox * 3 + 1] = 0; row[ox * 3 + 2] = 0;
+        }
+
+        const int32_t y0 = p.row_y0[ry], y1 = p.row_y1[ry];
+        const int32_t wy = p.row_wy[ry];
+        const int32_t wy0 = kWeightOne - wy;
+        const uint8_t *row0 = s_rgb_scratch + (size_t)y0 * src_w * 3;
+        const uint8_t *row1 = s_rgb_scratch + (size_t)y1 * src_w * 3;
+
+        for (int rx = 0; rx < roi_w; ++rx) {
+            const int ox = left_pad + rx;
+            const int32_t x0 = p.col_x0[rx], x1 = p.col_x1[rx];
+            const int32_t wx = p.col_wx[rx];
+            const int32_t wx0 = kWeightOne - wx;
+            const int32_t w00 = (wx0 * wy0) >> 15;
+            const int32_t w01 = (wx  * wy0) >> 15;
+            const int32_t w10 = (wx0 * wy ) >> 15;
+            const int32_t w11 = (wx  * wy ) >> 15;
+            const uint8_t *p00 = row0 + x0 * 3;
+            const uint8_t *p01 = row0 + x1 * 3;
+            const uint8_t *p10 = row1 + x0 * 3;
+            const uint8_t *p11 = row1 + x1 * 3;
+            uint8_t *dst = row + ox * 3;
+            for (int ch = 0; ch < 3; ++ch) {
+                int32_t v = (int32_t)p00[ch] * w00 + p01[ch] * w01 +
+                            p10[ch] * w10 + p11[ch] * w11;
+                v >>= 15;
+                if (v < 0) v = 0; else if (v > 255) v = 255;
+                dst[ch] = (uint8_t)v;
+            }
+        }
+    }
+}
 #endif // __ARM_NEON
 
 }  // namespace
@@ -323,7 +433,11 @@ void letterbox_params_free(LetterboxParams *p) {
 
 void yuv420sp_to_rgb_letterbox(const uint8_t *yuv, const LetterboxParams &p,
                                uint8_t *rgb_out) {
+#if defined(__ARM_NEON)
+    yuv420sp_to_rgb_letterbox_neon(yuv, p, rgb_out);
+#else
     yuv420sp_to_rgb_letterbox_scalar(yuv, p, rgb_out);
+#endif
 }
 
 void yuv420sp_to_bgr(const uint8_t *yuv, int w, int h, uint8_t *bgr_out) {
