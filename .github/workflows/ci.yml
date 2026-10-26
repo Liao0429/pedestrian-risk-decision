@@ -17,8 +17,8 @@ jobs:
           python-version: '3.10'
           cache: pip
 
-      - name: 安装测试依赖（测试仅需 numpy + pytest）
-        run: pip install 'numpy>=1.24' 'pytest>=7.0'
+      - name: 安装测试依赖（numpy + pytest + opencv-headless）
+        run: pip install 'numpy>=1.24' 'pytest>=7.0' 'opencv-python-headless'
 
       - name: 运行 Python 测试
         run: python -m pytest tests/ -q
