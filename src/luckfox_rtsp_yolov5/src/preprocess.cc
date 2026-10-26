@@ -148,8 +148,8 @@ void yuv420sp_to_bgr_scalar(const uint8_t *yuv, int w, int h, uint8_t *bgr_out) 
 
 #if defined(__ARM_NEON)
 // ---------------------------------------------------------------------------
-// NEON 加速：YUV420sp -> BGR（每 8 像素一批，vld2 解交织 UV，int32 定点乘加）
-// 输出 R/G/B 各 8 字节，vst3 交织写入 24 字节。
+// NEON 加速：YUV420sp -> BGR（每 8 像素一批，vtrn 展开 NV12 共享色度，int32 定点乘加）
+// 输出 B/G/R 各 8 字节，vst3 交织写入 24 字节（BGR 顺序，与标量一致）。
 // ---------------------------------------------------------------------------
 static inline uint8x8_t neon_pack_u8x8(int32x4_t lo, int32x4_t hi) {
     const int32x4_t zero = vdupq_n_s32(0);
@@ -158,16 +158,20 @@ static inline uint8x8_t neon_pack_u8x8(int32x4_t lo, int32x4_t hi) {
     hi = vminq_s32(vmaxq_s32(hi, zero), maxv);
     int16x4_t l16 = vmovn_s32(lo);
     int16x4_t h16 = vmovn_s32(hi);
-    return vmovn_s16(vcombine_s16(l16, h16));
+    // vmovn_s16 返回 int8x8_t，重解释为 uint8x8_t
+    return vreinterpret_u8_s8(vmovn_s16(vcombine_s16(l16, h16)));
 }
 
 static inline void yuv2bgr_neon8(const uint8_t *yp, const uint8_t *uvp,
                                  uint8_t *out) {
     uint8x8_t y8 = vld1_u8(yp);
-    uint8x8x2_t uv_a = vld2_u8(uvp);          // 前 4 像素 U/V
-    uint8x8x2_t uv_b = vld2_u8(uvp + 8);      // 后 4 像素 U/V
-    uint8x8_t u8 = vcombine_u8(uv_a.val[0], uv_b.val[0]);
-    uint8x8_t v8 = vcombine_u8(uv_a.val[1], uv_b.val[1]);
+    // NV12 水平 2x 抽样：8 个像素只对应 4 个 U/V（列 0,0,1,1,2,2,3,3）。
+    // vld1_u8 读 8 字节交错 UV（U0 V0 U1 V1 U2 V2 U3 V3），vtrn 展开为
+    // val[0]=[U0,U0,U1,U1,U2,U2,U3,U3]，val[1]=[V0,V0,V1,V1,V2,V2,V3,V3]。
+    uint8x8_t uv = vld1_u8(uvp);
+    uint8x8x2_t uv_trn = vtrn_u8(uv, uv);
+    uint8x8_t u8 = uv_trn.val[0];
+    uint8x8_t v8 = uv_trn.val[1];
 
     int16x8_t y16 = vreinterpretq_s16_u16(
         vsubq_u16(vmovl_u8(y8), vdupq_n_u16(16)));
@@ -177,19 +181,21 @@ static inline void yuv2bgr_neon8(const uint8_t *yp, const uint8_t *uvp,
         vsubq_u16(vmovl_u8(v8), vdupq_n_u16(128)));
 
     // 低 4 像素
-    int32x4_t yv_lo = vmull_n_s16(vget_low_s16(y16), kC0);
-    int32x4_t u_lo  = vget_low_s16(u16);
-    int32x4_t v_lo  = vget_low_s16(v16);
-    int32x4_t r_lo  = vmlal_n_s16(yv_lo, v_lo, kC1);
-    int32x4_t g_lo  = vmls_n_s16(vmls_n_s16(yv_lo, u_lo, kC2), v_lo, kC3);
-    int32x4_t b_lo  = vmlal_n_s16(yv_lo, u_lo, kC4);
+    int32x4_t yv_lo = vmull_n_s16(vget_low_s16(y16), (int16_t)kC0);
+    int16x4_t u_lo  = vget_low_s16(u16);
+    int16x4_t v_lo  = vget_low_s16(v16);
+    int32x4_t r_lo  = vmlal_n_s16(yv_lo, v_lo, (int16_t)kC1);
+    int32x4_t g_lo  = vmlsl_n_s16(vmlsl_n_s16(yv_lo, u_lo, (int16_t)kC2),
+                                  v_lo, (int16_t)kC3);
+    int32x4_t b_lo  = vmlal_n_s16(yv_lo, u_lo, (int16_t)kC4);
     // 高 4 像素
-    int32x4_t yv_hi = vmull_n_s16(vget_high_s16(y16), kC0);
-    int32x4_t u_hi  = vget_high_s16(u16);
-    int32x4_t v_hi  = vget_high_s16(v16);
-    int32x4_t r_hi  = vmlal_n_s16(yv_hi, v_hi, kC1);
-    int32x4_t g_hi  = vmls_n_s16(vmls_n_s16(yv_hi, u_hi, kC2), v_hi, kC3);
-    int32x4_t b_hi  = vmlal_n_s16(yv_hi, u_hi, kC4);
+    int32x4_t yv_hi = vmull_n_s16(vget_high_s16(y16), (int16_t)kC0);
+    int16x4_t u_hi  = vget_high_s16(u16);
+    int16x4_t v_hi  = vget_high_s16(v16);
+    int32x4_t r_hi  = vmlal_n_s16(yv_hi, v_hi, (int16_t)kC1);
+    int32x4_t g_hi  = vmlsl_n_s16(vmlsl_n_s16(yv_hi, u_hi, (int16_t)kC2),
+                                  v_hi, (int16_t)kC3);
+    int32x4_t b_hi  = vmlal_n_s16(yv_hi, u_hi, (int16_t)kC4);
 
     uint8x8_t r8 = neon_pack_u8x8(vshrq_n_s32(r_lo, kColorShift),
                                  vshrq_n_s32(r_hi, kColorShift));
@@ -197,11 +203,12 @@ static inline void yuv2bgr_neon8(const uint8_t *yp, const uint8_t *uvp,
                                  vshrq_n_s32(g_hi, kColorShift));
     uint8x8_t b8 = neon_pack_u8x8(vshrq_n_s32(b_lo, kColorShift),
                                  vshrq_n_s32(b_hi, kColorShift));
-    uint8x8x3_t rgb;
-    rgb.val[0] = r8;
-    rgb.val[1] = g8;
-    rgb.val[2] = b8;
-    vst3_u8(out, rgb);
+    // BGR 顺序写入（与标量路径 yuv420sp_to_bgr_scalar 一致，供画框/VENC 显示）
+    uint8x8x3_t bgr;
+    bgr.val[0] = b8;
+    bgr.val[1] = g8;
+    bgr.val[2] = r8;
+    vst3_u8(out, bgr);
 }
 
 void yuv420sp_to_bgr_neon(const uint8_t *yuv, int w, int h, uint8_t *bgr_out) {
