@@ -126,9 +126,7 @@ def process_video(model, video_path, out_dir, conf, imgsz, H, scale_mpp, device,
         try:
             now_ms = int(frame_id * 1000.0 / max(fps, 1))
             # 传 dict 而非 SimpleNamespace：RiskFSM 按 Mapping 读取 features
-            fsm.update({"n": n, "density": density, "r_gcc": r_gcc,
-                        "fiedler": feat.get("fiedler", 0.0),
-                        "spectral_radius": feat.get("spectral_radius", 0.0)}, now_ms)
+            fsm.update({"n": n, "density": density, "r_gcc": r_gcc}, now_ms)
             # 注意：RiskFSM.level 是属性（返回字符串），不是方法
             lv = fsm.level
             stable_level = LEVELS[lv] if isinstance(lv, int) else str(lv)

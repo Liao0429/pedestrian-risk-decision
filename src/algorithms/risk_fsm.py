@@ -76,13 +76,11 @@ class RiskFSMConfig:
     默认值与 C++ 端 `src/algorithms/risk_fsm.h` 的 `RiskFSMConfig` 保持一致。
     """
 
-    # ---------- 综合拥挤度评分权重（score = w1*norm(n) + w2*density + w3*r_gcc + w4*spectral_ratio）
+    # ---------- 综合拥挤度评分权重（score = w1*norm(n) + w2*density + w3*r_gcc）
     w1: float = 0.4          # 人数权重
     w2: float = 0.3          # 密度权重
     w3: float = 0.3          # 最大连通分量占比权重
-    w4: float = 0.0          # 谱特征权重（相对代数连通度 λ₂/λ_max，默认 0=不启用）
     n_ref: int = 20          # 人数归一化参考值（norm(n) = min(n/n_ref, 1)）
-    spectral_eps: float = 1e-6  # 谱半径除零保护
 
     # ---------- 动态（状态相关）滞回阈值，基于 score ∈ [0,1]
     up_warning: float = 0.40    # SAFE -> WARNING 升级阈值
@@ -103,14 +101,12 @@ class RiskFSMConfig:
 
     def __post_init__(self) -> None:
         # 类型/取值校验，尽早暴露配置错误
-        if self.w1 < 0 or self.w2 < 0 or self.w3 < 0 or self.w4 < 0:
-            raise ValueError("权重 w1/w2/w3/w4 必须为非负值")
-        if self.w1 + self.w2 + self.w3 + self.w4 <= 0:
+        if self.w1 < 0 or self.w2 < 0 or self.w3 < 0:
+            raise ValueError("权重 w1/w2/w3 必须为非负值")
+        if self.w1 + self.w2 + self.w3 <= 0:
             raise ValueError("权重之和必须大于 0")
         if self.n_ref <= 0:
             raise ValueError("n_ref 必须为正整数")
-        if self.spectral_eps <= 0:
-            raise ValueError("spectral_eps 必须为正数")
         if self.confirm_up < 1 or self.confirm_down < 1:
             raise ValueError("confirm_up / confirm_down 必须 >= 1")
         if self.danger_hold_frames < 0 or self.danger_hold_ms < 0:
@@ -209,20 +205,12 @@ class RiskFSM:
         density = features.get("density", 0.0) or 0.0
         r_gcc = features.get("r_gcc", 0.0) or 0.0
         trend = features.get("trend", 0.0) or 0.0
-        fiedler = features.get("fiedler", 0.0) or 0.0
-        spectral_radius = features.get("spectral_radius", 0.0) or 0.0
 
         norm_n = min(max(int(n), 0) / float(cfg.n_ref), 1.0)
         density = _clamp(float(density), 0.0, 1.0)
         r_gcc = _clamp(float(r_gcc), 0.0, 1.0)
 
         score = cfg.w1 * norm_n + cfg.w2 * density + cfg.w3 * r_gcc
-        # 谱特征：相对代数连通度 λ₂/λ_max ∈ [0,1]（跨规模可比，不随 n 缩放）
-        if cfg.w4 > 0.0:
-            spectral_ratio = 0.0
-            if abs(float(spectral_radius)) > cfg.spectral_eps:
-                spectral_ratio = _clamp(float(fiedler) / float(spectral_radius), 0.0, 1.0)
-            score += cfg.w4 * spectral_ratio
         if cfg.trend_bias != 0.0 and trend:
             score += cfg.trend_bias * _clamp(float(trend), -1.0, 1.0)
         return _clamp(score, 0.0, 1.0)
