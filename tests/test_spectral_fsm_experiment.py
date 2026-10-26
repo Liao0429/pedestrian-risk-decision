@@ -27,6 +27,10 @@ from spectral_fsm_experiment import (  # noqa: E402
 
 EXP_JSON = PROJECT_ROOT / "results" / "rerun" / "_spectral_fsm_experiment.json"
 
+# 111 条视频的逐帧 timeline 是 GPU 全量重跑的本地产物（.gitignore 排除），CI 不收集。
+# 依赖它的用例在数据缺失时跳过；其余用例保持纯离线可复现。
+TIMELINES = load_timelines()
+
 
 @pytest.fixture(scope="module")
 def cfg():
@@ -89,9 +93,11 @@ def test_m2_neutral_when_spectral_unavailable():
 
 
 # ---------- 2. M0 重算一致性 ----------
+@pytest.mark.skipif(len(TIMELINES) == 0,
+                    reason="缺少本地 results/rerun/video_enhanced 的 111 条 timeline 数据（.gitignore 排除，CI 不收集）")
 def test_m0_replay_consistency():
     cfg = load_config(str(PROJECT_ROOT / "config" / "default_config.json"))
-    timelines = load_timelines()
+    timelines = TIMELINES
     assert len(timelines) >= 100, f"timeline 数量异常: {len(timelines)}"
     total_same = total_frames = 0
     for _, tl in timelines:
@@ -131,7 +137,6 @@ def test_scenario_key_findings(cfg):
 def test_video_summary_global_behavior(cfg):
     """M1 正反馈不应被采纳（过度敏感）：DANGER 视频数应显著高于 M0；
     M2 抑制改变行为但被裁决不采纳——本测试只锁定行为方向防回归。"""
-    timelines = load_timelines()
     data = json.loads(EXP_JSON.read_text(encoding="utf-8"))
     vs = data["video_summary"]
     assert vs["M1_0.1"]["DANGER_videos"] > vs["M0"]["DANGER_videos"] + 10
