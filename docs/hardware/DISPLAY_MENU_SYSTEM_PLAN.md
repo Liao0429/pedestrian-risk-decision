@@ -1,6 +1,6 @@
 # 触控屏幕菜单 + 语音识别 + 双舵机云台 + 三色提示灯 + 按键 硬件扩展方案
 
-> 针对 Luckfox Pico Max（RV1106）毕设系统的完整交互升级方案。
+> 针对 Luckfox Pico Max（RV1106）系统的完整交互升级方案。
 > 目标：彩色触控屏显示**动画菜单**与**摄像头检测画面**；语音/按键开启程序；菜单显示**网络地址、CPU 占用率**等参数；按键返回；双舵机云台 + 三色灯联动。
 
 ---
@@ -9,19 +9,19 @@
 
 ```mermaid
 graph TD
-    CAM[摄像头 MIPI-CSI] --> LUCKFOX["Luckfox Pico Max (RV1106)"]
-    MIC[USB 麦克风] --> LUCKFOX
-    LCD["彩色触摸屏 (SPI + LVGL)"]
-    KEY[菜单按键 x4]
-    SERVO[双 SG90 舵机云台]
-    LED[三色提示灯 红/黄/绿]
-    LUCKFOX --> LCD
-    LUCKFOX --> SERVO
-    LUCKFOX --> LED
-    LUCKFOX <--> KEY
-    LUCKFOX <--> MIC
-    PWR[5V/2A 电源] --> LUCKFOX
-    PWR --> SERVO
+ CAM[摄像头 MIPI-CSI] --> LUCKFOX["Luckfox Pico Max (RV1106)"]
+ MIC[USB 麦克风] --> LUCKFOX
+ LCD["彩色触摸屏 (SPI + LVGL)"]
+ KEY[菜单按键 x4]
+ SERVO[双 SG90 舵机云台]
+ LED[三色提示灯 红/黄/绿]
+ LUCKFOX --> LCD
+ LUCKFOX --> SERVO
+ LUCKFOX --> LED
+ LUCKFOX <--> KEY
+ LUCKFOX <--> MIC
+ PWR[5V/2A 电源] --> LUCKFOX
+ PWR --> SERVO
 ```
 
 **交互流程**：
@@ -96,27 +96,27 @@ graph TD
 ### 接线图（示意）
 
 ```
-                     Luckfox Pico Max (RV1106)
-  ┌─────────────────────────────────────────────────────────────┐
-  │                                                                     │
-  │  3V3 ──────► LCD VCC (3.3V)      USB1 ────► USB 麦克风 (免驱)      │
-  │  GND ──────► LCD GND                                              │
-  │  SPI0_SCLK ─► LCD SCK            PWM0 ────► 舵机1 信号 (水平)     │
-  │  SPI0_MOSI ─► LCD MOSI          PWM1 ────► 舵机2 信号 (垂直)       │
-  │  GPIO_CS ───► LCD CS                                              │
-  │  GPIO_DC ───► LCD DC            GPIO22 ──► 330Ω ──► 红灯 LED      │
-  │  GPIO_RST ──► LCD RST           GPIO23 ──► 330Ω ──► 黄灯 LED      │
-  │  GPIO_BL ────► LCD BL           GPIO24 ──► 330Ω ──► 绿灯 LED      │
-  │                                                                     │
-  │  SPI1_CS ────► XPT2046 CS       GPIO18 ──► 按键(上)                │
-  │  SPI1_CLK ───► XPT2046 CLK       GPIO19 ──► 按键(下)                │
-  │  SPI1_MOSI ──► XPT2046 DIN      GPIO20 ──► 按键(确定)              │
-  │  SPI1_MISO ──► XPT2046 DOUT     GPIO21 ──► 按键(返回)              │
-  │  GPIO_IRQ ───► XPT2046 IRQ                                        │
-  └─────────────────────────────────────────────────────────────┘
-                     │
-           5V/2A 电源 ──┬──► Luckfox 5V 输入（Type-C/Power）
-                        └──► 舵机 5V 供电（独立，共地）
+ Luckfox Pico Max (RV1106)
+ ┌─────────────────────────────────────────────────────────────┐
+ │ │
+ │ 3V3 ──────► LCD VCC (3.3V) USB1 ────► USB 麦克风 (免驱) │
+ │ GND ──────► LCD GND │
+ │ SPI0_SCLK ─► LCD SCK PWM0 ────► 舵机1 信号 (水平) │
+ │ SPI0_MOSI ─► LCD MOSI PWM1 ────► 舵机2 信号 (垂直) │
+ │ GPIO_CS ───► LCD CS │
+ │ GPIO_DC ───► LCD DC GPIO22 ──► 330Ω ──► 红灯 LED │
+ │ GPIO_RST ──► LCD RST GPIO23 ──► 330Ω ──► 黄灯 LED │
+ │ GPIO_BL ────► LCD BL GPIO24 ──► 330Ω ──► 绿灯 LED │
+ │ │
+ │ SPI1_CS ────► XPT2046 CS GPIO18 ──► 按键(上) │
+ │ SPI1_CLK ───► XPT2046 CLK GPIO19 ──► 按键(下) │
+ │ SPI1_MOSI ──► XPT2046 DIN GPIO20 ──► 按键(确定) │
+ │ SPI1_MISO ──► XPT2046 DOUT GPIO21 ──► 按键(返回) │
+ │ GPIO_IRQ ───► XPT2046 IRQ │
+ └─────────────────────────────────────────────────────────────┘
+ │
+ 5V/2A 电源 ──┬──► Luckfox 5V 输入（Type-C/Power）
+ └──► 舵机 5V 供电（独立，共地）
 ```
 
 **关键接线要点**：
@@ -152,8 +152,8 @@ graph TD
 
 - 移植 **LVGL v8**（或 v9）到 Luckfox，屏幕驱动 ILI9341（Linux framebuffer 或 SPI 直接驱动）。
 - **动画菜单**：
-  - 主菜单：图标 + 标题，滚动文字动画，参数栏（IP/CPU/内存/帧率）定时刷新。
-  - 子菜单：检测画面（摄像头缩略图）、设置、关于。
+ - 主菜单：图标 + 标题，滚动文字动画，参数栏（IP/CPU/内存/帧率）定时刷新。
+ - 子菜单：检测画面（摄像头缩略图）、设置、关于。
 - **摄像头画面**：检测循环里的 `cv::Mat frame`（720×480 BGR）缩放到 160×120 → 转 RGB565 → 通过 LVGL image 控件显示（SPI 屏帧率约几 FPS，可接受）。
 
 ### 5.2 语音识别（sherpa-onnx）
@@ -161,9 +161,9 @@ graph TD
 - 交叉编译 sherpa-onnx（armv7）到板子。
 - 下载中文命令词/流式模型（`sherpa-onnx-streaming-zipformer-zh-14M`，约 14MB，Cortex A7 可跑）。
 - 用 `sherpa-onnx-alsa` 接 USB 麦克风，识别命令词：
-  - "开启检测" → 启动检测程序
-  - "关闭检测" → 停止
-  - "返回菜单" → 回到主菜单
+ - "开启检测" → 启动检测程序
+ - "关闭检测" → 停止
+ - "返回菜单" → 回到主菜单
 - 识别结果通过回调/共享标志通知主程序切换界面。
 
 ### 5.3 参数显示

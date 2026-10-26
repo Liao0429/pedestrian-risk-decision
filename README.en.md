@@ -19,14 +19,14 @@
 
 ```mermaid
 graph TD
-    A[Camera<br/>720×480] --> B["YOLOv5n Pedestrian Detection<br/>RKNN · INT8 · NPU"]
-    B --> C["IPM Inverse Perspective Mapping<br/>pixel foot-point → ground metric"]
-    C --> D["Complex Network Topology<br/>Adjacency + Graph Laplacian Spectra<br/>DBSCAN crowd clustering"]
-    C --> E["EnhancedDecision Module<br/>Kalman smoothing + spectral + FSM"]
-    D --> F["RiskEngine Rule Evaluation<br/>SAFE / WARNING / DANGER"]
-    E --> F
-    F --> G["Overlay + RTSP streaming"]
-    G --> H[Monitoring client]
+ A[Camera<br/>720×480] --> B["YOLOv5n Pedestrian Detection<br/>RKNN · INT8 · NPU"]
+ B --> C["IPM Inverse Perspective Mapping<br/>pixel foot-point → ground metric"]
+ C --> D["Complex Network Topology<br/>Adjacency + Graph Laplacian Spectra<br/>DBSCAN crowd clustering"]
+ C --> E["EnhancedDecision Module<br/>Kalman smoothing + spectral + FSM"]
+ D --> F["RiskEngine Rule Evaluation<br/>SAFE / WARNING / DANGER"]
+ E --> F
+ F --> G["Overlay + RTSP streaming"]
+ G --> H[Monitoring client]
 ```
 
 **Pipeline**: lightweight perception (YOLOv5n+INT8) → geometric correction (IPM) → graph topology analysis (Graph Laplacian/DBSCAN) → temporal risk decision (Kalman/FSM) → three-level risk output with RTSP streaming. Detailed architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
@@ -35,20 +35,20 @@ graph TD
 
 ```
 pedestrian-risk-decision/
-├── dataset/            # Real datasets
-│   ├── images500/      #   500 real COCO images with pedestrians (1–19 people)
-│   └── videos50/       #   111 real pedestrian/crowd videos (Mixkit, validated)
-├── scripts/            # Test scripts
-│   ├── crowd_test.py           # image mode (baseline)
-│   └── crowd_test_enhanced.py  # video mode (Kalman + spectral + FSM)
+├── dataset/ # Real datasets
+│ ├── images500/ # 500 real COCO images with pedestrians (1–19 people)
+│ └── videos50/ # 111 real pedestrian/crowd videos (Mixkit, validated)
+├── scripts/ # Test scripts
+│ ├── crowd_test.py # image mode (baseline)
+│ └── crowd_test_enhanced.py # video mode (Kalman + spectral + FSM)
 ├── src/
-│   ├── algorithms/     # Algorithm modules (Graph Laplacian/Kalman/ByteTrack/DBSCAN/FSM/IPM/EMA, Python + C++)
-│   ├── hardware/       # Hardware drivers (servo/pan_tilt/voice_alert)
-│   └── luckfox_rtsp_yolov5/  # On-board C++ project (RKNN)
-├── config/             # Threshold config
-├── results/            # Experimental results (image baseline + video enhanced)
-├── tests/              # Algorithm unit tests (all pass)
-├── docs/               # System principle / algorithm optimization / hardware / integration / performance / PCB / voice
+│ ├── algorithms/ # Algorithm modules (Graph Laplacian/Kalman/ByteTrack/DBSCAN/FSM/IPM/EMA, Python + C++)
+│ ├── hardware/ # Hardware drivers (servo/pan_tilt/voice_alert)
+│ └── luckfox_rtsp_yolov5/ # On-board C++ project (RKNN)
+├── config/ # Threshold config
+├── results/ # Experimental results (image baseline + video enhanced)
+├── tests/ # Algorithm unit tests (all pass)
+├── docs/ # System principle / algorithm optimization / hardware / integration / performance / PCB / voice
 └── config/default_config.json
 ```
 
@@ -106,11 +106,10 @@ python scripts/crowd_test_enhanced.py --input <video.mp4> --output results/video
 
 - **Voice assistant LLM** (cloud/local): `docs/LUCKFOX_VOICE_ASSISTANT_PLAN.md`
 - **Edge AI agent** (Needle 2, linux-armv7): `docs/AI_needle2_analysis.md`
-- **Xiaozhi AI integration** (MCP + ESP32): `docs/XIAOZHI_COMBINED_PLAN.md`
 - **PCB backplane** (JLCPCB): `docs/hardware/PCB_BOARD_DESIGN.md`
 
 ## 📌 Notes
 
 - This repository is **private**; the author will make it public manually after the project is complete.
-- The thesis is kept locally and NOT uploaded to this repository.
+- The is kept locally and NOT uploaded to this repository.
 - All experimental data comes from real datasets and is reproducible.

@@ -24,8 +24,8 @@ Luckfox 已有：YOLO 行人检测 + 复杂网络风险决策 + RTSP（C++）。
 
 ```
 USB麦克风 → 录音(WAV) → 云端 ASR → 文本
-                         → 云端 LLM(智谱/DeepSeek) → 回答文本
-                         → 云端 TTS(edge-tts/智谱TTS) → 音频 → USB喇叭
+ → 云端 LLM(智谱/DeepSeek) → 回答文本
+ → 云端 TTS(edge-tts/智谱TTS) → 音频 → USB喇叭
 ```
 
 | 环节 | 方案 | 说明 |
@@ -40,8 +40,8 @@ USB麦克风 → 录音(WAV) → 云端 ASR → 文本
 
 ```
 USB麦克风 → 本地 ASR(Vosk/sherpa-onnx 小模型) → 文本
-                         → 本地 LLM(Needle 2) 或 规则引擎 → 回答文本
-                         → 本地 TTS(espeak-ng/pico2wave) → USB喇叭
+ → 本地 LLM(Needle 2) 或 规则引擎 → 回答文本
+ → 本地 TTS(espeak-ng/pico2wave) → USB喇叭
 ```
 
 | 环节 | 方案 | 内存/体积 | 说明 |
@@ -58,7 +58,7 @@ USB麦克风 → 本地 ASR(Vosk/sherpa-onnx 小模型) → 文本
 
 语音助手（Python 进程）与 C++ 检测进程通过**本地 Unix socket / HTTP(127.0.0.1:端口)** 通信：
 
-- 用户问"现在多少人？" → ASR → LLM 工具调用 `query_risk()` → 读检测结果 → 组织回答 → TTS
+- 用户问"现在多少人？" → ASR → LLM 工具调用 `query_risk` → 读检测结果 → 组织回答 → TTS
 - 用户说"报警" → 工具 `enable_alarm(true)`
 - 检测到 DANGER → C++ 主动发消息给语音助手 → 播报"检测到人群聚集，DANGER 等级"
 
@@ -84,7 +84,7 @@ USB麦克风 → 本地 ASR(Vosk/sherpa-onnx 小模型) → 文本
 - **可行**：Luckfox 单板即可做语音对话大模型，无需 ESP32
 - **双套方案**：网络(好) + 本地(稳)，演示双保险
 - 与现有视觉检测融合，形成"看得见+听得懂+会说话"的完整成品
-- 与"小智 ESP32"方案比，单板更简洁；小智方案可作为论文后续扩展提及
+- 与"小智 ESP32"方案比，单板更简洁；小智方案可作为后续扩展提及
 
 ## 参考
 - Vosk: https://alphacephei.com/vosk/

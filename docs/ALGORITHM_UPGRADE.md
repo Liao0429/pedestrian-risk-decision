@@ -38,9 +38,9 @@ DBSCAN 直接输出"人群簇"语义：
 from crowd_dbscan import dbscan_crowd_features
 
 feat = dbscan_crowd_features(
-    pts=[(0.0, 0.0), (0.0, 1.0), (1.0, 0.0), (1.0, 1.0), (10.0, 0.0), ...],
-    eps=1.5,          # 聚集半径(米)，可通过配置传入
-    min_samples=2,    # 核心点邻域最少点数(含自身)
+ pts=[(0.0, 0.0), (0.0, 1.0), (1.0, 0.0), (1.0, 1.0), (10.0, 0.0), ...],
+ eps=1.5, # 聚集半径(米)，可通过配置传入
+ min_samples=2, # 核心点邻域最少点数(含自身)
 )
 ```
 
@@ -66,9 +66,9 @@ feat = dbscan_crowd_features(
 #include "crowd_dbscan.h"
 
 CrowdDBSCAN db(/*eps=*/1.5, /*min_samples=*/2);
-db.addPoint(x, y);            // 逐个添加，或
-db.setPoints(pts);            // 批量设置
-CrowdClusterFeatures f = db.compute();
+db.addPoint(x, y); // 逐个添加，或
+db.setPoints(pts); // 批量设置
+CrowdClusterFeatures f = db.compute;
 // f.n_clusters / f.cluster_sizes / f.largest_cluster_ratio
 // f.cluster_centers / f.labels / f.n_noise / f.n_clustered
 ```
@@ -86,18 +86,18 @@ CrowdClusterFeatures f = db.compute();
 实现要点：
 - 邻域采用 **闭区间 `dist <= eps`**（与经典 DBSCAN 定义一致；`dist==eps` 的两点互为邻居）。
 - `min_samples` 默认 2：即两人间距 ≤ eps 即构成一个 2 人簇，语义与现有
-  `EDGE_DIST_M` 建边阈值（严格小于）略有差异，但配置为参数后可统一。
+ `EDGE_DIST_M` 建边阈值（严格小于）略有差异，但配置为参数后可统一。
 - 参数 `eps` / `min_samples` 均通过函数参数 / 类构造函数传入，**可配置**，
-  便于与风险决策配置项联动。
+ 便于与风险决策配置项联动。
 
 ## 五、复杂度与边缘端适配
 
 - 当前实现为朴素 **O(n²)** 邻域枚举：预计算两两距离。人群规模 n 通常为
-  几十～几百，开销可忽略（与 `graph_laplacian.h` 的 O(n²) 建边同一量级）。
+ 几十～几百，开销可忽略（与 `graph_laplacian.h` 的 O(n²) 建边同一量级）。
 - 若需处理更大规模人群，可将邻域查询替换为 **KD 树 / 空间网格**，将平均
-  复杂度降至 **O(n log n)**（`ALGORITHM_OPTIMIZATION.md` 已标注）。
+ 复杂度降至 **O(n log n)**（`ALGORITHM_OPTIMIZATION.md` 已标注）。
 - `crowd_dbscan.h` 仅依赖标准库（`<vector>/<utility>/<cmath>/<algorithm>`），
-  不依赖 Eigen/OpenCV，适合 Luckfox(RV1106) 交叉编译。
+ 不依赖 Eigen/OpenCV，适合 Luckfox(RV1106) 交叉编译。
 
 ## 六、测试验证
 
@@ -105,7 +105,7 @@ CrowdClusterFeatures f = db.compute();
 
 - **分散点集**（4 点相距 5m，eps=1.0）→ 0 簇，全为噪声，最大簇占比 0
 - **两簇点集**（左右各 4 人密集，eps=1.5）→ 2 簇，每簇 4 人，占比 0.5，
-  簇中心 (0.5,0.5) 与 (10.5,0.5)
+ 簇中心 (0.5,0.5) 与 (10.5,0.5)
 - **全连通点集**（边长 1m 正方形 K4）→ 1 簇，占比 1.0
 - **链式密度可达**（间距 1m，eps=1.5）→ 跨中间点连成 1 簇（验证密度可达）
 - **噪声点**：簇外孤立点正确标记为噪声
@@ -113,9 +113,9 @@ CrowdClusterFeatures f = db.compute();
 - **eps 闭区间边界**：距离恰为 eps 的两点视为邻居
 - **空点集 / 单点 / 非法形状**边界情况
 - **随机交叉验证**：与独立参考实现（核心图连通分量 + 边界归属）在随机点集、
-  混合高斯簇状点集上簇数/噪声数/聚类数一致（70 组随机）
+ 混合高斯簇状点集上簇数/噪声数/聚类数一致（70 组随机）
 - **C++ 算法逻辑复刻**：逐行翻译 `crowd_dbscan.h` 的 `dbscan` 为纯 Python，
-  与 Python 端输出完全一致（间接验证头文件正确性）
+ 与 Python 端输出完全一致（间接验证头文件正确性）
 
 > 注：本机（git-bash/Windows）未安装 C++ 编译器，故采用与
 > `test_graph_laplacian.py` 验证 Jacobi 相同的做法——用 Python 精确复刻
@@ -127,12 +127,12 @@ CrowdClusterFeatures f = db.compute();
 DBSCAN 特征可作为风险决策 FSM 的输入：
 
 - `largest_cluster_ratio` 与现有 `r_gcc`（最大连通分量占比）语义互补：
-  - `r_gcc` 反映**网络连通**程度（是否"一串"连在一起）；
-  - `largest_cluster_ratio` 反映**密度聚集**规模（是否"挤成一团"）。
+ - `r_gcc` 反映**网络连通**程度（是否"一串"连在一起）；
+ - `largest_cluster_ratio` 反映**密度聚集**规模（是否"挤成一团"）。
 - 可新增决策规则：当 `largest_cluster_ratio > 阈值` 且 `n_clusters` 较大时，
-  判定为"多人群聚集"高风险；`cluster_centers` 可输出告警坐标。
+ 判定为"多人群聚集"高风险；`cluster_centers` 可输出告警坐标。
 - 建议与现有 `compute_laplacian_features` 并行计算，特征向量拼接入 FSM，
-  不必替换谱特征（谱特征保留答辩理论深度）。
+ 不必替换谱特征（谱特征保留理论深度）。
 
 ## 八、后续可选优化
 
@@ -147,9 +147,9 @@ DBSCAN 特征可作为风险决策 FSM 的输入：
 > 对应 `ALGORITHM_OPTIMIZATION.md` 中两个 P0/P1 升级项的实施落地：
 >
 > 1. **IPM 真机标定工具**（P0，几何准确度根基）：替代原手填固定单应矩阵 H（720x480 梯形假设），
->    用画面中的地面点像素坐标 + 真实米制坐标求解 H，将地面定位误差从"假设"降到厘米级；
+> 用画面中的地面点像素坐标 + 真实米制坐标求解 H，将地面定位误差从"假设"降到厘米级；
 > 2. **EMA 时序平滑器**（P1，时序稳定）：在风险特征送入 FSM 前做指数滑动平均，进一步抑制
->    检测抖动与 IPM 映射误差带来的单帧跳变。
+> 检测抖动与 IPM 映射误差带来的单帧跳变。
 
 ---
 
@@ -184,19 +184,19 @@ p_ground ~ H · [u, v, 1]ᵀ
 ```python
 import numpy as np
 from src.algorithms.ipm_calibrate import (
-    calibrate_from_points, calibrate_from_points_ransac,
-    pixel_to_ground, ground_to_pixel,
-    save_homography, load_homography,
+ calibrate_from_points, calibrate_from_points_ransac,
+ pixel_to_ground, ground_to_pixel,
+ save_homography, load_homography,
 )
 
 # 1) 4 点标定（推荐，精度最高）
 pixel = np.array([[100, 220], [300, 230], [320, 400], [80, 410]], dtype=np.float32)
-ground = np.array([[0, 0], [5, 0], [5, 8], [0, 8]], dtype=np.float32)   # 米
-H = calibrate_from_points(pixel, ground)          # -> (3,3) float64
+ground = np.array([[0, 0], [5, 0], [5, 8], [0, 8]], dtype=np.float32) # 米
+H = calibrate_from_points(pixel, ground) # -> (3,3) float64
 
 # 2) 正 / 逆映射
-ground_pts = pixel_to_ground(H, pixel)            # 像素 -> 地面米
-pixel_pts = ground_to_pixel(H, ground_pts)        # 地面米 -> 像素
+ground_pts = pixel_to_ground(H, pixel) # 像素 -> 地面米
+pixel_pts = ground_to_pixel(H, ground_pts) # 地面米 -> 像素
 
 # 3) 保存 / 加载（支持 .npy 二进制 与 .txt 文本）
 save_homography(H, "config/ipm_homography.npy")
@@ -218,9 +218,9 @@ H2 = load_homography("config/ipm_homography.npy")
 
 ```bash
 python src/algorithms/ipm_calibrate.py \
-    --pixel  "100,220 300,230 320,400 80,410" \
-    --ground "0,0 5,0 5,8 0,8" \
-    --save   config/ipm_homography.npy
+ --pixel "100,220 300,230 320,400 80,410" \
+ --ground "0,0 5,0 5,8 0,8" \
+ --save config/ipm_homography.npy
 ```
 
 运行后输出 H 矩阵，并**自检**：把标定像素点映射回地面，逐点打印误差（米）。
@@ -238,10 +238,10 @@ python src/algorithms/ipm_calibrate.py \
 
 ```
 YOLO 检测框 ──► 脚点(框底中心像素) ──► H 逆透视 ──► 地面米坐标
-                                          ▲
-                                      ipm_calibrate 标定
-                                          │
-                              保存 H 到 config/*.npy
+ ▲
+ ipm_calibrate 标定
+ │
+ 保存 H 到 config/*.npy
 ```
 
 Python 侧在初始化时 `load_homography` 加载 H，之后对每个检测脚点调用
@@ -261,7 +261,7 @@ Python 侧在初始化时 `load_homography` 加载 H，之后对每个检测脚�
 | 保存/加载 `.npy` / `.txt` 一致性 | 通过（atol 1e-9/1e-12） |
 | 共线退化、非 4 点输入、CLI | 均通过 |
 
-> 测试数据为 `make_synthetic_correspondences()` 构造：用人为给定的透视单应 H_gt 生成
+> 测试数据为 `make_synthetic_correspondences` 构造：用人为给定的透视单应 H_gt 生成
 > 5m×8m 地面矩形四角的像素坐标并取整模拟像素量化，再反求 H 验证。**非真实传感器数据。**
 
 ---
@@ -282,8 +282,8 @@ RiskFSM 已用滞回 + 确认帧防抖，但送入 FSM 的 `n / density / r_gcc`
 帧级固定 `alpha` 的递推：
 
 ```
-s_0 = x_0                          （首帧初始化）
-s_t = alpha · x_t + (1 - alpha) · s_{t-1}      （alpha ∈ (0, 1]）
+s_0 = x_0 （首帧初始化）
+s_t = alpha · x_t + (1 - alpha) · s_{t-1} （alpha ∈ (0, 1]）
 ```
 
 对白噪声输入，平滑后方差理论抑制比为 `alpha / (2 - alpha)`。
@@ -292,7 +292,7 @@ s_t = alpha · x_t + (1 - alpha) · s_{t-1}      （alpha ∈ (0, 1]）
 **时间感知模式**（`use_timestamp=True`）：对非等间隔帧序列，按时间间隔自适应：
 
 ```
-alpha_t = 1 - exp(-dt / tau)，  dt = t_t - t_{t-1}
+alpha_t = 1 - exp(-dt / tau)， dt = t_t - t_{t-1}
 ```
 
 `dt` 越小平滑越强；`tau` 为时间常数（秒），与响应速度成反比。
@@ -306,22 +306,22 @@ from src.algorithms.ema_smoother import EMASmoother
 
 # 单变量（alpha=0.3）
 sm = EMASmoother(alpha=0.3)
-y = sm.update(0.6, t=1)          # -> 0.6（首帧原样）
-y = sm.update(0.9, t=2)          # -> 0.3*0.9 + 0.7*0.6 = 0.69
+y = sm.update(0.6, t=1) # -> 0.6（首帧原样）
+y = sm.update(0.9, t=2) # -> 0.3*0.9 + 0.7*0.6 = 0.69
 
 # 多变量风险特征（n, density, r_gcc 三维，独立平滑）
 smv = EMASmoother(alpha=0.3, dim=3)
-y = smv.update([0.5, 0.6, 0.4], t=1)   # -> [0.5, 0.6, 0.4]
-y = smv.update([0.9, 0.2, 0.8], t=2)   # -> 各维独立 EMA
+y = smv.update([0.5, 0.6, 0.4], t=1) # -> [0.5, 0.6, 0.4]
+y = smv.update([0.9, 0.2, 0.8], t=2) # -> 各维独立 EMA
 
 # 时间感知模式
-smt = EMASmoother(alpha=0.3, use_timestamp=True, tau=0.1)   # tau 秒
+smt = EMASmoother(alpha=0.3, use_timestamp=True, tau=0.1) # tau 秒
 
 # 查询 / 重置
-sm.initialized     # bool
-sm.smoothed        # 当前平滑值（副本）
-sm.dimension       # 特征维度
-sm.reset()         # 清空状态
+sm.initialized # bool
+sm.smoothed # 当前平滑值（副本）
+sm.dimension # 特征维度
+sm.reset # 清空状态
 ```
 
 **参数**
@@ -340,11 +340,11 @@ sm.reset()         # 清空状态
 ```cpp
 #include "algorithms/ema_smoother.h"
 
-pedestrian::EmaSmoother sm(0.3, 3);   // alpha=0.3, 3 维特征
+pedestrian::EmaSmoother sm(0.3, 3); // alpha=0.3, 3 维特征
 
 // 每帧：
 std::vector<double> feat = {n, density, r_gcc};
-std::vector<double> s = sm.update(feat, now_ms);   // 平滑后特征
+std::vector<double> s = sm.update(feat, now_ms); // 平滑后特征
 double n_s = s[0];
 double density_s = s[1];
 double r_gcc_s = s[2];
@@ -353,8 +353,8 @@ double r_gcc_s = s[2];
 pedestrian::EmaSmoother sm1(0.3, 1);
 double d = sm1.update(0.6, now_ms);
 
-sm.reset();          // 场景切换时重置
-bool ok = sm.initialized();
+sm.reset; // 场景切换时重置
+bool ok = sm.initialized;
 ```
 
 **成员方法**
@@ -363,11 +363,11 @@ bool ok = sm.initialized();
 |---|---|
 | `EmaSmoother(alpha=0.3, dim=1, use_timestamp=false, tau=1.0)` | 构造（标量 alpha 广播） |
 | `EmaSmoother(const vector<double>& alpha, ...)` | 构造（每维独立 alpha） |
-| `setAlpha(...)` / `alpha()` / `dim()` | 配置 / 查询 |
-| `setUseTimestamp(bool)` / `useTimestamp()` / `setTau(double)` / `tau()` | 时间感知模式 |
+| `setAlpha(...)` / `alpha` / `dim` | 配置 / 查询 |
+| `setUseTimestamp(bool)` / `useTimestamp` / `setTau(double)` / `tau` | 时间感知模式 |
 | `update(value, t)` / `update(vector, t)` | 一帧更新，返回平滑值 |
-| `smoothed()` / `smoothedAt(i)` / `initialized()` | 查询平滑状态 |
-| `reset()` | 清空状态 |
+| `smoothed` / `smoothedAt(i)` / `initialized` | 查询平滑状态 |
+| `reset` | 清空状态 |
 
 > 非法 `alpha` 输入会回退到默认 0.3（工程健壮性）；维度不匹配时本帧被忽略/仅拷贝输入，
 > 保证状态不损坏。
@@ -379,14 +379,14 @@ from src.algorithms.ema_smoother import EMASmoother
 from src.algorithms.risk_fsm import RiskFSM, RiskFSMConfig
 
 # 对 FSM 输入特征做 EMA（每维独立，alpha 0.4~0.6 可调）
-ema = EMASmoother(alpha=0.5, dim=3)   # n, density, r_gcc
-fsm = RiskFSM(RiskFSMConfig())
+ema = EMASmoother(alpha=0.5, dim=3) # n, density, r_gcc
+fsm = RiskFSM(RiskFSMConfig)
 
 for frame in frames:
-    feat = engine.features()          # {"n":..., "density":..., "r_gcc":...}
-    smooth = ema.update([feat["n"], feat["density"], feat["r_gcc"]], frame_id)
-    level = fsm.update({"n": smooth[0], "density": smooth[1],
-                        "r_gcc": smooth[2], "clustering": 0.0}, now_ms)
+ feat = engine.features # {"n":..., "density":..., "r_gcc":...}
+ smooth = ema.update([feat["n"], feat["density"], feat["r_gcc"]], frame_id)
+ level = fsm.update({"n": smooth[0], "density": smooth[1],
+ "r_gcc": smooth[2], "clustering": 0.0}, now_ms)
 ```
 
 C++ 侧同样在 FSM 前加一层 `EmaSmoother`，将平滑后的 `FsmFeatures` 送入 `RiskFSM::update`。
@@ -406,7 +406,7 @@ C++ 侧同样在 FSM 前加一层 `EmaSmoother`，将平滑后的 `FsmFeatures` 
 | reset 行为 / 非法 alpha 校验 | 通过 |
 | C++ 头文件默认值与 Python 一致性 | 通过 |
 
-> 测试数据为 `make_noisy_series()` 构造的"真值 + 高斯白噪声（σ=0.3）"300 帧序列，
+> 测试数据为 `make_noisy_series` 构造的"真值 + 高斯白噪声（σ=0.3）"300 帧序列，
 > 用可复现随机种子生成。**非真实传感器数据。**
 
 ---
@@ -450,25 +450,25 @@ ByteTrack 直接以**检测框（像素）**为观测，在图像平面跟踪，
 ByteTrack（ECCV 2022）核心思想：**不丢弃低分检测框**。把检测框分成高分/低分两档分两轮关联：
 
 ```
-                     ┌──────────────────────────────┐
-                     │         当前帧检测框           │
-                     └──────────────┬───────────────┘
-                 ┌──────────────────┴──────────────────┐
-            score ≥ track_thresh                  det_thresh ≤ score < track_thresh
-               （高分检测）                              （低分检测，如遮挡）
-                 └──────────┬──────────────────────────┘
-   ┌────────────────────────▼───────────────────────────┐
-   │ 第一轮：高分检测 vs 全部轨迹（IoU 代价，匈牙利匹配）     │
-   │   ├─ 匹配成功：更新轨迹（hits++，misses=0）           │
-   │   └─ 未匹配高分检测：新建轨迹                        │
-   └────────────────────────┬───────────────────────────┘
-                            │ 未匹配的轨迹
-                            ▼
-   ┌────────────────────────────────────────────────────┐
-   │ 第二轮（低分二次关联）：低分检测 vs 未匹配的已确认轨迹   │
-   │   ├─ 匹配成功：更新轨迹（遮挡期间维持 ID）            │
-   │   └─ 仍未匹配：misses++，超过 max_lost 后删除        │
-   └────────────────────────────────────────────────────┘
+ ┌──────────────────────────────┐
+ │ 当前帧检测框 │
+ └──────────────┬───────────────┘
+ ┌──────────────────┴──────────────────┐
+ score ≥ track_thresh det_thresh ≤ score < track_thresh
+ （高分检测） （低分检测，如遮挡）
+ └──────────┬──────────────────────────┘
+ ┌────────────────────────▼───────────────────────────┐
+ │ 第一轮：高分检测 vs 全部轨迹（IoU 代价，匈牙利匹配） │
+ │ ├─ 匹配成功：更新轨迹（hits++，misses=0） │
+ │ └─ 未匹配高分检测：新建轨迹 │
+ └────────────────────────┬───────────────────────────┘
+ │ 未匹配的轨迹
+ ▼
+ ┌────────────────────────────────────────────────────┐
+ │ 第二轮（低分二次关联）：低分检测 vs 未匹配的已确认轨迹 │
+ │ ├─ 匹配成功：更新轨迹（遮挡期间维持 ID） │
+ │ └─ 仍未匹配：misses++，超过 max_lost 后删除 │
+ └────────────────────────────────────────────────────┘
 ```
 
 ### 2.1 单目标模型：8 维线性匀速 Kalman
@@ -501,22 +501,22 @@ x = [cx, cy, a, h, vcx, vcy, va, vh]
 from src.algorithms.bytetrack_tracker import ByteTrack
 
 tracker = ByteTrack(
-    track_thresh=0.5,      # 高分检测阈值
-    det_thresh=0.1,    # 检测置信度下界
-    match_thresh=0.8,   # IoU 代价阈值 = 1 - IoU 门限
-    max_lost=30,        # 连续未关联多少帧后删除轨迹
-    min_hits=3,          # 新轨迹连续关联多少帧后确认
-    frame_rate=30,
-    dt=None,            # 固定帧间隔（None = 1.0）
+ track_thresh=0.5, # 高分检测阈值
+ det_thresh=0.1, # 检测置信度下界
+ match_thresh=0.8, # IoU 代价阈值 = 1 - IoU 门限
+ max_lost=30, # 连续未关联多少帧后删除轨迹
+ min_hits=3, # 新轨迹连续关联多少帧后确认
+ frame_rate=30,
+ dt=None, # 固定帧间隔（None = 1.0）
 )
 
-tracks = tracker.update(detections)   # detections: [(x1,y1,x2,y2,conf), ...]
+tracks = tracker.update(detections) # detections: [(x1,y1,x2,y2,conf), ...]
 # 返回: [[track_id, x1, y1, x2, y2, conf], ...]（按 track_id 升序）
 
-tracker.states()        # 同 update 返回格式
-tracker.track_info()    # {id: {bbox, score, hits, misses, age, last_seen, start_frame, stable, confirmed}}
-tracker.track_count()
-tracker.reset()
+tracker.states # 同 update 返回格式
+tracker.track_info # {id: {bbox, score, hits, misses, age, last_seen, start_frame, stable, confirmed}}
+tracker.track_count
+tracker.reset
 ```
 
 | 参数 | 作用 | 建议 |
@@ -535,10 +535,10 @@ tracker.reset()
 #include "bytetrack_tracker.h"
 
 ByteTrack tracker(0.5, 0.1, 0.8, 30, 3, 1.0, false);
-std::vector<std::vector<double>> dets;      // [x1,y1,x2,y2,score]
+std::vector<std::vector<double>> dets; // [x1,y1,x2,y2,score]
 std::vector<TrackResult> tracks = tracker.update(dets, frame_id);
 for (const TrackResult& t : tracks) {
-    // t.id, t.x1, t.y1, t.x2, t.y2, t.score
+ // t.id, t.x1, t.y1, t.x2, t.y2, t.score
 }
 ```
 
@@ -552,16 +552,16 @@ for (const TrackResult& t : tracks) {
 
 ```
 YOLO 检测框 ──► ByteTrack.update(dets) ──► 稳定轨迹 [id, x1,y1,x2,y2,conf]
-                                              │
-                 ┌────────────────────────────┤
-                 ▼                            ▼
-           脚点 = ((x1+x2)/2, y2)       轨迹 ID / 遮挡状态
-                 │                            │
-                 ▼                            ▼
-           IPM 逆透视映射                RiskFSM 风险决策
-                 │                            │
-                 ▼                            ▼
-      KalmanTracker 地面坐标平滑       拥挤度 / TTC 等下游
+ │
+ ┌────────────────────────────┤
+ ▼ ▼
+ 脚点 = ((x1+x2)/2, y2) 轨迹 ID / 遮挡状态
+ │ │
+ ▼ ▼
+ IPM 逆透视映射 RiskFSM 风险决策
+ │ │
+ ▼ ▼
+ KalmanTracker 地面坐标平滑 拥挤度 / TTC 等下游
 ```
 
 Python 集成示例：
@@ -571,15 +571,15 @@ from src.algorithms.bytetrack_tracker import ByteTrack
 from src.algorithms.kalman_tracker import KalmanTracker
 
 bt = ByteTrack(track_thresh=0.5, det_thresh=0.1, match_thresh=0.8, max_lost=30, min_hits=3)
-smoother = KalmanTracker()   # 可选：对脚点地面坐标进一步平滑
+smoother = KalmanTracker # 可选：对脚点地面坐标进一步平滑
 
 for frame in video_frames:
-    boxes = yolo.detect(frame)            # [(x1,y1,x2,y2,conf), ...]
-    tracks = bt.update(boxes)             # [[id, x1, y1, x2, y2, conf], ...]
-    feet_px = [((t[1]+t[3])/2, t[4]) for t in tracks]   # 脚点像素
-    ground = [ipm_map(fx, fy) for fx, fy in feet_px]     # 地面米坐标
-    smoothed = smoother.update(ground)                  # 可选平滑
-    # 下游：RiskFSM 使用 smoothed 位置/速度与轨迹 ID
+ boxes = yolo.detect(frame) # [(x1,y1,x2,y2,conf), ...]
+ tracks = bt.update(boxes) # [[id, x1, y1, x2, y2, conf], ...]
+ feet_px = [((t[1]+t[3])/2, t[4]) for t in tracks] # 脚点像素
+ ground = [ipm_map(fx, fy) for fx, fy in feet_px] # 地面米坐标
+ smoothed = smoother.update(ground) # 可选平滑
+ # 下游：RiskFSM 使用 smoothed 位置/速度与轨迹 ID
 ```
 
 ## 六、单元测试与验收指标

@@ -26,10 +26,10 @@ curl -sL -o /tmp/go2rtc https://github.com/AlexxIT/go2rtc/releases/latest/downlo
 
 ```yaml
 streams:
-  cam:
-    - rtsp://127.0.0.1:554/live/0   # 开发板本机 RTSP 源
+ cam:
+ - rtsp://127.0.0.1:554/live/0 # 开发板本机 RTSP 源
 api:
-  listen: ":1984"
+ listen: ":1984"
 ```
 
 ### 3. 启动（开发板）
@@ -43,9 +43,9 @@ sudo setsid ./go2rtc -config go2rtc.yaml > /tmp/go2rtc.log 2>&1 < /dev/null &
 ### 4. 验证
 
 ```bash
-ps aux | grep go2rtc                 # 进程存在
+ps aux | grep go2rtc # 进程存在
 ss -tlnp | grep -E '1984|8554|8555' # Web/HLS/WebRTC 端口监听
-curl -s http://127.0.0.1:1984/api/streams  # 返回 cam 流
+curl -s http://127.0.0.1:1984/api/streams # 返回 cam 流
 ```
 
 ## 端口说明

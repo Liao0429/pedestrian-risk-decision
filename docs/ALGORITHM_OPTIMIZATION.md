@@ -1,6 +1,6 @@
 # 算法效率与准确度优化分析
 
-> 针对毕设 4 大算法模块：检测、几何映射、图论拓扑、时序决策。
+> 针对 4 大算法模块：检测、几何映射、图论拓扑、时序决策。
 > 目标平台：Luckfox RV1106（单核 1.2GHz，256MB，1TOPS NPU）。
 
 ## 一、当前算法的改善效果
@@ -19,19 +19,19 @@
 ### 1. 时序跟踪：升级到 ByteTrack（强烈推荐，P0）
 - 现状：Kalman 单目标平滑（我们自己实现的简单版）
 - **更好：ByteTrack**（2022，ECCV，开源自带 C++）
-  - 原理：Kalman 预测 + IoU 关联 + **低分框二次关联**，能更好地处理遮挡和 ID 切换
-  - 提升：多人跟踪鲁棒性、漏检补全、轨迹连续，比单纯 Kalman 强很多
-  - 边缘端：C++ 实现，计算量小，RV1106 可跑
+ - 原理：Kalman 预测 + IoU 关联 + **低分框二次关联**，能更好地处理遮挡和 ID 切换
+ - 提升：多人跟踪鲁棒性、漏检补全、轨迹连续，比单纯 Kalman 强很多
+ - 边缘端：C++ 实现，计算量小，RV1106 可跑
 - 实现：把 `KalmanTracker` 换成 ByteTrack 的多目标关联逻辑，接口不变
 
 ### 2. 拓扑分析：补充 DBSCAN 聚类（已实现，P1）✅
 - 现状：图拉普拉斯谱特征刻画"聚集结构"
 - **更好/更直观：DBSCAN 聚类**（基于密度聚类，O(n log n)）
-  - 直接输出"人群簇"：簇数、每簇人数、簇中心、最大簇占比
-  - 与"拥挤度/局部聚集"语义天然吻合，答辩更好讲
+ - 直接输出"人群簇"：簇数、每簇人数、簇中心、最大簇占比
+ - 与"拥挤度/局部聚集"语义天然吻合，更好讲
 - **已实现**：见 `src/algorithms/crowd_dbscan.py`（Python）、
-  `src/algorithms/crowd_dbscan.h`（C++）、`tests/test_crowd_dbscan.py`（单元测试），
-  详细说明见 `docs/ALGORITHM_UPGRADE.md`
+ `src/algorithms/crowd_dbscan.h`（C++）、`tests/test_crowd_dbscan.py`（单元测试），
+ 详细说明见 `docs/ALGORITHM_UPGRADE.md`
 - 建议：谱特征（图拉普拉斯）保留作理论深度，**加 DBSCAN 作为工程化决策特征**（更快更直观）
 
 ### 3. 几何：IPM 真机标定（P0，准确性关键）

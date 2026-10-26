@@ -1,4 +1,4 @@
-# 实验/算法脚本依赖（毕设项目，Python 3.10+）
+# 实验/算法脚本依赖（项目，Python 3.10+）
 # 安装：pip install -r requirements.txt
 #
 # 版本策略：主版本锁上限，兼容 3.10~3.14；测试仅需 numpy + pytest。

@@ -1,6 +1,6 @@
 # 双舵机云台自动追踪方案（Luckfox Pico Max + 2×SG90）
 
-> 项目：基于 C++ 的边缘端轻量化行人感知与风险决策软件系统（毕设）
+> 项目：基于 C++ 的边缘端轻量化行人感知与风险决策软件系统（）
 > 目标板：Luckfox Pico Max（RV1106G3，单核 Cortex-A7 1.2GHz，256MB DDR3L，NPU 1 TOPS）
 > 本文档：调研双舵机云台（Pan-Tilt）实现摄像头自动追踪的硬件选型、接口、接线、控制算法与软件集成方案。
 > 舵机型号：用户已有的 **2 个 SG90（9g 微舵机）** 为默认方案。
@@ -43,10 +43,10 @@
 
 | 型号 | 重量 | 扭矩 | 电压 | 电流 | 适用性 |
 |---|---|---|---|---|---|
-| **SG90**（推荐） | 9g | 1.8kg·cm | 4.8~6V | ~250mA | 轻负载云台、毕设演示足够；便宜 |
+| **SG90**（推荐） | 9g | 1.8kg·cm | 4.8~6V | ~250mA | 轻负载云台、演示足够；便宜 |
 | MG996R | 55g | 9.4~11kg·cm | 4.8~6V | ~500mA~2.5A | 扭矩大但太重、耗电大，云台会明显抖动，不推荐给本方案 |
 | MG90S | 13.4g | 1.8~2.2kg·cm | 4.8~6V | ~250mA | 金属齿轮、更耐用，可作为 SG90 的加固替代 |
-| DS3218 | 60g+ | 20kg·cm+ | 6~7.4V | 大 | 工业级，毕设不需要 |
+| DS3218 | 60g+ | 20kg·cm+ | 6~7.4V | 大 | 工业级，不需要 |
 
 **结论**：既然已持有 SG90，直接采用。注意 SG90 扭矩小，云台负载（摄像头/板子）必须尽量轻，且俯仰（tilt）舵机要处理重力，建议：
 - 安装时让俯仰舵机尽量靠近负载重心；
@@ -61,8 +61,8 @@ SG90 是模拟舵机，内部有电位器反馈，外部只需输入 **50Hz PWM*
 ```
 周期 T = 20ms（50Hz）
 脉宽 duty = 0.5ms → 0°
-           1.5ms → 90°（中位）
-           2.5ms → 180°
+ 1.5ms → 90°（中位）
+ 2.5ms → 180°
 角度与脉宽近似线性： angle = (duty_us - 500) / (2000 / 180)
 ```
 
@@ -78,16 +78,16 @@ RV1106 内部有 PWM 控制器（32 位定时器/计数器），Linux 下通过 
 
 官方文档明确示例：
 - 导出 PWM10_M1（即 `GPIO1_C6_d`）：
-  ```
-  echo 0 > /sys/class/pwm/pwmchip10/export
-  ```
+ ```
+ echo 0 > /sys/class/pwm/pwmchip10/export
+ ```
 - 舵机控制时设置：
-  ```
-  echo 20000000 > /sys/class/pwm/pwmchip10/pwm0/period       # 20ms = 50Hz
-  echo 1500000 > /sys/class/pwm/pwmchip10/pwm0/duty_cycle   # 1.5ms = 90°中位
-  echo normal  > /sys/class/pwm/pwmchip10/pwm0/polarity
-  echo 1       > /sys/class/pwm/pwmchip10/pwm0/enable
-  ```
+ ```
+ echo 20000000 > /sys/class/pwm/pwmchip10/pwm0/period # 20ms = 50Hz
+ echo 1500000 > /sys/class/pwm/pwmchip10/pwm0/duty_cycle # 1.5ms = 90°中位
+ echo normal > /sys/class/pwm/pwmchip10/pwm0/polarity
+ echo 1 > /sys/class/pwm/pwmchip10/pwm0/enable
+ ```
 
 ### 2.2 电压
 
@@ -114,23 +114,23 @@ RV1106 内部有 PWM 控制器（32 位定时器/计数器），Linux 下通过 
 **方式 A：Buildroot 系统**（板子如果刷的是官方 buildroot 镜像）：
 ```
 sudo luckfox-config
-  → Advanced Options → PWM
-  → 勾选 PWM8_M1、PWM9_M1（按需）
-  → 保存并 reboot
+ → Advanced Options → PWM
+ → 勾选 PWM8_M1、PWM9_M1（按需）
+ → 保存并 reboot
 ```
 
 **方式 B：Ubuntu 系统**（本项目的板子刷的是 Ubuntu 22.04，无 luckfox-config 工具）：
 需要修改设备树源文件并重编译内核 DTB，在 SDK 中 `rv1106g-luckfox-pico-pro-max.dts` 添加：
 ```c
 &pwm8 {
-    status = "okay";
-    pinctrl-names = "active";
-    pinctrl-0 = <&pwm8m1_pins>;
+ status = "okay";
+ pinctrl-names = "active";
+ pinctrl-0 = <&pwm8m1_pins>;
 };
 &pwm9 {
-    status = "okay";
-    pinctrl-names = "active";
-    pinctrl-0 = <&pwm9m1_pins>;
+ status = "okay";
+ pinctrl-names = "active";
+ pinctrl-0 = <&pwm9m1_pins>;
 };
 ```
 然后在老电脑上交叉编译内核/DTB，重新烧录或替换 `/boot` 下的 dtb。
@@ -145,14 +145,14 @@ sudo luckfox-config
 
 ```
 舵机1（Pan 水平）：
-  橙色 信号线  → GPIO1_C4_d（PWM8_M1）＝ 排针第 5 脚
-  红色 电源线  → 外部 5V 电源正极
-  棕色 地线    → 外部电源负极 ＋ 板子 GND（共地）
+ 橙色 信号线 → GPIO1_C4_d（PWM8_M1）＝ 排针第 5 脚
+ 红色 电源线 → 外部 5V 电源正极
+ 棕色 地线 → 外部电源负极 ＋ 板子 GND（共地）
 
 舵机2（Tilt 垂直）：
-  橙色 信号线  → GPIO1_C5_d（PWM9_M1）＝ 排针第 4 脚
-  红色 电源线  → 外部 5V 电源正极
-  棕色 地线    → 外部电源负极 ＋ 板子 GND（共地）
+ 橙色 信号线 → GPIO1_C5_d（PWM9_M1）＝ 排针第 4 脚
+ 红色 电源线 → 外部 5V 电源正极
+ 棕色 地线 → 外部电源负极 ＋ 板子 GND（共地）
 
 板子 GND：排针第 3 / 8 / 13 / 18 / 23 脚任选一个
 ```
@@ -160,15 +160,15 @@ sudo luckfox-config
 ### 3.2 电源接线（重点）
 
 ```
-                ┌─────────────────────────────┐
-                │  外部 5V 电源（USB充电器/DC-DC/电池组，≥1.5A）│
-                └─────────────────────────────┘
-                        │ +5V              │ GND
-            ┌───────────┴─────┐            ├──────────────┐
-            │ 舵机1 红线       │ 舵机2 红线 │              │
-            │ 舵机1 棕线       │ 舵机2 棕线│              │
-            ▼                 ▼            ▼              ▼
-        SG90_1             SG90_2        板子 GND      板子 Type-C/电源 共地
+ ┌─────────────────────────────┐
+ │ 外部 5V 电源（USB充电器/DC-DC/电池组，≥1.5A）│
+ └─────────────────────────────┘
+ │ +5V │ GND
+ ┌───────────┴─────┐ ├──────────────┐
+ │ 舵机1 红线 │ 舵机2 红线 │ │
+ │ 舵机1 棕线 │ 舵机2 棕线│ │
+ ▼ ▼ ▼ ▼
+ SG90_1 SG90_2 板子 GND 板子 Type-C/电源 共地
 ```
 
 **三条铁律：**
@@ -195,7 +195,7 @@ GPIO 信号 → 1kΩ → 三极管基极
 
 - 购买**塑料双轴云台支架**（约 ¥5~10），两个舵机一横一竖组成 Pan-Tilt。
 - 负载建议：**只把摄像头模组（SC3336，约 5g）+ 短 FPC 排线装在云台上**，板子固定在底座不动。这样 SG90 非常轻松。
-  - 但 SC3336 的 MIPI FPC 线较短且硬，若板子必须跟着转，可换长 FPC 或把整块板（约 40×40mm、含排针约 30~40g）装在云台上。
+ - 但 SC3336 的 MIPI FPC 线较短且硬，若板子必须跟着转，可换长 FPC 或把整块板（约 40×40mm、含排针约 30~40g）装在云台上。
 - 若整板随动：Type-C 供电线和网线要留足余量，且**重心尽量贴近俯仰舵机转轴**；可在云台对面加小配重。
 - 俯仰舵机承受重力，是薄弱点：把摄像头放俯仰臂近轴处；若抖动，把俯仰换 MG90S。
 
@@ -212,8 +212,8 @@ GPIO 信号 → 1kΩ → 三极管基极
 ```
 图像尺寸：W=720, H=480，画面中心 (360, 240)
 目标中心：(tx, ty)
-偏差：    err_x = tx - 360
-          err_y = ty - 240
+偏差： err_x = tx - 360
+ err_y = ty - 240
 ```
 死区（deadzone）：`|err| < 15px` 时不更新角度，避免抖动。
 
@@ -236,7 +236,7 @@ GPIO 信号 → 1kΩ → 三极管基极
 ### 4.4 角度 → 脉宽
 
 ```
-duty_ns = 500000 + (angle / 180.0) * 2000000   // 0.5ms ~ 2.5ms
+duty_ns = 500000 + (angle / 180.0) * 2000000 // 0.5ms ~ 2.5ms
 ```
 
 ---
@@ -255,56 +255,56 @@ duty_ns = 500000 + (angle / 180.0) * 2000000   // 0.5ms ~ 2.5ms
 
 class Servo {
 public:
-    Servo(int chip, int channel = 0)
-        : m_chip(chip), m_chan(channel) {
-        snprintf(m_base, sizeof(m_base),
-                 "/sys/class/pwm/pwmchip%d/pwm%d", chip, channel);
-    }
+ Servo(int chip, int channel = 0)
+ : m_chip(chip), m_chan(channel) {
+ snprintf(m_base, sizeof(m_base),
+ "/sys/class/pwm/pwmchip%d/pwm%d", chip, channel);
+ }
 
-    // 导出并配置为 50Hz、normal、中位 1.5ms，然后使能
-    bool init() {
-        char p[64];
-        snprintf(p, sizeof(p), "/sys/class/pwm/pwmchip%d/export", m_chip);
-        FILE *f = fopen(p, "w");
-        if (f) { fprintf(f, "%d", m_chan); fclose(f); usleep(10000); }
+ // 导出并配置为 50Hz、normal、中位 1.5ms，然后使能
+ bool init {
+ char p[64];
+ snprintf(p, sizeof(p), "/sys/class/pwm/pwmchip%d/export", m_chip);
+ FILE *f = fopen(p, "w");
+ if (f) { fprintf(f, "%d", m_chan); fclose(f); usleep(10000); }
 
-        if (!writeFile("period", 20000000)) return false;      // 20ms = 50Hz
-        if (!writeFile("polarity", "normal")) return false;
-        if (!writeFile("duty_cycle", 1500000)) return false;  // 中位 90°
-        if (!writeFile("enable", 1)) return false;
-        return true;
-    }
+ if (!writeFile("period", 20000000)) return false; // 20ms = 50Hz
+ if (!writeFile("polarity", "normal")) return false;
+ if (!writeFile("duty_cycle", 1500000)) return false; // 中位 90°
+ if (!writeFile("enable", 1)) return false;
+ return true;
+ }
 
-    // angle: 0~180
-    void setAngle(float angle) {
-        if (angle < 0)   angle = 0;
-        if (angle > 180) angle = 180;
-        long ns = 500000L + (long)((angle / 180.0f) * 2000000.0f);
-        writeFile("duty_cycle", ns);
-    }
+ // angle: 0~180
+ void setAngle(float angle) {
+ if (angle < 0) angle = 0;
+ if (angle > 180) angle = 180;
+ long ns = 500000L + (long)((angle / 180.0f) * 2000000.0f);
+ writeFile("duty_cycle", ns);
+ }
 
 private:
-    bool writeFile(const char *attr, long val) {
-        char path[128];
-        snprintf(path, sizeof(path), "%s/%s", m_base, attr);
-        FILE *f = fopen(path, "w");
-        if (!f) return false;
-        fprintf(f, "%ld", val);
-        fclose(f);
-        return true;
-    }
-    bool writeFile(const char *attr, const char *val) {
-        char path[128];
-        snprintf(path, sizeof(path), "%s/%s", m_base, attr);
-        FILE *f = fopen(path, "w");
-        if (!f) return false;
-        fprintf(f, "%s", val);
-        fclose(f);
-        return true;
-    }
+ bool writeFile(const char *attr, long val) {
+ char path[128];
+ snprintf(path, sizeof(path), "%s/%s", m_base, attr);
+ FILE *f = fopen(path, "w");
+ if (!f) return false;
+ fprintf(f, "%ld", val);
+ fclose(f);
+ return true;
+ }
+ bool writeFile(const char *attr, const char *val) {
+ char path[128];
+ snprintf(path, sizeof(path), "%s/%s", m_base, attr);
+ FILE *f = fopen(path, "w");
+ if (!f) return false;
+ fprintf(f, "%s", val);
+ fclose(f);
+ return true;
+ }
 
-    int  m_chip, m_chan;
-    char m_base[128];
+ int m_chip, m_chan;
+ char m_base[128];
 };
 ```
 
@@ -318,69 +318,69 @@ private:
 
 class PanTilt {
 public:
-    PanTilt(Servo &pan, Servo &tilt)
-        : m_pan(pan), m_tilt(tilt),
-          m_panAngle(90), m_tiltAngle(90),
-          m_smoothPan(90), m_smoothTilt(90) {}
+ PanTilt(Servo &pan, Servo &tilt)
+ : m_pan(pan), m_tilt(tilt),
+ m_panAngle(90), m_tiltAngle(90),
+ m_smoothPan(90), m_smoothTilt(90) {}
 
-    void init() {
-        m_pan.init();  m_tilt.init();
-        m_pan.setAngle(90);  m_tilt.setAngle(90);
-    }
+ void init {
+ m_pan.init; m_tilt.init;
+ m_pan.setAngle(90); m_tilt.setAngle(90);
+ }
 
-    // imgW/imgH: 图像宽高; tx,ty: 目标中心(原图像素坐标)
-    // mode: 0 追踪最大行人, 1 追踪人群质心
-    void update(int imgW, int imgH, float tx, float ty, bool hasTarget) {
-        if (!hasTarget) return;   // 无目标保持不动
+ // imgW/imgH: 图像宽高; tx,ty: 目标中心(原图像素坐标)
+ // mode: 0 追踪最大行人, 1 追踪人群质心
+ void update(int imgW, int imgH, float tx, float ty, bool hasTarget) {
+ if (!hasTarget) return; // 无目标保持不动
 
-        const float cx = imgW / 2.0f, cy = imgH / 2.0f;
-        float errX = tx - cx;
-        float errY = ty - cy;
+ const float cx = imgW / 2.0f, cy = imgH / 2.0f;
+ float errX = tx - cx;
+ float errY = ty - cy;
 
-        // 死区
-        const float DEAD = 15.0f;
-        if (fabs(errX) < DEAD && fabs(errY) < DEAD) return;
+ // 死区
+ const float DEAD = 15.0f;
+ if (fabs(errX) < DEAD && fabs(errY) < DEAD) return;
 
-        // P 增益
-        const float KP_X = 0.125f;   // °/px
-        const float KP_Y = 0.125f;
+ // P 增益
+ const float KP_X = 0.125f; // °/px
+ const float KP_Y = 0.125f;
 
-        float targetPan  = 90.0f + KP_X * errX;
-        float targetTilt = 90.0f + KP_Y * errY;
+ float targetPan = 90.0f + KP_X * errX;
+ float targetTilt = 90.0f + KP_Y * errY;
 
-        // 机械限幅
-        if (targetPan  < 10) targetPan  = 10;
-        if (targetPan  > 170) targetPan = 170;
-        if (targetTilt < 10) targetTilt = 10;
-        if (targetTilt > 170) targetTilt = 170;
+ // 机械限幅
+ if (targetPan < 10) targetPan = 10;
+ if (targetPan > 170) targetPan = 170;
+ if (targetTilt < 10) targetTilt = 10;
+ if (targetTilt > 170) targetTilt = 170;
 
-        // 角速度限幅（每次最大 2°，约 40°/s @ 20Hz）
-        const float MAX_STEP = 2.0f;
-        float dPan  = clamp(targetPan  - m_panAngle,  -MAX_STEP,  MAX_STEP);
-        float dTilt = clamp(targetTilt - m_tiltAngle, -MAX_STEP,  MAX_STEP);
-        m_panAngle  += dPan;
-        m_tiltAngle += dTilt;
+ // 角速度限幅（每次最大 2°，约 40°/s @ 20Hz）
+ const float MAX_STEP = 2.0f;
+ float dPan = clamp(targetPan - m_panAngle, -MAX_STEP, MAX_STEP);
+ float dTilt = clamp(targetTilt - m_tiltAngle, -MAX_STEP, MAX_STEP);
+ m_panAngle += dPan;
+ m_tiltAngle += dTilt;
 
-        // 一阶低通平滑
-        m_smoothPan  = 0.7f * m_panAngle  + 0.3f * m_smoothPan;
-        m_smoothTilt = 0.7f * m_tiltAngle + 0.3f * m_smoothTilt;
+ // 一阶低通平滑
+ m_smoothPan = 0.7f * m_panAngle + 0.3f * m_smoothPan;
+ m_smoothTilt = 0.7f * m_tiltAngle + 0.3f * m_smoothTilt;
 
-        m_pan.setAngle(m_smoothPan);
-        m_tilt.setAngle(m_smoothTilt);
-    }
+ m_pan.setAngle(m_smoothPan);
+ m_tilt.setAngle(m_smoothTilt);
+ }
 
-    // 查询当前目标中心（供其它线程使用）：由调用方在多线程时加锁
-    void currentAngles(float &pan, float &tilt) const {
-        pan = m_smoothPan; tilt = m_smoothTilt;
-    }
+ // 查询当前目标中心（供其它线程使用）：由调用方在多线程时加锁
+ void currentAngles(float &pan, float &tilt) const {
+ pan = m_smoothPan; tilt = m_smoothTilt;
+ }
 
 private:
-    static float clamp(float v, float lo, float hi) {
-        return v < lo ? lo : (v > hi ? hi : v);
-    }
-    Servo &m_pan, &m_tilt;
-    float m_panAngle, m_tiltAngle;
-    float m_smoothPan, m_smoothTilt;
+ static float clamp(float v, float lo, float hi) {
+ return v < lo ? lo : (v > hi ? hi : v);
+ }
+ Servo &m_pan, &m_tilt;
+ float m_panAngle, m_tiltAngle;
+ float m_smoothPan, m_smoothTilt;
 };
 ```
 
@@ -396,25 +396,25 @@ float tgtX = 0, tgtY = 0;
 float maxArea = 0;
 
 for (int i = 0; i < od_results.count; i++) {
-    object_detect_result *dr = &(od_results.results[i]);
-    if (dr->cls_id != 0) continue;              // 只跟踪 person
-    int l = dr->box.left, t = dr->box.top;
-    int r = dr->box.right, b = dr->box.bottom;
-    int sx = l, sy = t, ex = r, ey = b;
-    mapCoordinates(&sx, &sy); mapCoordinates(&ex, &ey);   // 转显示坐标
+ object_detect_result *dr = &(od_results.results[i]);
+ if (dr->cls_id != 0) continue; // 只跟踪 person
+ int l = dr->box.left, t = dr->box.top;
+ int r = dr->box.right, b = dr->box.bottom;
+ int sx = l, sy = t, ex = r, ey = b;
+ mapCoordinates(&sx, &sy); mapCoordinates(&ex, &ey); // 转显示坐标
 
-    float area = (ex - sx) * (ey - sy);
-    float boxCx = (sx + ex) / 2.0f;
-    float boxCy = (sy + ey) / 2.0f;
+ float area = (ex - sx) * (ey - sy);
+ float boxCx = (sx + ex) / 2.0f;
+ float boxCy = (sy + ey) / 2.0f;
 
-    if (trackMode == 0) {                       // 最大行人
-        if (area > maxArea) { maxArea = area; tgtX = boxCx; tgtY = boxCy; hasTarget = true; }
-    } else {                                    // 模式1: 人群质心(高密度风险区域)
-        tgtX += boxCx; tgtY += boxCy; hasTarget = true;
-    }
+ if (trackMode == 0) { // 最大行人
+ if (area > maxArea) { maxArea = area; tgtX = boxCx; tgtY = boxCy; hasTarget = true; }
+ } else { // 模式1: 人群质心(高密度风险区域)
+ tgtX += boxCx; tgtY += boxCy; hasTarget = true;
+ }
 }
-if (trackMode == 1 && hasTarget) {                // 质心平均
-    tgtX /= pedestrianCount; tgtY /= pedestrianCount;
+if (trackMode == 1 && hasTarget) { // 质心平均
+ tgtX /= pedestrianCount; tgtY /= pedestrianCount;
 }
 
 // 将 tgtX/tgtY 发布给舵机线程（原子变量，见下）
@@ -432,18 +432,18 @@ g_target.store({tgtX, tgtY, hasTarget});
 struct Target { float x=0, y=0; bool valid=false; };
 std::atomic<Target> g_target;
 
-void servoThread() {
-    Servo  pan(8, 0);   // PWM8_M1  → 排针第5脚
-    Servo  tilt(9, 0);  // PWM9_M1  → 排针第4脚
-    PanTilt pt(pan, tilt);
-    pt.init();
+void servoThread {
+ Servo pan(8, 0); // PWM8_M1 → 排针第5脚
+ Servo tilt(9, 0); // PWM9_M1 → 排针第4脚
+ PanTilt pt(pan, tilt);
+ pt.init;
 
-    const int W = 720, H = 480;
-    while (running) {
-        Target t = g_target.load();
-        pt.update(W, H, t.x, t.y, t.valid);
-        std::this_thread::sleep_for(std::chrono::milliseconds(50)); // 20Hz
-    }
+ const int W = 720, H = 480;
+ while (running) {
+ Target t = g_target.load;
+ pt.update(W, H, t.x, t.y, t.valid);
+ std::this_thread::sleep_for(std::chrono::milliseconds(50)); // 20Hz
+ }
 }
 ```
 
@@ -499,13 +499,13 @@ target_link_libraries(${TARGET} ${CMAKE_THREAD_LIBS_INIT})
 ```bash
 # 假设 PWM8_M1 已使能（pwmchip8 存在）
 echo 0 > /sys/class/pwm/pwmchip8/export
-echo 20000000 > /sys/class/pwm/pwmchip8/pwm0/period      # 20ms
-echo normal   > /sys/class/pwm/pwmchip8/pwm0/polarity
-echo 1500000  > /sys/class/pwm/pwmchip8/pwm0/duty_cycle   # 90°中位
-echo 1        > /sys/class/pwm/pwmchip8/pwm0/enable
+echo 20000000 > /sys/class/pwm/pwmchip8/pwm0/period # 20ms
+echo normal > /sys/class/pwm/pwmchip8/pwm0/polarity
+echo 1500000 > /sys/class/pwm/pwmchip8/pwm0/duty_cycle # 90°中位
+echo 1 > /sys/class/pwm/pwmchip8/pwm0/enable
 
 # 慢慢摆动测试（0.5ms→90°，2.5ms→180°）
-echo 500000  > /sys/class/pwm/pwmchip8/pwm0/duty_cycle
+echo 500000 > /sys/class/pwm/pwmchip8/pwm0/duty_cycle
 sleep 1
 echo 2500000 > /sys/class/pwm/pwmchip8/pwm0/duty_cycle
 ```

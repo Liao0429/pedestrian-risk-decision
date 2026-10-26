@@ -9,15 +9,15 @@
 ## 1. 结论摘要
 
 - **测试套件全通过**：Python 133 项（121 原有单元测试 + 12 项新增集成测试）、
-  C++ 主机单元测试 26/26 + 28/28 + 15/15 全部通过（Ubuntu g++ 11.4）。
+ C++ 主机单元测试 26/26 + 28/28 + 15/15 全部通过（Ubuntu g++ 11.4）。
 - **数据完整**：500 张图片、111 条视频、30 张验证集清单、配置与全部结果 JSON
-  均通过一致性 / 完整性审计，未发现损坏或缺失。
+ 均通过一致性 / 完整性审计，未发现损坏或缺失。
 - **发现并修复 2 个真实缺陷**：`crowd_test_enhanced.py` 的 RiskFSM 调用存在两处错误，
-  导致增强路径的 FSM 一直是死代码（静默回退到单帧规则判定）。已修复并由新的
-  集成测试覆盖。
+ 导致增强路径的 FSM 一直是死代码（静默回退到单帧规则判定）。已修复并由新的
+ 集成测试覆盖。
 - **历史增强结果说明**：`results/video_enhanced/*` 在修复前生成，FSM 未实际生效
-  （仍使用 Kalman + 谱特征，但等级为逐帧规则判定）。修复后脚本的 FSM 已生效，
-  详见第 5 节。
+ （仍使用 Kalman + 谱特征，但等级为逐帧规则判定）。修复后脚本的 FSM 已生效，
+ 详见第 5 节。
 
 ---
 
@@ -55,17 +55,17 @@ python -m pytest tests -q
 | `test_process_video_sparse_stays_safe` | 真实 process_video 在稀疏场景全程 SAFE |
 
 ```bash
-python -m pytest tests/test_integration_pipeline.py -v   # 12 passed
-python tests/test_integration_pipeline.py                # 独立运行同样 12/12 通过
+python -m pytest tests/test_integration_pipeline.py -v # 12 passed
+python tests/test_integration_pipeline.py # 独立运行同样 12/12 通过
 ```
 
 ### 2.3 C++ 主机单元测试（老电脑 Ubuntu 22.04，g++ 11.4）
 
 ```bash
 cd ~/prd_verify/src/luckfox_rtsp_yolov5 && make test
-# test_enhanced_decision  26/26 passed
-# test_minijson           28/28 passed
-# test_risk_config        15/15 passed（OpenCV 不可用，SKIP risk_engine_config）
+# test_enhanced_decision 26/26 passed
+# test_minijson 28/28 passed
+# test_risk_config 15/15 passed（OpenCV 不可用，SKIP risk_engine_config）
 ```
 
 > 说明：该 Ubuntu 环境无 OpenCV，故 `test_risk_engine_config`（17/17）在上一任务中已用
@@ -143,7 +143,7 @@ fs = SimpleNamespace(n=n, density=density, r_gcc=r_gcc)
 fsm.update(fs, now_ms)
 ```
 
-`RiskFSM.update(features, now_ms)` 的 `_compute_score()` 用 `features.get(...)` 读取，
+`RiskFSM.update(features, now_ms)` 的 `_compute_score` 用 `features.get(...)` 读取，
 `SimpleNamespace` 没有 `.get`，每帧必然抛 `AttributeError`，被 `except` 吞掉并回退到
 `raw_level`（单帧规则判定）。**后果：增强路径的 FSM 一直是死代码。**
 
@@ -153,15 +153,15 @@ fsm.update(fs, now_ms)
 fsm.update({"n": n, "density": density, "r_gcc": r_gcc}, now_ms)
 ```
 
-### 缺陷 2：`fsm.level()` 被当方法调用，但 `level` 是属性
+### 缺陷 2：`fsm.level` 被当方法调用，但 `level` 是属性
 
-`RiskFSM.level` 是 `@property`（返回字符串）。脚本原来写 `lv = fsm.level()`，每帧必然抛
+`RiskFSM.level` 是 `@property`（返回字符串）。脚本原来写 `lv = fsm.level`，每帧必然抛
 `TypeError: 'str' object is not callable`，同样被 `except` 吞掉回退 `raw_level`。
 
 修复：
 
 ```python
-lv = fsm.level   # 属性，返回 'SAFE'/'WARNING'/'DANGER'
+lv = fsm.level # 属性，返回 'SAFE'/'WARNING'/'DANGER'
 ```
 
 ### 影响说明
@@ -220,7 +220,7 @@ lv = fsm.level   # 属性，返回 'SAFE'/'WARNING'/'DANGER'
 WARNING 而不是逐帧闪跳。稀疏视频全程 SAFE，零误报。
 
 > **注意**：README 中"密集人群持续输出 DANGER（264/305帧）"是修复前（FSM 死代码、
-> 逐帧规则判定）的历史结果。修复后 FSM 生效，结果更保守（见上表）。论文引用增强
+> 逐帧规则判定）的历史结果。修复后 FSM 生效，结果更保守（见上表）。引用增强
 > 实验结果时，建议以 `results/video_enhanced_fsm/`（FSM 实际生效）为准。
 
 ---
@@ -231,7 +231,7 @@ WARNING 而不是逐帧闪跳。稀疏视频全程 SAFE，零误报。
 |---|---|
 | `results/video_enhanced/*` 为修复前输出（FSM 未生效） | 保留历史；修复后已生成 `results/video_enhanced_fsm/`（FSM 生效） |
 | README 对增强实验的描述（"密集 264/305 帧 DANGER"）为修复前数据 | 建议以 `results/video_enhanced_fsm/` 为准（见 5.4） |
-| 论文中使用增强结果时，建议引用复跑后的 FSM 版本 | 建议 |
+| 中使用增强结果时，建议引用复跑后的 FSM 版本 | 建议 |
 
 ---
 

@@ -20,9 +20,9 @@
 | 单色、分辨率低（128×64） | 无法用红/黄/绿直观表达 SAFE/WARNING/DANGER 等级 |
 | 无触摸 | 无法现场调参、切换页面 |
 | 需要自绘字库/u8g2 中文字库 | 中文显示麻烦、字库占用 Flash |
-| 屏太小 | 答辩/演示时远处看不清 |
+| 屏太小 | /演示时远处看不清 |
 
-**彩色触控大屏**（串口屏）用**红/黄/绿大字号**显示风险等级、**触摸按钮**切换页面、**彩色大字**显示人数/FPS/IP，演示效果好得多，答辩加分明显。
+**彩色触控大屏**（串口屏）用**红/黄/绿大字号**显示风险等级、**触摸按钮**切换页面、**彩色大字**显示人数/FPS/IP，演示效果好得多，加分明显。
 
 ### 1.2 为什么选"串口屏"（USART HMI）
 
@@ -31,7 +31,7 @@
 - **界面开发快**：用厂商上位机（USART HMI）图形化拖拽控件，生成工程烧录到屏，**C++ 端只需发字符串指令**改文本/颜色/页面，无需在开发板上做 GUI；
 - **触摸交互简单**：屏幕按钮按下后由串口回传数据，C++ 端解析即可。
 
-淘晶驰（TJC，USART HMI）是国内串口屏事实标准，资料多、上手快、价位低，是毕设彩色触控方案的最优选择。
+淘晶驰（TJC，USART HMI）是国内串口屏事实标准，资料多、上手快、价位低，是彩色触控方案的最优选择。
 
 ---
 
@@ -45,33 +45,33 @@
 | 5 寸 | 800×480 | TJC8048C050_011X | 电阻 / 电容 | UART TTL | 约 ¥110~140 | 高配档 |
 | 7 寸 | 800×480 / 1024×600 | TJC8048C070_011X | 电容 | UART TTL | 约 ¥160~220 | 高配档 |
 
-> 注：同一尺寸电阻触摸比电容便宜；电容手感好、支持多点，但对毕设非必需。以上为淘宝常见价。
+> 注：同一尺寸电阻触摸比电容便宜；电容手感好、支持多点，但对非必需。以上为淘宝常见价。
 
 ### 2.2 成本控制说明（够用档 vs 高配档）
 
 **结论：推荐「4.3 寸 480×272 电阻触摸」串口屏（约 ¥80）作为默认方案。**
 
-理由（结合毕设展示与性价比）：
+理由（结合展示与性价比）：
 
 1. **显示内容完全够用**：主页只需要
-   - 行人数（`Crowd: 12`）
-   - 风险等级大字（`DANGER`，配红/黄/绿背景）
-   - `FPS: 18`
-   - `IP: 192.168.0.136`
-   
-   480×272 分辨率下，用 24~32px 大字号可排 4~5 行，远看清晰；OLED 那 128×64 根本做不到。
+ - 行人数（`Crowd: 12`）
+ - 风险等级大字（`DANGER`，配红/黄/绿背景）
+ - `FPS: 18`
+ - `IP: 192.168.0.136`
+ 
+ 480×272 分辨率下，用 24~32px 大字号可排 4~5 行，远看清晰；OLED 那 128×64 根本做不到。
 
 2. **触摸交互只需几个按钮**：副页放"自动/手动切换、静音、云台使能"等按钮，4.3 寸足够排布。
 
-3. **价格差 40~100 元**：4.3 寸约 ¥80，5 寸约 ¥120，7 寸约 ¥180。多花 40~100 元换来的更大尺寸/更高分辨率，对毕设答辩的边际收益很低——评审主要看**功能与数据实时性**，不是屏幕大小。
+3. **价格差 40~100 元**：4.3 寸约 ¥80，5 寸约 ¥120，7 寸约 ¥180。多花 40~100 元换来的更大尺寸/更高分辨率，对的边际收益很低——评审主要看**功能与数据实时性**，不是屏幕大小。
 
-4. **电阻触摸耐用且便宜**：毕设演示用触摸笔/手指点按即可，无需电容的多点手势。
+4. **电阻触摸耐用且便宜**：演示用触摸笔/手指点按即可，无需电容的多点手势。
 
 **两档定位：**
 
 | 档位 | 型号 | 价格 | 适用 |
 |------|------|------|------|
-| **够用档（推荐）** | 4.3 寸 480×272 电阻 | ~¥80 | 毕设展示主体方案：主页大字显示 + 副页触摸调参 |
+| **够用档（推荐）** | 4.3 寸 480×272 电阻 | ~¥80 | 展示主体方案：主页大字显示 + 副页触摸调参 |
 | 高配档 | 5 寸 800×480 电阻/电容（~¥120）或 7 寸 800×480 电容（~¥180） | ¥120~180 | 预算充足、想要更大屏幕/更清晰文字、展示更多图表曲线 |
 
 > 若预算实在紧张，也可用淘晶驰 3.5 寸（320×480，约 ¥50~60），但 4.3 寸性价比和显示效果更均衡，推荐 4.3 寸为底线。
@@ -140,84 +140,84 @@ stty -F /dev/ttyS3
 
 // HMI 颜色代号（RGB565 16 位值）
 enum HmiColor {
-    HMI_BLACK  = 0x0000,
-    HMI_BLUE   = 0x001F,
-    HMI_GREEN  = 0x07E0,   // 2016
-    HMI_RED    = 0xF800,   // 63488
-    HMI_YELLOW = 0xFFE0,   // 65504
-    HMI_WHITE  = 0xFFFF,
-    HMI_GRAY   = 0x8410,
+ HMI_BLACK = 0x0000,
+ HMI_BLUE = 0x001F,
+ HMI_GREEN = 0x07E0, // 2016
+ HMI_RED = 0xF800, // 63488
+ HMI_YELLOW = 0xFFE0, // 65504
+ HMI_WHITE = 0xFFFF,
+ HMI_GRAY = 0x8410,
 };
 
 class TouchScreen {
 public:
-    explicit TouchScreen(const char* dev = "/dev/ttyS3", int baud = 115200)
-        : fd_(-1) {
-        fd_ = open(dev, O_RDWR | O_NOCTTY | O_NONBLOCK);
-        if (fd_ < 0) { perror("open ttyS3"); return; }
-        struct termios tty;
-        memset(&tty, 0, sizeof(tty));
-        tcgetattr(fd_, &tty);
-        cfsetospeed(&tty, B115200);
-        cfsetispeed(&tty, B115200);
-        tty.c_cflag &= ~PARENB;   // 无校验
-        tty.c_cflag &= ~CSTOPB;   // 1 停止位
-        tty.c_cflag &= ~CSIZE;
-        tty.c_cflag |=  CS8;       // 8 数据位
-        tty.c_cflag |=  (CLOCAL | CREAD);
-        tty.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
-        tty.c_iflag &= ~(IXON | IXOFF | IXANY);
-        tty.c_oflag &= ~OPOST;
-        tcsetattr(fd_, TCSANOW, &tty);
-    }
-    ~TouchScreen() { if (fd_ >= 0) close(fd_); }
-    bool ok() const { return fd_ >= 0; }
+ explicit TouchScreen(const char* dev = "/dev/ttyS3", int baud = 115200)
+ : fd_(-1) {
+ fd_ = open(dev, O_RDWR | O_NOCTTY | O_NONBLOCK);
+ if (fd_ < 0) { perror("open ttyS3"); return; }
+ struct termios tty;
+ memset(&tty, 0, sizeof(tty));
+ tcgetattr(fd_, &tty);
+ cfsetospeed(&tty, B115200);
+ cfsetispeed(&tty, B115200);
+ tty.c_cflag &= ~PARENB; // 无校验
+ tty.c_cflag &= ~CSTOPB; // 1 停止位
+ tty.c_cflag &= ~CSIZE;
+ tty.c_cflag |= CS8; // 8 数据位
+ tty.c_cflag |= (CLOCAL | CREAD);
+ tty.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+ tty.c_iflag &= ~(IXON | IXOFF | IXANY);
+ tty.c_oflag &= ~OPOST;
+ tcsetattr(fd_, TCSANOW, &tty);
+ }
+ ~TouchScreen { if (fd_ >= 0) close(fd_); }
+ bool ok const { return fd_ >= 0; }
 
-    // 发送一条指令（自动追加 0xFF 0xFF 0xFF 结束符）
-    void send(const char* fmt, ...) {
-        char buf[256];
-        va_list ap;
-        va_start(ap, fmt);
-        vsnprintf(buf, sizeof(buf), fmt, ap);
-        va_end(ap);
-        size_t n = strlen(buf);
-        buf[n++] = 0xFF;
-        buf[n++] = 0xFF;
-        buf[n++] = 0xFF;
-        write(fd_, buf, n);
-    }
+ // 发送一条指令（自动追加 0xFF 0xFF 0xFF 结束符）
+ void send(const char* fmt, ...) {
+ char buf[256];
+ va_list ap;
+ va_start(ap, fmt);
+ vsnprintf(buf, sizeof(buf), fmt, ap);
+ va_end(ap);
+ size_t n = strlen(buf);
+ buf[n++] = 0xFF;
+ buf[n++] = 0xFF;
+ buf[n++] = 0xFF;
+ write(fd_, buf, n);
+ }
 
-    // 控件文本：t0.txt="123"
-    void setText(const char* ctrl, const char* text) {
-        send("%s.txt=\"%s\"", ctrl, text);
-    }
-    // 数字控件：n0.val=123
-    void setVal(const char* ctrl, int v) {
-        send("%s.val=%d", ctrl, v);
-    }
-    // 页面跳转：page 1 / page main
-    void setPage(const char* page) {
-        send("page %s", page);
-    }
-    // 控件背景色/字体色：b0.bco=63488
-    void setBco(const char* ctrl, int color) { send("%s.bco=%d", ctrl, color); }
-    void setPco(const char* ctrl, int color) { send("%s.pco=%d", ctrl, color); }
-    // 隐藏/显示：vis b0,0 / vis b0,1
-    void setVis(const char* ctrl, int state) { send("vis %s,%d", ctrl, state); }
-    // 触摸使能：tsw b0,1
-    void setTouch(const char* ctrl, int state) { send("tsw %s,%d", ctrl, state); }
+ // 控件文本：t0.txt="123"
+ void setText(const char* ctrl, const char* text) {
+ send("%s.txt=\"%s\"", ctrl, text);
+ }
+ // 数字控件：n0.val=123
+ void setVal(const char* ctrl, int v) {
+ send("%s.val=%d", ctrl, v);
+ }
+ // 页面跳转：page 1 / page main
+ void setPage(const char* page) {
+ send("page %s", page);
+ }
+ // 控件背景色/字体色：b0.bco=63488
+ void setBco(const char* ctrl, int color) { send("%s.bco=%d", ctrl, color); }
+ void setPco(const char* ctrl, int color) { send("%s.pco=%d", ctrl, color); }
+ // 隐藏/显示：vis b0,0 / vis b0,1
+ void setVis(const char* ctrl, int state) { send("vis %s,%d", ctrl, state); }
+ // 触摸使能：tsw b0,1
+ void setTouch(const char* ctrl, int state) { send("tsw %s,%d", ctrl, state); }
 
-    // 读取并解析一帧触摸返回数据。
-    // 返回 true 且 (page/ctrl/event) 有效时，表示串口屏回传了按键事件。
-    // 返回 -1 表示串口暂时无数据。
-    int readEvent(int* page, int* ctrl, int* event);
+ // 读取并解析一帧触摸返回数据。
+ // 返回 true 且 (page/ctrl/event) 有效时，表示串口屏回传了按键事件。
+ // 返回 -1 表示串口暂时无数据。
+ int readEvent(int* page, int* ctrl, int* event);
 
 private:
-    int fd_;
+ int fd_;
 };
 ```
 
-> 说明：`send()` 用 `vsnprintf` 生成指令体，再追加 `0xFF 0xFF 0xFF` 一次性写入串口，就是淘晶驰文档推荐的做法。
+> 说明：`send` 用 `vsnprintf` 生成指令体，再追加 `0xFF 0xFF 0xFF` 一次性写入串口，就是淘晶驰文档推荐的做法。
 
 ### 4.2 发送指令：改文本 / 背景色 / 页面 / 按钮状态
 
@@ -230,10 +230,10 @@ C++ 端控制：
 
 ```cpp
 TouchScreen scr;
-if (!scr.ok()) { /* 串口屏未就绪 */ }
+if (!scr.ok) { /* 串口屏未就绪 */ }
 
 // 1) 主页大字显示风险等级（红色背景、白字）
-scr.setBco("t0", HMI_RED);       // DANGER 用红色
+scr.setBco("t0", HMI_RED); // DANGER 用红色
 scr.setPco("t0", HMI_WHITE);
 scr.setText("t0", "DANGER");
 
@@ -243,27 +243,27 @@ scr.setText("t2", "18");
 scr.setText("t3", "192.168.0.136");
 
 // 3) 切到设置页
-scr.setPage("1");                 // 等价 page 1
+scr.setPage("1"); // 等价 page 1
 
 // 4) 设置按钮状态：静音按钮背景变黄表示已静音
 scr.setBco("b2", HMI_YELLOW);
 scr.setText("b2", "MUTE ON");
 
 // 5) 隐藏/禁用某按钮
-scr.setVis("b3", 0);            // 云台不可用时不显示
-scr.setTouch("b3", 0);          // 禁用触摸
+scr.setVis("b3", 0); // 云台不可用时不显示
+scr.setTouch("b3", 0); // 禁用触摸
 ```
 
 **等级颜色映射**（在决策线程里根据 `CrowdLevel` 选色）：
 
 ```cpp
 void paintLevel(TouchScreen& scr, CrowdLevel lvl) {
-    const char* name = RiskEngine::levelName(lvl);
-    int color = HMI_GREEN;
-    if (lvl == CROWD_WARNING) color = HMI_YELLOW;
-    else if (lvl == CROWD_DANGER) color = HMI_RED;
-    scr.setBco("t0", color);
-    scr.setText("t0", name);
+ const char* name = RiskEngine::levelName(lvl);
+ int color = HMI_GREEN;
+ if (lvl == CROWD_WARNING) color = HMI_YELLOW;
+ else if (lvl == CROWD_DANGER) color = HMI_RED;
+ scr.setBco("t0", color);
+ scr.setText("t0", name);
 }
 ```
 
@@ -286,21 +286,21 @@ enum { EVT_PRESS = 0x01, EVT_RELEASE = 0x00 };
 
 // 读取并解析一帧 0x65 返回；无数据返回 -1
 int TouchScreen::readEvent(int* page, int* ctrl, int* event) {
-    uint8_t b;
-    ssize_t r = read(fd_, &b, 1);
-    if (r != 1) return -1;
-    if (b != 0x65) return 0;             // 非按键事件，丢弃
-    uint8_t buf[6];                        // 65 page ctrl event FF FF FF
-    ssize_t got = 0;
-    while (got < 6) {
-        ssize_t n = read(fd_, buf + got, 6 - got);
-        if (n <= 0) usleep(1000);
-        else got += n;
-    }
-    *page  = buf[0];
-    *ctrl  = buf[1];
-    *event = buf[2];
-    return 1;
+ uint8_t b;
+ ssize_t r = read(fd_, &b, 1);
+ if (r != 1) return -1;
+ if (b != 0x65) return 0; // 非按键事件，丢弃
+ uint8_t buf[6]; // 65 page ctrl event FF FF FF
+ ssize_t got = 0;
+ while (got < 6) {
+ ssize_t n = read(fd_, buf + got, 6 - got);
+ if (n <= 0) usleep(1000);
+ else got += n;
+ }
+ *page = buf[0];
+ *ctrl = buf[1];
+ *event = buf[2];
+ return 1;
 }
 ```
 
@@ -323,14 +323,14 @@ C++ 端读串口，按字符串匹配（收到 `BTN_MODE` 则切换模式）。�
 ```cpp
 int page, ctrl, evt;
 if (scr.readEvent(&page, &ctrl, &evt) == 1 && evt == EVT_PRESS) {
-    if (page == 0 && ctrl == 0) {          // 主页按钮 b0：进入设置页
-        scr.setPage("1");
-    } else if (page == 1) {
-        if (ctrl == 1) toggleMode();      // 自动/手动
-        else if (ctrl == 2) toggleMute(); // 静音
-        else if (ctrl == 3) togglePtz();     // 云台使能
-        else if (ctrl == 4) scr.setPage("0");
-    }
+ if (page == 0 && ctrl == 0) { // 主页按钮 b0：进入设置页
+ scr.setPage("1");
+ } else if (page == 1) {
+ if (ctrl == 1) toggleMode; // 自动/手动
+ else if (ctrl == 2) toggleMute; // 静音
+ else if (ctrl == 3) togglePtz; // 云台使能
+ else if (ctrl == 4) scr.setPage("0");
+ }
 }
 ```
 
@@ -340,14 +340,14 @@ if (scr.readEvent(&page, &ctrl, &evt) == 1 && evt == EVT_PRESS) {
 
 ```
 ┌───────────────────────────────┐
-│  Crowd: 12           (大字号)  │
-│                              │
-│  ██████ DANGER ██████        │  ← 风险等级大色块（红/黄/绿背景+白字）
-│                              │
-│  FPS: 18                     │  ← 帧率
-│  IP: 192.168.0.136           │  ← IP 地址
-│                              │
-│        [ 设置 ]  (b0 按钮)      │
+│ Crowd: 12 (大字号) │
+│ │
+│ ██████ DANGER ██████ │ ← 风险等级大色块（红/黄/绿背景+白字）
+│ │
+│ FPS: 18 │ ← 帧率
+│ IP: 192.168.0.136 │ ← IP 地址
+│ │
+│ [ 设置 ] (b0 按钮) │
 └───────────────────────────────┘
 ```
 
@@ -355,10 +355,10 @@ if (scr.readEvent(&page, &ctrl, &evt) == 1 && evt == EVT_PRESS) {
 
 ```
 ┌───────────────────────────────┐
-│  模式: [自动]   (b1 按钮)     │
-│  静音: [关]     (b2 按钮)      │
-│  云台: [使能]   (b3 按钮)     │
-│          [ 返回 ] (b4 按钮)     │
+│ 模式: [自动] (b1 按钮) │
+│ 静音: [关] (b2 按钮) │
+│ 云台: [使能] (b3 按钮) │
+│ [ 返回 ] (b4 按钮) │
 └───────────────────────────────┘
 ```
 
@@ -396,45 +396,45 @@ if (scr.readEvent(&page, &ctrl, &evt) == 1 && evt == EVT_PRESS) {
 
 class GpioIn {
 public:
-    GpioIn() : fd_(-1), last_(0), stable_(0), value_(0), activeLow_(false) {}
-    ~GpioIn() { closePin(); }
+ GpioIn : fd_(-1), last_(0), stable_(0), value_(0), activeLow_(false) {}
+ ~GpioIn { closePin; }
 
-    bool openPin(unsigned gpio, bool activeLow = false) {
-        FILE* f = fopen("/sys/class/gpio/export", "w");
-        if (!f) return false;
-        fprintf(f, "%u", gpio); fclose(f);
+ bool openPin(unsigned gpio, bool activeLow = false) {
+ FILE* f = fopen("/sys/class/gpio/export", "w");
+ if (!f) return false;
+ fprintf(f, "%u", gpio); fclose(f);
 
-        std::string dir = "/sys/class/gpio/gpio" + std::to_string(gpio) + "/direction";
-        f = fopen(dir.c_str(), "w");
-        if (!f) return false;
-        fprintf(f, "in"); fclose(f);
+ std::string dir = "/sys/class/gpio/gpio" + std::to_string(gpio) + "/direction";
+ f = fopen(dir.c_str, "w");
+ if (!f) return false;
+ fprintf(f, "in"); fclose(f);
 
-        std::string val = "/sys/class/gpio/gpio" + std::to_string(gpio) + "/value";
-        fd_ = open(val.c_str(), O_RDONLY);
-        activeLow_ = activeLow;
-        return fd_ >= 0;
-    }
-    void closePin() { if (fd_ >= 0) { ::close(fd_); fd_ = -1; } }
+ std::string val = "/sys/class/gpio/gpio" + std::to_string(gpio) + "/value";
+ fd_ = open(val.c_str, O_RDONLY);
+ activeLow_ = activeLow;
+ return fd_ >= 0;
+ }
+ void closePin { if (fd_ >= 0) { ::close(fd_); fd_ = -1; } }
 
-    // 采样一次；连续 3 次一致才更新（消抖）。调用间隔建议 10~20ms。
-    int sample() {
-        if (fd_ < 0) return -1;
-        char c = 0;
-        if (lseek(fd_, 0, SEEK_SET) < 0) return -1;
-        if (read(fd_, &c, 1) != 1) return -1;
-        int raw = (c == '1') ? 1 : 0;
-        if (activeLow_) raw = 1 - raw;
-        if (raw == last_) {
-            if (++stable_ >= 3) value_ = raw;
-        } else {
-            last_ = raw;
-            stable_ = 0;
-        }
-        return value_;
-    }
+ // 采样一次；连续 3 次一致才更新（消抖）。调用间隔建议 10~20ms。
+ int sample {
+ if (fd_ < 0) return -1;
+ char c = 0;
+ if (lseek(fd_, 0, SEEK_SET) < 0) return -1;
+ if (read(fd_, &c, 1) != 1) return -1;
+ int raw = (c == '1') ? 1 : 0;
+ if (activeLow_) raw = 1 - raw;
+ if (raw == last_) {
+ if (++stable_ >= 3) value_ = raw;
+ } else {
+ last_ = raw;
+ stable_ = 0;
+ }
+ return value_;
+ }
 private:
-    int fd_, last_, stable_, value_;
-    bool activeLow_;
+ int fd_, last_, stable_, value_;
+ bool activeLow_;
 };
 ```
 
@@ -449,19 +449,19 @@ ptzGpio.openPin(72);
 
 TouchScreen scr;
 while (running) {
-    int mode = modeGpio.sample();
-    int mute = muteGpio.sample();
-    int ptz  = ptzGpio.sample();
+ int mode = modeGpio.sample;
+ int mute = muteGpio.sample;
+ int ptz = ptzGpio.sample;
 
-    // 同步到串口屏设置页按钮状态
-    scr.setBco("b1", mode ? HMI_YELLOW : HMI_GRAY);
-    scr.setText("b1", mode ? "MANUAL" : "AUTO");
-    scr.setBco("b2", mute ? HMI_YELLOW : HMI_GRAY);
-    scr.setText("b2", mute ? "MUTE ON" : "MUTE OFF");
-    scr.setBco("b3", ptz  ? HMI_GREEN  : HMI_GRAY);
-    scr.setText("b3", ptz  ? "PTZ ON"  : "PTZ OFF");
+ // 同步到串口屏设置页按钮状态
+ scr.setBco("b1", mode ? HMI_YELLOW : HMI_GRAY);
+ scr.setText("b1", mode ? "MANUAL" : "AUTO");
+ scr.setBco("b2", mute ? HMI_YELLOW : HMI_GRAY);
+ scr.setText("b2", mute ? "MUTE ON" : "MUTE OFF");
+ scr.setBco("b3", ptz ? HMI_GREEN : HMI_GRAY);
+ scr.setText("b3", ptz ? "PTZ ON" : "PTZ OFF");
 
-    usleep(200 * 1000);   // 5Hz
+ usleep(200 * 1000); // 5Hz
 }
 ```
 
@@ -526,7 +526,7 @@ while (running) {
 5. **C++ 集成**：实现 `TouchScreen` 类，在 `main.cc` 启动外设线程：读 GPIO 开关 + 组装人数/等级/FPS/IP → 发串口屏指令。
 6. **触摸联动**：解析 0x65 回传，实现按钮切换页面/模式/静音/云台。
 7. **联调**：真人入镜，屏幕实时显示人数/等级（红黄绿）/FPS/IP；触摸切页、拨动开关验证功能。
-8. **论文素材**：串口屏实拍照片、USART HMI 工程截图、串口屏返回波形/日志、开关消抖前后对比。
+8. **素材**：串口屏实拍照片、USART HMI 工程截图、串口屏返回波形/日志、开关消抖前后对比。
 
 ### 验收标准
 

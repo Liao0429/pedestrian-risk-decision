@@ -1,7 +1,7 @@
 # 系统架构设计文档
 
 > 对应项目《基于 C++ 的边缘端轻量化行人感知与风险决策软件系统设计》
-> 本文描述系统总体架构、数据流、算法模块与部署拓扑，是代码与论文的桥梁。
+> 本文描述系统总体架构、数据流、算法模块与部署拓扑，是代码与的桥梁。
 
 ## 1. 系统概述
 
@@ -13,19 +13,19 @@
 
 ```mermaid
 graph TD
-    CAM["摄像头<br/>720×480 · 30fps"] --> V4L2["V4L2 采集<br/>YUV420SP"]
-    V4L2 --> PP["图像预处理<br/>letterbox → 640×640"]
-    PP --> NPU["RKNN NPU<br/>YOLOv5n · INT8"]
-    NPU --> POST["后处理<br/>NMS · 置信度过滤"]
-    POST --> PERSON["按 target_classes 过滤<br/>(默认 person，可切车辆/动物)"]
-    PERSON --> IPM["IPM 逆透视映射<br/>像素脚点 → 地面米制 (x,y)"]
-    IPM --> TOPO["复杂网络拓扑<br/>邻接矩阵 + 图拉普拉斯谱<br/>DBSCAN 人群聚类"]
-    TOPO --> RE["RiskEngine<br/>规则评估<br/>SAFE/WARNING/DANGER"]
-    IPM --> ED["EnhancedDecision 增强决策<br/>Kalman 平滑 + 谱特征 + FSM 时序"]
-    ED --> RE
-    RE --> OVERLAY["画面叠加<br/>检测框 + 风险信息条"]
-    OVERLAY --> RTSP["RTSP 推流<br/>rtsp://IP:554/live/0"]
-    RTSP --> CLIENT["监控终端"]
+ CAM["摄像头<br/>720×480 · 30fps"] --> V4L2["V4L2 采集<br/>YUV420SP"]
+ V4L2 --> PP["图像预处理<br/>letterbox → 640×640"]
+ PP --> NPU["RKNN NPU<br/>YOLOv5n · INT8"]
+ NPU --> POST["后处理<br/>NMS · 置信度过滤"]
+ POST --> PERSON["按 target_classes 过滤<br/>(默认 person，可切车辆/动物)"]
+ PERSON --> IPM["IPM 逆透视映射<br/>像素脚点 → 地面米制 (x,y)"]
+ IPM --> TOPO["复杂网络拓扑<br/>邻接矩阵 + 图拉普拉斯谱<br/>DBSCAN 人群聚类"]
+ TOPO --> RE["RiskEngine<br/>规则评估<br/>SAFE/WARNING/DANGER"]
+ IPM --> ED["EnhancedDecision 增强决策<br/>Kalman 平滑 + 谱特征 + FSM 时序"]
+ ED --> RE
+ RE --> OVERLAY["画面叠加<br/>检测框 + 风险信息条"]
+ OVERLAY --> RTSP["RTSP 推流<br/>rtsp://IP:554/live/0"]
+ RTSP --> CLIENT["监控终端"]
 ```
 
 **两条并行决策路径**：
@@ -42,7 +42,7 @@ graph TD
 ### 3.2 几何层（IPM 逆透视映射）
 - 用 `cv::getPerspectiveTransform` 将画面底部地面梯形（近大远小）映射到地面 6m×4m 米制坐标。
 - 行人脚点（box 底边中心）经单应矩阵 H 映射为地面坐标 `(x,y)`，消除透视畸变对"距离/密度"的影响。
-- 关键代码：`main.cc::mapCoordinates()`、`src/algorithms/ipm_calibrate.py`。
+- 关键代码：`main.cc::mapCoordinates`、`src/algorithms/ipm_calibrate.py`。
 
 ### 3.3 拓扑层（复杂网络分析）
 - 以地面米制坐标为节点，按 `edge_dist`（默认 2.0m）建邻接矩阵。
@@ -63,13 +63,13 @@ graph TD
 
 ```
 摄像头帧(720×480 YUV) → letterbox(640×640) → NPU推理
-  → NMS → person 检测框(left,top,right,bottom,prop)
-  → 脚点 (px, py) = (水平中心, 框底边)
-  → IPM: mapCoordinates → 地面米制 (gx, gy)
-  → 收集 groundPts[]
-  → (A) riskEngine.addPedestrian → computeFeatures → evaluate → CrowdLevel
-  → (B) enhancedDecision.processFrame(groundPts) → EnhancedResult{level,n,density,r_gcc,fiedler}
-  → 画框 + 风险信息条 → RTSP
+ → NMS → person 检测框(left,top,right,bottom,prop)
+ → 脚点 (px, py) = (水平中心, 框底边)
+ → IPM: mapCoordinates → 地面米制 (gx, gy)
+ → 收集 groundPts[]
+ → (A) riskEngine.addPedestrian → computeFeatures → evaluate → CrowdLevel
+ → (B) enhancedDecision.processFrame(groundPts) → EnhancedResult{level,n,density,r_gcc,fiedler}
+ → 画框 + 风险信息条 → RTSP
 ```
 
 ## 5. 模块清单
@@ -91,9 +91,9 @@ graph TD
 
 ```mermaid
 graph LR
-    PC["本机 (Win, GPU 1080Ti)<br/>PC 端实验 / 训练"] -- 同步源码 --> OLD["老电脑 (Ubuntu 22.04)<br/>ARM 交叉编译<br/>gcc-arm-11.2"]
-    OLD -- scp 部署 --> BOARD["Luckfox Pico Max (RV1106)<br/>192.168.0.136<br/>sudo ./luckfox_pico_rtsp_yolov5"]
-    BOARD -- "RTSP (H.264)" --> MONITOR["监控终端 / 浏览器"]
+ PC["本机 (Win, GPU 1080Ti)<br/>PC 端实验 / 训练"] -- 同步源码 --> OLD["老电脑 (Ubuntu 22.04)<br/>ARM 交叉编译<br/>gcc-arm-11.2"]
+ OLD -- scp 部署 --> BOARD["Luckfox Pico Max (RV1106)<br/>192.168.0.136<br/>sudo ./luckfox_pico_rtsp_yolov5"]
+ BOARD -- "RTSP (H.264)" --> MONITOR["监控终端 / 浏览器"]
 ```
 
 - 本机（GPU）负责大规模真实数据集实验与算法验证。
