@@ -1,0 +1,140 @@
+# -*- coding: utf-8 -*-
+"""消融实验（Ablation Study）——论文核心工作量章节。
+对代表性视频，分别关闭/开启 Kalman / 谱特征 / FSM，量化各组件的贡献。
+配置组合：
+  A. 基线（无 Kalman、无谱特征、无 FSM）：逐帧规则判定
+  B. +Kalman（仅跟踪平滑）
+  C. +Kalman + 谱特征
+  D. +Kalman + 谱特征 + FSM（完整增强）
+输出：每视频每组等级分布/切换次数 + 汇总图 docs/figures/fig_ablation.png
+运行：python scripts/ablation_study.py
+"""
+import sys, os, json, cv2, time
+sys.path.insert(0, r"H:/PedestrianRiskDecision/scripts")
+os.chdir(r"H:/PedestrianRiskDecision")
+from ultralytics import YOLO  # noqa: E402
+from crowd_test import get_homography  # noqa: E402
+from crowd_test_enhanced import (detect_pedestrians, compute_features,
+                                 load_config)  # noqa: E402
+from src.algorithms.kalman_tracker import KalmanTracker  # noqa: E402
+from src.algorithms.risk_fsm import RiskFSM, RiskFSMConfig  # noqa: E402
+from src.algorithms.graph_laplacian import compute_laplacian_features  # noqa: E402
+
+VIDEOS = ["mixkit_134", "mixkit_13192", "mixkit_3428", "mixkit_4519",
+          "mixkit_4178", "mixkit_50134"]
+COMBOS = [
+    ("A 基线(无增强)", False, False, False),
+    ("B +Kalman",      True,  False, False),
+    ("C +Kalman+谱特征", True, True,  False),
+    ("D 完整(增强)",    True,  True,  True),
+]
+
+
+def rule_level(n, rho, gcc, cfg):
+    d, w = cfg["danger"], cfg["warning"]
+    if n >= d["n"] or rho >= d["rho"] or gcc >= d["gcc"]:
+        return "DANGER"
+    if n >= w["n"] or rho >= w["rho"] or gcc >= w["gcc"]:
+        return "WARNING"
+    return "SAFE"
+
+
+def run_one(model, video, H, cfg, edge_dist, use_kalman, use_spectral, use_fsm):
+    cap = cv2.VideoCapture(video)
+    fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
+    tracker = KalmanTracker(dt=1.0 / max(fps, 1), gate_dist=edge_dist) if use_kalman else None
+    fsm = RiskFSM(RiskFSMConfig(**(cfg.get("temporal", {}) if cfg else {}))) if use_fsm else None
+    levels = []
+    now_ms = 0
+    while True:
+        ok, frame = cap.read()
+        if not ok:
+            break
+        _, _, pts = detect_pedestrians(model, frame, 0.25, 640, 0, H, None, [0])
+        if use_kalman and tracker is not None:
+            states = tracker.update(pts)
+            smooth = [(s[0], s[1]) for s in states.values()]
+        else:
+            smooth = pts
+        n, m, density, r_gcc, clustering = compute_features(smooth, edge_dist)
+        feat = {"n": n, "m": m, "density": density, "r_gcc": r_gcc, "clustering": clustering}
+        if use_spectral and smooth:
+            try:
+                spec = compute_laplacian_features(smooth, edge_dist)
+                feat.update({k: spec.get(k, 0.0) for k in
+                             ["fiedler", "spectral_radius", "algebraic_connectivity", "eig_entropy"]})
+            except Exception:
+                pass
+        if use_fsm and fsm is not None:
+            fsm.update({"n": n, "density": density, "r_gcc": r_gcc}, now_ms)
+            lv = fsm.level
+        else:
+            lv = rule_level(n, density, r_gcc, cfg)
+        levels.append(lv)
+        now_ms += int(1000.0 / max(fps, 1))
+    cap.release()
+    from collections import Counter
+    dist = dict(Counter(levels))
+    switches = sum(1 for i in range(1, len(levels)) if levels[i] != levels[i - 1])
+    return {"frames": len(levels), "switches": switches, "dist": dist}
+
+
+def main():
+    model = YOLO("yolov8n.pt")
+    cfg = load_config("config/default_config.json")
+    edge_dist = cfg.get("edge_dist_m", 2.0)
+
+    # 预计算每视频 H
+    H_cache = {}
+    for name in VIDEOS:
+        vp = f"dataset/videos50/{name}.mp4"
+        cap = cv2.VideoCapture(vp)
+        ok, frame = cap.read()
+        if ok:
+            H_cache[name] = get_homography(frame.shape[1], frame.shape[0])
+        cap.release()
+
+    summary = {"videos": VIDEOS, "combos": [c[0] for c in COMBOS], "results": {}}
+    for name in VIDEOS:
+        summary["results"][name] = {}
+        vp = f"dataset/videos50/{name}.mp4"
+        for label, uk, us, uf in COMBOS:
+            r = run_one(model, vp, H_cache[name], cfg, edge_dist, uk, us, uf)
+            summary["results"][name][label] = r
+            print(f"{name:14s} {label:16s} 切换{r['switches']:3d} 分布{r['dist']}", flush=True)
+        print("---", flush=True)
+
+    os.makedirs("results/rerun", exist_ok=True)
+    with open("results/rerun/_ablation.json", "w", encoding="utf-8") as f:
+        json.dump(summary, f, ensure_ascii=False, indent=2)
+
+    # 绘图：每视频切换次数对比
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    plt.rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimHei", "DejaVu Sans"]
+    plt.rcParams["axes.unicode_minus"] = False
+    labels = [c[0] for c in COMBOS]
+    nv = len(VIDEOS)
+    fig, axes = plt.subplots(2, 3, figsize=(15, 8))
+    axes = axes.flatten()
+    for idx, name in enumerate(VIDEOS):
+        ax = axes[idx]
+        vals = [summary["results"][name][lbl]["switches"] for lbl in labels]
+        bars = ax.bar(labels, vals, color=["#95a5a6", "#5dade2", "#af7ac5", "#2ecc71"], edgecolor="black")
+        for b, v in zip(bars, vals):
+            ax.text(b.get_x() + b.get_width() / 2, v + 0.3, str(v), ha="center", fontsize=9)
+        ax.set_title(name)
+        ax.set_ylabel("等级切换次数")
+        ax.tick_params(axis="x", rotation=15)
+        ax.set_ylim(0, max(vals) * 1.25)
+    fig.suptitle("消融实验：各组件对等级稳定性的贡献（切换次数越低越稳定）", fontsize=14)
+    fig.tight_layout()
+    os.makedirs("docs/figures", exist_ok=True)
+    fig.savefig("docs/figures/fig_ablation.png", dpi=150)
+    plt.close(fig)
+    print("消融结果已保存 results/rerun/_ablation.json + docs/figures/fig_ablation.png")
+
+
+if __name__ == "__main__":
+    main()

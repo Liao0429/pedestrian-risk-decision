@@ -83,6 +83,12 @@ pedestrian-risk-decision/
 ![视频增强前后对比](docs/figures/fig3_before_after.png)  
 ![视频增强等级分布](docs/figures/fig4_video_level.png)
 
+### 消融实验（各组件贡献）
+
+![消融实验](docs/figures/fig_ablation.png)
+
+- **Kalman 跟踪平滑**使平均切换次数下降约 67%（35.2 → 11.7），**FSM 时序决策**进一步稳定（→ 4.0）；谱特征提升风险语义准确性。详见 `docs/ABLATION_STUDY.md`。
+
 ### 🎬 真实检测效果视频
 
 **增强算法效果视频**（点击封面观看，真实视频处理结果）：
@@ -138,6 +144,7 @@ make test        # 编译并运行增强决策/JSON 配置/阈值引擎单元测
 | `docs/DEMO_SCRIPT.md` | 答辩现场演示脚本（讲稿/故障预案，8-10分钟） |
 | `docs/PERFORMANCE_COMPARISON.md` | 性能对比实验报告 |
 | `docs/COMPARISON.md` | 增强算法前后对比（真实数据 + 代价/下降方面） |
+| `docs/ABLATION_STUDY.md` | 消融实验（Kalman/谱特征/FSM 各组件贡献） |
 | `docs/hardware/` | 硬件扩展（舵机/语音/大屏/开关/PCB） |
 | `docs/experiment_results.md` | 30 张图基线实验报告（早期） |
 
