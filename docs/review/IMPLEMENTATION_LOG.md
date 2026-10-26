@@ -368,3 +368,52 @@
 - `pytest tests/` → **158 passed**（150 原有 + 8 新增谱实验测试）。
 - 未修改生产代码（risk_fsm.py / enhanced_decision.cc 零改动）→ 无需回退；
   实验脚本与结果 JSON 已提交，可随时重跑复现。
+
+---
+
+## 八、NEON 图像预处理优化（2026-10-27，P1-6 性能优化实施）
+
+> 动机：阶段五/六真机打点定位 CPU 预处理为第一瓶颈——`cvt_resize`（YUV→BGR）~45ms
+> + `letterbox`（resize+BGR2RGB+memcpy）~91ms，合计 ~136ms/帧，占帧间隔 85%。
+> 本阶段新增 `preprocess.{h,cc}` 模块，把预处理合并为两条单遍路径并加入 NEON 加速。
+> 对应提交：`90e3186`（文件随并行提交混入）、`d89b43d`、`fcad283`、`eb446da`。
+
+### 1. 实现内容
+
+- **`yuv420sp_to_bgr`**：NV12 → BGR 全帧（供画框与 VENC 编码显示）。NEON 路径
+  （`__ARM_NEON` 条件编译）每 8 像素一批：`vld1_u8` 取 Y、`vld1+vtrn` 展开 UV
+  （NV12 水平 2x 抽样：8 像素仅 4 对 UV，避免越界读）、`vmull/vmlal/vmlsl` 定点
+  乘加（12 位小数系数），`vst3_u8` 交织写 RGB。
+- **`yuv420sp_to_rgb_letterbox`**：直接从 NV12 采样生成 RGB letterbox 供 RKNN。
+  每输出像素取 4 个源像素 Y/U/V（NV12 块共享）→ 各自转 BGR 并 **clamp**（与
+  OpenCV `uint8` 中间缓冲语义一致）→ 定点 bilinear 插值（15 位权重，OpenCV
+  中心对齐坐标 `src=(dst+0.5)*scale-0.5`）→ BGR→RGB 写 RKNN 输入。
+- **`letterbox_prepare`**：一次性预计算缩放几何与行列映射表（定点权重），
+  每帧仅执行整数插值，无浮点、无 OpenCV 中间缓冲、无每帧重复计算。
+- **修复颜色语义 bug**：旧代码 `cv::COLOR_YUV420sp2BGR` 的枚举值
+  `== COLOR_YUV2BGR_NV21`（NV21 语义），而 Rockchip VI `RK_FMT_YUV420SP` 是
+  NV12——旧流程存在系统性红蓝互换+色偏（后续 BGR2RGB 只做了二次翻转，G 通道
+  仍偏）。新模块使用正确 NV12 语义。
+- **模型输入尺寸去硬编码**：letterbox 目标尺寸改为 `rknn_app_ctx.model_width/
+  height`（RKNN 实际查询值），不再假设 640×640。
+
+### 2. 验证（多层闭环）
+
+| 验证项 | 结果 |
+|---|---|
+| 算法等价性（Python 原型 vs OpenCV） | 随机图 max_diff=1（PSNR 57），纯色 0，灰度 1 |
+| 黄金数据（`generate_preprocess_golden.py`，OpenCV 正确 NV12 参考） | 9 用例（纯色/渐变/噪声/纹理/小尺寸/非对齐） |
+| C++ 主机测试 `test_preprocess.cc` | **174 项全部通过**，与 OpenCV 参考 max_diff≤2 |
+| 交叉编译（`-O2 -mfpu=neon -mfloat-abi=hard`） | **通过**（修复 NEON 类型错误后） |
+| 板端 NEON vs 标量一致性（`test_preprocess_neon.cc`） | 开发板实测 **3 轮 max_diff=0 PASS** |
+| Python 回归 `pytest tests/` | **158 passed** |
+
+### 3. 遗留（如实）
+
+- **真机部署与性能对比未做**：新预处理二进制尚未部署到开发板生产服务
+  （`pedestrian-risk.service`）。部署需要授权，且应选择低人流时段。
+  部署后通过 `[PROFILE]` 对比 `cvt_resize/letterbox` 耗时（阶段五基线：
+  44-91ms/44-91ms，合计 ~136ms），预期合计降至 30-50ms，帧率 6.3→10+ FPS。
+- NEON 版本未覆盖 letterbox 内层（该路径为定点标量，已消除浮点与中间缓冲；
+  NEON 化留作 P2）。
+- `90e3186` 提交中混入了本模块文件（并行会话误并），历史未重写（保持可追溯）。
