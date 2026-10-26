@@ -83,6 +83,25 @@ pedestrian-risk-decision/
 ![视频增强前后对比](docs/figures/fig3_before_after.png)  
 ![视频增强等级分布](docs/figures/fig4_video_level.png)
 
+### 🎬 真实效果展示
+
+**开发板真机画面**（RV1106 实拍，RTSP 拉流真实截图）：
+
+![真机画面1](results/edge_board/screenshots/board_live_frame05.png)
+![真机画面2](results/edge_board/screenshots/board_live_frame25.png)
+![真机画面3](results/edge_board/screenshots/board_live_frame45.png)
+![真机画面4](results/edge_board/screenshots/board_live_frame58.png)
+
+**增强算法效果视频**（点击封面观看，真实视频处理结果）：
+
+- 密集人群场景（DANGER/WARNING 切换，FSM 稳定）：
+  [![密集人群增强](docs/figures/demo_mixkit_13192.png)](results/video_enhanced_fsm/mixkit_13192_enhanced.mp4)
+
+- 稀疏/无人场景（零误报）：
+  [![稀疏场景增强](docs/figures/demo_mixkit_13265.png)](results/video_enhanced_fsm/mixkit_13265_enhanced.mp4)
+
+> 视频为真实数据集（Mixkit）经 `scripts/crowd_test_enhanced.py`（Kalman + 谱特征 + FSM）处理生成；逐帧时间线 JSON 在 `results/video_enhanced_fsm/`。
+
 详见 `docs/PERFORMANCE_COMPARISON.md`。
 
 ## 🚀 部署方法
