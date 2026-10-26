@@ -9,10 +9,11 @@
 
 - **轻量化检测**：YOLOv5n + INT8 量化，在边缘端 NPU 上实时检测行人（C++/RKNN）
 - **几何校正**：逆透视映射（IPM）把像素脚点映射到地面米制坐标，消除透视畸变
-- **复杂网络拓扑**：邻接矩阵 + 图拉普拉斯谱分析（Fiedler 值/谱半径/代数连通度）+ DBSCAN 人群聚类
-- **时序决策**：Kalman/ByteTrack 多目标跟踪 + EMA 平滑 + FSM 有限状态机（滞回防抖）
+- **复杂网络拓扑**：邻接矩阵 + 图拉普拉斯网络特征（密度/最大连通分量占比/谱特征）驱动风险评分；DBSCAN 聚类模块独立实现并通过单测（可选扩展，未接入主循环）
+- **时序决策**：多目标 Kalman 跟踪（最近邻关联）+ FSM 有限状态机（滞回防抖/确认帧/DANGER 保持）；ByteTrack/EMA 模块独立实现并通过单测（可选扩展）
 - **风险分级**：实时输出 **SAFE / WARNING / DANGER** 三级风险
 - **多目标可切换**：通过 `target_classes` 配置检测目标类别（人[0]/车辆[2,5,7,3]/狗[16]/猫[15]/动物[14,18,19,20,21]），一键切换危险目标聚集报警
+- **真机性能**：NEON 优化预处理（CPU 预处理 136ms→33ms），实测 **7.46 FPS**、内存 ~11MB、1 小时+ 长稳零重启（看门狗 + 有限超时）
 - **网页免安装观看**：开发板 go2rtc 转 WebRTC/HLS，手机/电脑浏览器直接打开网页看监控（`docs/WEB_VIEWER.md`）
 - **可配置**：规则阈值、目标类别与**外部 IPM 标定文件**通过 JSON 配置文件加载（`config/default_config.json`；`homography_file` 指向文本 3x3 单应，相机位姿变化无需重编译）
 - **可扩展硬件**：支持双舵机云台、语音告警、彩色触控屏、物理开关（`docs/hardware/`）
@@ -23,16 +24,15 @@
 graph TD
  A[摄像头<br/>720×480] --> B["YOLOv5n 目标检测<br/>RKNN · INT8 · NPU<br/>target_classes 过滤（默认人）"]
  B --> C["IPM 逆透视映射<br/>像素脚点 → 地面米制坐标"]
- C --> D["复杂网络拓扑分析<br/>邻接矩阵 + 图拉普拉斯谱<br/>DBSCAN 人群聚类"]
- C --> E["增强决策模块 EnhancedDecision<br/>Kalman 平滑 + 谱特征 + FSM 时序"]
- D --> F["RiskEngine 规则评估<br/>SAFE / WARNING / DANGER"]
- E --> F
+ C --> D["复杂网络拓扑分析<br/>邻接矩阵 + 图拉普拉斯特征<br/>n / density / r_gcc / 谱特征"]
+ D --> E["增强决策模块 EnhancedDecision<br/>Kalman 平滑 + FSM 时序决策"]
+ E --> F["风险分级输出<br/>SAFE / WARNING / DANGER"]
  F --> G["画面叠加 + RTSP 推流"]
  G --> H[监控终端]
  G --> I["go2rtc 网页观看<br/>WebRTC/HLS · 浏览器直接看"]
 ```
 
-**流水线**：前端轻量化感知（YOLOv5n+INT8）→ 几何空间校正（IPM）→ 图论拓扑分析（图拉普拉斯/DBSCAN）→ 时序风险决策（Kalman/FSM）→ 输出三级风险并 RTSP 推流。详细架构见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)。
+**流水线**：前端轻量化感知（YOLOv5n+INT8）→ 几何空间校正（IPM）→ 图论拓扑分析（图拉普拉斯特征）→ 时序风险决策（Kalman/FSM）→ 输出三级风险并 RTSP 推流。详细架构见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)。
 
 ## 📁 目录结构
 
@@ -43,16 +43,16 @@ pedestrian-risk-decision/
 │ └── videos50/ # 111 条真实行人/人群视频（Mixkit，已校验）
 ├── scripts/ # 测试脚本
 │ ├── crowd_test.py # 图片模式（基线）
-│ ├── crowd_test_enhanced.py # 视频模式（Kalman+谱特征+FSM 增强）
-│ └── start_demo.sh # 开发板一键启动（RTSP + 网页观看，用）
+│ ├── crowd_test_enhanced.py # 视频模式（Kalman+FSM 增强）
+│ └── start_demo.sh # 开发板一键启动（RTSP + 网页观看）
 ├── src/
 │ ├── algorithms/ # 算法模块（图拉普拉斯/Kalman/ByteTrack/DBSCAN/FSM/IPM/EMA，含 Python+C++ 接口）
 │ ├── hardware/ # 硬件驱动（servo/pan_tilt/voice_alert）
-│ └── luckfox_rtsp_yolov5/ # 开发板 C++ 工程（RKNN）
+│ └── luckfox_rtsp_yolov5/ # 开发板 C++ 工程（RKNN，NEON 优化）
 ├── config/ # 阈值配置
-├── results/ # 实验结果（图片基线 + 视频增强）
+├── results/ # 实验结果（图片基线 + 视频增强 + 消融 + 真机性能）
 ├── tests/ # 算法单元测试（全通过）
-├── docs/ # 系统原理/算法优化/硬件方案/集成方案/性能对比/PCB设计/语音方案
+├── docs/ # 系统原理/架构/算法/硬件/演示/工作日志
 └── config/default_config.json
 ```
 
@@ -74,7 +74,7 @@ pedestrian-risk-decision/
 ![图片基线等级分布](docs/figures/fig1_level_dist.png) 
 ![图片基线检出率](docs/figures/fig2_detect_rate.png)
 
-### 视频增强（真实视频，Kalman+谱特征+FSM，111 条全量重跑）
+### 视频增强（真实视频，Kalman+FSM，111 条全量重跑）
 - **全量 111 条真实视频（45021 帧）**：等级分布 **SAFE 25669 / WARNING 11545 / DANGER 7807**，平均每条等级切换 **4.00 次**（FSM 滞回稳定），40 条出现 DANGER，**31 条全程输出 SAFE（系统未报警）**（无人工真值，无法判定未报警是正确不报还是漏报）
 - 密集人群（`mixkit_13192`）：**DANGER 179 / WARNING 120 / SAFE 6**（305 帧），等级切换仅 4 次 → 稳定（公平基线 AND 规则为 48 次/视频）
 - 稀疏/无人场景（`mixkit_50134`，光照正常）：388 帧全程 SAFE（该场景无行人，未触发告警）
@@ -87,7 +87,25 @@ pedestrian-risk-decision/
 
 ![消融实验](docs/figures/fig_ablation.png)
 
-- **Kalman 跟踪平滑**使平均切换次数下降约 67%（35.2 → 11.7），**FSM 时序决策**进一步稳定（→ 4.0）；谱特征作为图连通性指标参与计算与显示（收益评估见消融数据）。详见 `results/rerun/_ablation.json` 与 `docs/figures/fig_ablation.png`。
+- **A 基线（无增强）**：平均切换 35.2 次
+- **B +Kalman 平滑**：→ 11.7 次（↓67%）
+- **C +Kalman+谱特征**：与 B 相同（11.7 次）——谱特征已计算并显示，但未接入风险评分；接入实验（M1/M2，111 条视频离线重算）证明无独立语义增益，**裁决不采纳**，保留为显示指标
+- **D 完整（+FSM 时序决策）**：→ 4.0 次（滞回/确认帧/DANGER 保持带来最终稳定）
+
+详见 `results/rerun/_ablation.json` 与 `docs/figures/fig_ablation.png`。
+
+### ⚡ 真机性能（Luckfox Pico Max / RV1106）
+
+| 指标 | 结果 |
+|---|---|
+| 帧率（NEON 优化后） | **6.30 → 7.46 FPS（+18%）** |
+| CPU 预处理耗时（letterbox+RGB） | **136ms → 33ms（-76%，NEON）** |
+| 内存占用（RSS） | **~10.5-10.9MB** |
+| 长稳（systemd 看门狗 + 有限超时） | **1 小时+ 零重启、零错误**（t0~t4 快照） |
+| 板端黄金测试 | **174/174 通过**（NEON vs 标量对照） |
+| 主链路保护 | VI/VENC 1s 有限超时、连续失败 30 次主动退出交由看门狗重启 |
+
+性能打点日志与长稳快照见 `results/edge_board/`。
 
 ### 🎬 真实检测效果视频
 
@@ -99,7 +117,7 @@ pedestrian-risk-decision/
 - 稀疏/无人场景（真实少人，未触发告警）：
  [![稀疏场景增强](docs/figures/demo_mixkit_50134.png)](results/demo/mixkit_50134_enhanced.mp4)
 
-> 视频为真实数据集（Mixkit）经 `scripts/crowd_test_enhanced.py`（Kalman + 谱特征 + FSM）处理生成；逐帧时间线 JSON 在 `results/rerun/video_enhanced/` 与 `results/video_enhanced_fsm/`。
+> 视频为真实数据集（Mixkit）经 `scripts/crowd_test_enhanced.py`（Kalman + FSM）处理生成；逐帧时间线 JSON 在 `results/rerun/video_enhanced/` 与 `results/video_enhanced_fsm/`。
 
 性能对比图表见 `docs/figures/`。
 
@@ -109,15 +127,15 @@ pedestrian-risk-decision/
 ```bash
 # 图片基线
 python scripts/crowd_test.py --input dataset/images500 --output results/images500_baseline --device 0
-# 视频增强（Kalman + 谱特征 + FSM）
+# 视频增强（Kalman + FSM）
 python scripts/crowd_test_enhanced.py --input <video.mp4> --output results/video_enhanced --spectral --device 0
 ```
 
 ### 开发板部署（Luckfox RV1106，C++/RKNN）
 1. 老电脑（Ubuntu）用交叉编译工具链编译 `src/luckfox_rtsp_yolov5/` 工程（架构见 `docs/ARCHITECTURE.md`，硬件方案见 `docs/hardware/`）
-2. 产物 scp 到开发板，`sudo ./luckfox_pico_rtsp_yolov5` 运行
+2. 产物 scp 到开发板，`sudo ./luckfox_pico_rtsp_yolov5` 运行（systemd 托管 + 看门狗自动重启）
 3. RTSP 推流：`rtsp://<板子IP>:554/live/0`
-4. 增强算法（谱特征/ByteTrack/FSM）的 C++ 头文件在 `src/algorithms/*.h`，可交叉编译集成
+4. 算法模块（图论/Kalman/FSM）的 C++ 头文件在 `src/algorithms/*.h`，可交叉编译集成
 5. **一键启动**：`sudo bash scripts/start_demo.sh` 自动拉起 RTSP + 网页观看并打印访问地址（见 `docs/WEB_VIEWER.md`）
 
 ### C++ 算法主机测试与构建（无需开发板）
@@ -127,7 +145,7 @@ make test # 编译并运行增强决策/JSON 配置/阈值引擎单元测试（�
 # 等价 CMake 方式：
 # cmake -S . -B build && cmake --build build && ctest --test-dir build
 ```
-- 测试覆盖：`EnhancedDecision`（Kalman+谱特征+FSM 确定性输出）、`minijson` JSON 解析、`RiskConfig` 运行时阈值读取。
+- 测试覆盖：`EnhancedDecision`（Kalman+FSM 确定性输出）、`minijson` JSON 解析、`RiskConfig` 运行时阈值读取、`Preprocess` NEON vs 标量对照。
 - 交叉编译完整工程：`make luckfox LUCKFOX_SDK_ROOT=<SDK路径>`（需 Luckfox SDK 库与工具链）。
 - 阈值通过 `config/default_config.json` 运行时加载（`RiskEngine::setConfig`），失败自动回退默认值，“可配置”承诺在 C++ 端落地。
 
@@ -135,21 +153,22 @@ make test # 编译并运行增强决策/JSON 配置/阈值引擎单元测试（�
 
 | 文档 | 内容 |
 |---|---|
+| `docs/工作日志.md` | 开发进度日志（时间/改动/commit/进度） |
 | `docs/SYSTEM_PRINCIPLE.md` | 系统实现原理与算法详解 |
 | `docs/ARCHITECTURE.md` | 系统架构与模块划分 |
 | `docs/algorithms.md` | 算法设计（C++/Python 双实现、黄金回归说明） |
 | `docs/WEB_VIEWER.md` | 网页免安装观看监控（go2rtc，手机/电脑浏览器） |
 | `docs/DEMO_VIDEO.md` | 真实检测效果视频说明 |
-| `docs/AI_needle2_analysis.md` | 端侧 AI 智能体（Needle 2，linux-armv7）接入分析 |
 | `docs/LUCKFOX_VOICE_ASSISTANT_PLAN.md` | 语音对话大模型方案（网络/本地双方案） |
 | `docs/hardware/` | 硬件扩展（舵机/语音/大屏/开关/PCB） |
 
 ## 🧩 可扩展模块（后续）
 
 - **语音对话大模型**（网络/本地双方案）：`docs/LUCKFOX_VOICE_ASSISTANT_PLAN.md`
-- **端侧 AI 智能体**（Needle 2，linux-armv7 支持）：`docs/AI_needle2_analysis.md`
 - **PCB 底板打样**：`docs/hardware/PCB_BOARD_DESIGN.md`
+- **DBSCAN 人群聚类 / ByteTrack 跟踪 / EMA 平滑**：独立实现并通过单测（`src/algorithms/`），可按需接入主循环
 
 ## 📌 说明
 
 - 所有实验数据均来自真实数据集，可复现。
+- 论文/答辩/评审类内部文档仅保存在本地（`H:\毕设论文\`），不入库；GitHub 仅保留代码、配置、测试与技术文档。
