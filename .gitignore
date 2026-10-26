@@ -44,3 +44,6 @@ results/rerun/**/*.mp4
 results/rerun/**/vis/
 results/rerun/video_enhanced/*/
 results/rerun/video_baseline/*/
+
+# 外部 RKNN 模型调研/部署用二进制（来源见 docs，不入库）
+*.rknn
