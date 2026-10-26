@@ -14,7 +14,7 @@
 - **Risk grading**: real-time **SAFE / WARNING / DANGER** three-level output
 - **Configurable**: rule thresholds loaded from JSON (`config/default_config.json`)
 - **Edge performance**: NEON-optimized preprocessing (CPU preprocess 136ms→33ms), **7.46 FPS** measured, ~11MB RSS, 2.5h+ long-run with zero restart (watchdog + bounded timeouts)
-- **Extensible hardware**: dual-servo gimbal, voice alert, color touchscreen, physical switch (`docs/hardware/`)
+- **Extensible hardware**: dual-servo gimbal, RGB risk LED, push button, voice alert, color touchscreen, physical switch drivers ready (`docs/hardware/`)
 
 ## 🏗️ System Architecture
 
@@ -43,7 +43,7 @@ pedestrian-risk-decision/
 │ ├── crowd_test_enhanced.py # video mode (Kalman + FSM)
 ├── src/
 │ ├── algorithms/ # Algorithm modules (Graph Laplacian/Kalman/ByteTrack/DBSCAN/FSM/IPM/EMA, Python + C++)
-│ ├── hardware/ # Hardware drivers (servo/pan_tilt/voice_alert)
+│ ├── hardware/ # Hardware drivers (gpio/led/button/servo/pan_tilt/voice_alert)
 │ └── luckfox_rtsp_yolov5/ # On-board C++ project (RKNN, NEON-optimized)
 ├── config/ # Threshold config
 ├── results/ # Experimental results (image baseline + video enhanced + ablation + edge performance)
@@ -126,7 +126,8 @@ python scripts/crowd_test_enhanced.py --input <video.mp4> --output results/video
 | `docs/WEB_VIEWER.md` | Browser-based live monitoring (go2rtc) |
 | `docs/DEMO_VIDEO.md` | Real detection demo videos |
 | `docs/LUCKFOX_VOICE_ASSISTANT_PLAN.md` | Voice assistant LLM plan (cloud/local) |
-| `docs/hardware/` | Hardware extensions (servo/voice/display/switch/PCB) |
+| `docs/hardware/` | Hardware extensions (LED/button/servo/voice/display/switch/PCB) |
+| `docs/hardware/led_button_driver.md` | RGB LED + button drivers (GPIO abstraction, color mapping, debounce, tests) |
 
 ## 🧩 Extensible Modules
 

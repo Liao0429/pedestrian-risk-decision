@@ -30,7 +30,7 @@ all: test
 # ---------------------------------------------------------------------------
 # 主机单元测试
 # ---------------------------------------------------------------------------
-test: test-enhanced test-minijson test-risk-config test-golden test-preprocess
+test: test-enhanced test-minijson test-risk-config test-golden test-preprocess test-hardware
 
 test-enhanced: $(TEST_DIR)/test_enhanced_decision.cc $(SRC_DIR)/enhanced_decision.cc $(ALGO_HEADERS)
 	$(CXX) $(CXXFLAGS) $(INC) $(TEST_DIR)/test_enhanced_decision.cc $(SRC_DIR)/enhanced_decision.cc \
@@ -70,6 +70,14 @@ test-preprocess: $(TEST_DIR)/test_preprocess.cc $(SRC_DIR)/preprocess.cc \
 	$(CXX) $(CXXFLAGS) $(INC) $(TEST_DIR)/test_preprocess.cc $(SRC_DIR)/preprocess.cc \
 	    -o $(TEST_DIR)/test_preprocess
 	./$(TEST_DIR)/test_preprocess ../../tests/golden/preprocess
+
+# 硬件驱动模块（三色 LED + 按键）主机测试：使用 FakeGpio 内存替身，
+# 验证颜色映射/防抖/边沿检测逻辑，无 Linux/GPIO 依赖。
+test-hardware: $(TEST_DIR)/test_hardware_modules.cc ../hardware/gpio.h \
+               ../hardware/led.h ../hardware/button.h
+	$(CXX) $(CXXFLAGS) -I../hardware $(TEST_DIR)/test_hardware_modules.cc \
+	    -o $(TEST_DIR)/test_hardware_modules
+	./$(TEST_DIR)/test_hardware_modules
 
 # ---------------------------------------------------------------------------
 # 开发板交叉编译（需 Luckfox SDK）
@@ -112,6 +120,7 @@ clean:
 	      $(TEST_DIR)/test_risk_config \
 	      $(TEST_DIR)/test_golden_regression \
 	      $(TEST_DIR)/test_preprocess \
+	      $(TEST_DIR)/test_hardware_modules \
 	      luckfox_pico_rtsp_yolov5
 
 help:

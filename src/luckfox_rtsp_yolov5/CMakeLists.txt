@@ -65,6 +65,15 @@ else()
 endif()
 add_test(NAME test_risk_config COMMAND test_risk_config)
 
+# 硬件驱动模块主机测试：三色 LED 颜色映射 + 按键防抖/边沿检测
+# （使用 FakeGpio 内存替身，无 Linux/GPIO 依赖，PC/CI 可直接运行）
+add_executable(test_hardware_modules
+  tests/test_hardware_modules.cc
+)
+target_include_directories(test_hardware_modules PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/../hardware)
+add_test(NAME test_hardware_modules COMMAND test_hardware_modules)
+
 # 黄金回归：C++ 实现读取 tests/golden/*.json（scripts/generate_golden.py 用
 # Python 参考实现生成），防止 C++/Python 双实现漂移。显式传入绝对 golden 目录，
 # 因为 ctest 的工作目录是 build 目录。
