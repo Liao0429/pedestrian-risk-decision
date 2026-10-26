@@ -87,11 +87,26 @@ int main(int argc, char *argv[]) {
   cv::Point2f dstPts[4] = { cv::Point2f(-3,3), cv::Point2f(3,3),
                             cv::Point2f(3,-1), cv::Point2f(-3,-1) };
   cv::Mat H = cv::getPerspectiveTransform(srcPts, dstPts);
-  RiskEngine riskEngine;
-  riskEngine.setHomography(H);
   // 运行时加载阈值配置（默认 ./config/default_config.json，缺失时回退到默认值）
   pedestrian::RiskConfig riskCfg =
       pedestrian::loadRiskConfigOr("./config/default_config.json", pedestrian::RiskConfig());
+  // 若配置了外部 IPM 标定文件（homography_file），则用其替换默认硬编码单应，
+  // 相机位姿变化后无需重编译（响应 review2 P1-8：单应矩阵硬编码）。
+  if (!riskCfg.homography_file.empty()) {
+      cv::Mat H_ext;
+      if (pedestrian::loadHomographyFromFile(riskCfg.homography_file, H_ext)) {
+          H = H_ext;
+          fprintf(stderr, "[IPM] 已从外部标定文件加载单应矩阵: %s\n",
+                  riskCfg.homography_file.c_str());
+      } else {
+          fprintf(stderr,
+                  "[IPM] 警告: 无法加载外部标定文件 %s（不存在或格式非法），"
+                  "使用默认硬编码单应\n",
+                  riskCfg.homography_file.c_str());
+      }
+  }
+  RiskEngine riskEngine;
+  riskEngine.setHomography(H);
   riskEngine.setConfig(riskCfg);
   // 增强决策模块默认启用（不再依赖编译宏开关）
   pedestrian::EnhancedConfig enhancedCfg;

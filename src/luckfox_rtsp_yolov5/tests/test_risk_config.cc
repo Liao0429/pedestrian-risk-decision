@@ -29,6 +29,7 @@
 #if __has_include(<opencv2/core/core.hpp>)
 #define HAS_OPENCV 1
 #include "risk_engine.h"
+#include "ipm_transform.h"
 #else
 #define HAS_OPENCV 0
 #endif
@@ -186,6 +187,92 @@ void test_load_or_fallback() {
     CHECK_EQ(cfg.danger.n, 99.0);  // 文件不存在 -> 返回 fallback
 }
 
+void test_homography_file_field() {
+    // 缺失 -> 默认空串（未配置）
+    writeFile(R"({"edge_dist_m": 2.5})");
+    pedestrian::RiskConfig cfg = pedestrian::loadRiskConfig(kTmpPath);
+    CHECK(cfg.homography_file.empty());
+    std::remove(kTmpPath);
+
+    // 正常读取字符串路径
+    writeFile(R"({"homography_file": "ipm_homography.txt"})");
+    cfg = pedestrian::loadRiskConfig(kTmpPath);
+    CHECK(cfg.homography_file == "ipm_homography.txt");
+    std::remove(kTmpPath);
+
+    // 非法类型（数字）-> 抛异常
+    writeFile(R"({"homography_file": 123})");
+    bool threw = false;
+    try { pedestrian::loadRiskConfig(kTmpPath); } catch (const std::runtime_error&) { threw = true; }
+    CHECK(threw);
+    std::remove(kTmpPath);
+}
+
+#if HAS_OPENCV
+void test_load_homography_file() {
+    const char* kHPath = "tmp_ipm_homography_test.txt";
+    // 合法 3x3 文本（np.savetxt 风格，空格分隔）-> 加载成功，CV_64F，值正确
+    {
+        std::ofstream ofs(kHPath);
+        ofs << "3.0 0.5 100.0\n0.2 4.0 200.0\n0.001 0.002 1.0\n";
+        ofs.close();
+    }
+    cv::Mat H;
+    CHECK(pedestrian::loadHomographyFromFile(kHPath, H));
+    CHECK(!H.empty());
+    CHECK(H.rows == 3 && H.cols == 3);
+    CHECK(H.type() == CV_64F);
+    const double* p = reinterpret_cast<const double*>(H.data);
+    CHECK_EQ(p[0], 3.0);
+    CHECK_EQ(p[4], 4.0);
+    CHECK_EQ(p[8], 1.0);
+    std::remove(kHPath);
+
+    // 逗号分隔 CSV 也兼容（与 Python .csv 输出一致）
+    {
+        std::ofstream ofs(kHPath);
+        ofs << "1, 0, 5\n0, 1, 6\n0, 0, 1\n";
+        ofs.close();
+    }
+    CHECK(pedestrian::loadHomographyFromFile(kHPath, H));
+    CHECK_EQ(p[0], 1.0);
+    CHECK_EQ(p[5], 6.0);
+    std::remove(kHPath);
+
+    // 文件不存在 -> false
+    cv::Mat H2;
+    CHECK(!pedestrian::loadHomographyFromFile("no_such_h.txt", H2));
+
+    // 数值不足 9 个 -> false
+    {
+        std::ofstream ofs(kHPath);
+        ofs << "1 2 3\n4 5 6\n";
+        ofs.close();
+    }
+    CHECK(!pedestrian::loadHomographyFromFile(kHPath, H2));
+    std::remove(kHPath);
+
+    // 退化矩阵（分母行全 0）-> false
+    {
+        std::ofstream ofs(kHPath);
+        ofs << "1 0 0\n0 1 0\n0 0 0\n";
+        ofs.close();
+    }
+    CHECK(!pedestrian::loadHomographyFromFile(kHPath, H2));
+    std::remove(kHPath);
+
+    // loadHomographyOr：文件可加载用文件，否则回退
+    cv::Mat fb = cv::Mat::eye(3, 3, CV_64F);
+    cv::Mat out = pedestrian::loadHomographyOr("no_such_h.txt", fb);
+    CHECK(!out.empty());
+    CHECK(out.type() == CV_64F);
+}
+#else
+void test_load_homography_file() {
+    std::printf("SKIP test_load_homography_file (OpenCV 不可用)\n");
+}
+#endif
+
 #if HAS_OPENCV
 void test_risk_engine_config() {
     // 用配置把 DANGER 阈值调到很低，验证 evaluate() 使用运行时配置而非宏
@@ -225,6 +312,8 @@ int main() {
     test_class_conf_thresholds();
     test_invalid_throws();
     test_load_or_fallback();
+    test_homography_file_field();
+    test_load_homography_file();
     test_risk_engine_config();
 
     std::printf("\n%d/%d tests passed\n", g_passed, g_passed + g_failed);

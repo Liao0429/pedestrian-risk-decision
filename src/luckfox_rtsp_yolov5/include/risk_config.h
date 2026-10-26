@@ -53,6 +53,7 @@ struct RiskRule {
 struct RiskConfig {
     double   edge_dist_m = 2.0;
     bool     enable_risk_engine_fallback = false;  // 增强决策默认启用时，是否仍跑 RiskEngine 旁路（重复 computeFeatures）
+    std::string homography_file;  // 外部 IPM 单应标定文件路径（文本 3x3，与 ipm_calibrate.py 的 .txt/.csv 兼容）。空串=用默认硬编码单应（相机位姿变化时配置此字段即可，无需重编译）
     std::vector<int> target_classes{0};  // 检测目标类别集合（COCO id），默认 [0]=person；可切换 [2,5,7,3]=车辆等
     std::map<int,float> class_conf_thresholds;  // 按类别差异化置信度阈值（COCO id -> 最低置信度 0~1）。空=不区分（仅用全局 BOX_THRESH）
     RiskRule danger;                // DANGER 阈值（默认 10 / 0.55 / 0.80）
@@ -120,6 +121,14 @@ inline RiskConfig loadRiskConfig(const std::string& path) {
             throw std::runtime_error("enable_risk_engine_fallback 必须是布尔值");
         }
         cfg.enable_risk_engine_fallback = v->asBool();
+    }
+
+    // 外部 IPM 单应标定文件（可选）。空字符串=未配置（用默认硬编码单应）。
+    if (const minijson::Value* v = root.find("homography_file")) {
+        if (!v->isString()) {
+            throw std::runtime_error("homography_file 必须是字符串（外部单应标定文件路径，空串=不用）");
+        }
+        cfg.homography_file = v->asString();
     }
 
     // 按类别差异化置信度阈值（可选）：{"class_conf_thresholds": {"0":0.50, "2":0.60}}
