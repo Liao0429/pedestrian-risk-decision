@@ -75,9 +75,9 @@ pedestrian-risk-decision/
 ![图片基线检出率](docs/figures/fig2_detect_rate.png)
 
 ### 视频增强（真实视频，Kalman+谱特征+FSM，111 条全量重跑）
-- **全量 111 条真实视频（45021 帧）**：等级分布 **SAFE 25669 / WARNING 11545 / DANGER 7807**，平均每条等级切换 **4.00 次**（FSM 滞回稳定），40 条出现 DANGER，**31 条全程 SAFE（零误报）**
+- **全量 111 条真实视频（45021 帧）**：等级分布 **SAFE 25669 / WARNING 11545 / DANGER 7807**，平均每条等级切换 **4.00 次**（FSM 滞回稳定），40 条出现 DANGER，**31 条未触发风险报警**（含少量低照度场景检测器漏检，已核对说明，见 `docs/COMPARISON.md`）
 - 密集人群（`mixkit_13192`）：**DANGER 179 / WARNING 120 / SAFE 6**（305 帧），等级切换仅 4 次 → 稳定（逐帧规则基线为 46 次/视频）
-- 稀疏/无人场景（`mixkit_13265`）：281 帧全程 SAFE，**零误报**
+- 稀疏/无人场景（`mixkit_50134`，光照正常）：388 帧全程 SAFE，**零误报**
 - 算法前后对比见 `docs/COMPARISON.md`（含增强代价/下降方面）；全量明细见 `results/rerun/`
 
 ![视频增强前后对比](docs/figures/fig3_before_after.png)  
