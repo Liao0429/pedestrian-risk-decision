@@ -260,3 +260,29 @@
 - 日志：`/tmp/enhanced_latest.log` 中 `[PROFILE]` 每 90 帧一行；服务运行正常，无 `rknn_run fail`/看门狗告警。
 - 本机回归：**150 passed**（`python -m pytest tests/ -q`）。
 - 回退：板端保留 `luckfox_pico_rtsp_yolov5.before_p1-6_profile`，`mv` 回原名 + 重启服务即可。
+---
+
+## 六、手动交叉编译脚本修复 + 编译复核（2026-10-27 01:25，cron 补充）
+
+> 对应提交：`8cca61b`（docs/review/_briefs/build_o2_manual_fixed.sh 留档）＋本段文档
+> 背景：阶段五已通过 `build && make install -j4` 完成真机部署（数据见阶段五）；本阶段补一条**独立可复现的手动编译路径**，并复核代码一致性。
+
+### 1. 源码一致性复核
+- 本地 `H:/PedestrianRiskDecision/src/luckfox_rtsp_yolov5/{src,include}` 11 个文件与老电脑
+  `~/luckfox/luckfox_pico_rkmpi_example-kernel-5.10.160/example/luckfox_pico_rtsp_yolov5/{src,include}`
+  **md5 全部一致**（含 main.cc PROFILE 打点、postprocess.cc NMS classIds[j] 修复、BGR2RGB 颜色修复）。
+- 说明上一阶段同步到老电脑 example 目录的代码即当前仓库最新代码。
+
+### 2. build_o2_manual.sh 链接段 bug 修复
+- 问题：脚本编译段 `obj=$(basename $f .cc).o` 产出 `main.o`，链接段却引用 `main.cc.o` → 链接必然失败
+  （`cannot find /tmp/o2build/*.cc.o`）。此前该手动脚本从未完整跑通链接。
+- 修复：老电脑 `/home/liao/build_o2_manual.sh` 链接段 6 处 `.cc.o` → `.o`；修复版留档
+  `docs/review/_briefs/build_o2_manual_fixed.sh`。
+- 复核运行：`bash build_o2_manual.sh` → 6/6 编译通过 + 链接成功，产物
+  `/tmp/luckfox_o2`（5,816,328 B，`ELF 32-bit LSB executable, ARM, EABI5, dynamically linked`）。
+- 唯一告警：`libdrm.so.2` 链接期未找到（rkaiq 的运行时依赖，Luckfox 官方 rootfs 自带，不影响部署）。
+
+### 3. 开发板状态（只读检查，未部署）
+- `ping 192.168.0.136` OK；SSH 可连；`pedestrian-watchdog.service` active。
+- 主服务 `pedestrian-risk.service` 当时未在运行列表（可能正被 watchdog 拉起/停止），为避免干扰设备，本轮**未部署**新二进制；
+  阶段五已完成真机部署与 PROFILE 数据采集（见阶段五 §2），故无遗漏。
