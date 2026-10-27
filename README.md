@@ -44,7 +44,8 @@ pedestrian-risk-decision/
 ├── scripts/ # 测试脚本
 │ ├── crowd_test.py # 图片模式（基线）
 │ ├── crowd_test_enhanced.py # 视频模式（Kalman+FSM 增强）
-│ └── start_demo.sh # 开发板一键启动（RTSP + 网页观看）
+│ ├── start_demo.sh # 开发板一键启动（RTSP + 网页观看）
+│ └── cross_build_lvgl.sh # LVGL v8 交叉编译（老电脑→开发板 ARM 产物 + 冒烟测试）
 ├── src/
 │ ├── algorithms/ # 算法模块（图拉普拉斯/Kalman/ByteTrack/DBSCAN/FSM/IPM/EMA，含 Python+C++ 接口）
 │ ├── hardware/ # 硬件驱动（gpio/led/button/servo/pan_tilt/voice_alert/selftest/lcd_menu）
@@ -166,6 +167,7 @@ make test # 编译并运行增强决策/JSON 配置/阈值引擎单元测试（�
 | `docs/hardware/voice_module.md` | 语音告警方案（USB 喇叭推荐 / DFPlayer 兜底）与播报策略 |
 | `docs/hardware/selftest.md` | 开机硬件自检（6 项 PASS/FAIL、systemd 门禁、部署步骤） |
 | `docs/hardware/lvgl_menu.md` | 触摸屏菜单方案（LVGL 移植调研、菜单状态机框架、99 项测试、板端适配路线） |
+| `docs/hardware/lvgl_board_port.md` | 板端 LVGL 移植准备（ILI9341 接入草案：设备树修改/boot.img 签名处理/LVGL 交叉编译验证） |
 
 ## 🧩 可扩展模块（后续）
 

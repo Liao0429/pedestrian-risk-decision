@@ -41,6 +41,7 @@ pedestrian-risk-decision/
 ├── scripts/ # Test scripts
 │ ├── crowd_test.py # image mode (baseline)
 │ ├── crowd_test_enhanced.py # video mode (Kalman + FSM)
+│ └── cross_build_lvgl.sh # Cross-compile LVGL v8 for the board (ARM smoke-test binary)
 ├── src/
 │ ├── algorithms/ # Algorithm modules (Graph Laplacian/Kalman/ByteTrack/DBSCAN/FSM/IPM/EMA, Python + C++)
 │ ├── hardware/ # Hardware drivers (gpio/led/button/servo/pan_tilt/voice_alert/selftest/lcd_menu)
