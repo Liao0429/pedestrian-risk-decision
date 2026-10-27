@@ -14,7 +14,7 @@
 - **Risk grading**: real-time **SAFE / WARNING / DANGER** three-level output
 - **Configurable**: rule thresholds loaded from JSON (`config/default_config.json`)
 - **Edge performance**: NEON-optimized preprocessing (CPU preprocess 136ms→33ms), **7.46 FPS** measured, ~11MB RSS, 2.5h+ long-run with zero restart (watchdog + bounded timeouts)
-- **Extensible hardware**: dual-servo gimbal, RGB risk LED, push button, voice alert, color touchscreen, physical switch drivers ready (`docs/hardware/`)
+- **Extensible hardware**: dual-servo gimbal, RGB risk LED, debounced push button, voice alert (USB speaker + aplay, level-triggered/preemption/debounce), color touchscreen, physical switch drivers ready (`docs/hardware/`)
 
 ## 🏗️ System Architecture
 
@@ -128,6 +128,7 @@ python scripts/crowd_test_enhanced.py --input <video.mp4> --output results/video
 | `docs/LUCKFOX_VOICE_ASSISTANT_PLAN.md` | Voice assistant LLM plan (cloud/local) |
 | `docs/hardware/` | Hardware extensions (LED/button/servo/voice/display/switch/PCB) |
 | `docs/hardware/led_button_driver.md` | RGB LED + button drivers (GPIO abstraction, color mapping, debounce, tests) |
+| `docs/hardware/voice_module.md` | Voice alert solution (USB speaker recommended / DFPlayer fallback) and alert policy |
 
 ## 🧩 Extensible Modules
 

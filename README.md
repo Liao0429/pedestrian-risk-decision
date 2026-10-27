@@ -16,7 +16,7 @@
 - **真机性能**：NEON 优化预处理（CPU 预处理 136ms→33ms），实测 **7.46 FPS**、内存 ~11MB、2.5 小时+ 长稳零重启（看门狗 + 有限超时）
 - **网页免安装观看**：开发板 go2rtc 转 WebRTC/HLS，手机/电脑浏览器直接打开网页看监控（`docs/WEB_VIEWER.md`）
 - **可配置**：规则阈值、目标类别与**外部 IPM 标定文件**通过 JSON 配置文件加载（`config/default_config.json`；`homography_file` 指向文本 3x3 单应，相机位姿变化无需重编译）
-- **可扩展硬件**：双舵机云台、三色 LED 风险灯、按键、语音告警、彩色触控屏、物理开关驱动已就绪（`docs/hardware/`）
+- **可扩展硬件**：双舵机云台、三色 LED 风险灯、防抖按键、语音告警（USB 喇叭 + aplay，等级触发/抢占/防重复）、彩色触控屏、物理开关驱动已就绪（`docs/hardware/`）
 
 ## 🏗️ 系统架构
 
@@ -162,6 +162,7 @@ make test # 编译并运行增强决策/JSON 配置/阈值引擎单元测试（�
 | `docs/LUCKFOX_VOICE_ASSISTANT_PLAN.md` | 语音对话大模型方案（网络/本地双方案） |
 | `docs/hardware/` | 硬件扩展（LED/按键/舵机/语音/大屏/开关/PCB） |
 | `docs/hardware/led_button_driver.md` | 三色 LED + 按键驱动（GPIO 抽象、颜色映射、防抖、测试） |
+| `docs/hardware/voice_module.md` | 语音告警方案（USB 喇叭推荐 / DFPlayer 兜底）与播报策略 |
 
 ## 🧩 可扩展模块（后续）
 

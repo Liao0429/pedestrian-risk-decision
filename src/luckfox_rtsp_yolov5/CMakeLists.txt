@@ -69,6 +69,7 @@ add_test(NAME test_risk_config COMMAND test_risk_config)
 # （使用 FakeGpio 内存替身，无 Linux/GPIO 依赖，PC/CI 可直接运行）
 add_executable(test_hardware_modules
   tests/test_hardware_modules.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/../hardware/voice_alert.cc
 )
 target_include_directories(test_hardware_modules PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../hardware)

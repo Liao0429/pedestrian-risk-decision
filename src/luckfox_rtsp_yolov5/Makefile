@@ -74,8 +74,10 @@ test-preprocess: $(TEST_DIR)/test_preprocess.cc $(SRC_DIR)/preprocess.cc \
 # 硬件驱动模块（三色 LED + 按键）主机测试：使用 FakeGpio 内存替身，
 # 验证颜色映射/防抖/边沿检测逻辑，无 Linux/GPIO 依赖。
 test-hardware: $(TEST_DIR)/test_hardware_modules.cc ../hardware/gpio.h \
-               ../hardware/led.h ../hardware/button.h
+               ../hardware/led.h ../hardware/button.h ../hardware/voice_alert.h \
+               ../hardware/voice_alert.cc
 	$(CXX) $(CXXFLAGS) -I../hardware $(TEST_DIR)/test_hardware_modules.cc \
+	    ../hardware/voice_alert.cc \
 	    -o $(TEST_DIR)/test_hardware_modules
 	./$(TEST_DIR)/test_hardware_modules
 

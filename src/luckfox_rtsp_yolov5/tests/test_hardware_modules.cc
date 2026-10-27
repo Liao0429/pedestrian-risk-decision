@@ -18,6 +18,7 @@
 #include "button.h"
 #include "gpio.h"
 #include "led.h"
+#include "voice_alert.h"
 
 namespace {
 
@@ -179,6 +180,127 @@ void testButtonActiveLow() {
     CHECK(btn.fallingEdge());
 }
 
+// ---------------------------------------------------------------------------
+// 7. VoiceAlert 语音告警状态机（FakeVoiceBackend 内存替身）
+// ---------------------------------------------------------------------------
+void testVoiceAlert() {
+    using hw::AlertLevel;
+    using hw::FakeVoiceBackend;
+    using hw::VoiceAlert;
+
+    // 7.1 FakeVoiceBackend 基本行为
+    {
+        FakeVoiceBackend fb;
+        CHECK(fb.available());
+        CHECK(fb.warningCount() == 0 && fb.dangerCount() == 0);
+        fb.playWarning();
+        fb.playDanger();
+        CHECK(fb.warningCount() == 1 && fb.dangerCount() == 1);
+        CHECK(fb.totalPlayCount() == 2);
+        fb.setAvailable(false);
+        fb.playWarning();
+        CHECK(fb.warningCount() == 1);  // 不可用时不计数
+        CHECK(!fb.available());
+    }
+
+    // 7.2 SAFE 不触发播报；SAFE→WARNING 跳变触发警告
+    {
+        FakeVoiceBackend fb;
+        VoiceAlert va(&fb, 100, 100, 200);  // 短周期便于测试
+        va.update(AlertLevel::SAFE, 0);
+        CHECK(fb.totalPlayCount() == 0);
+        va.update(AlertLevel::WARNING, 1000);
+        CHECK(fb.warningCount() == 1);
+        CHECK(va.playingLevel() == AlertLevel::WARNING);
+    }
+
+    // 7.3 WARNING→DANGER 升级抢占（播危险语，不再播警告）
+    {
+        FakeVoiceBackend fb;
+        VoiceAlert va(&fb, 100, 100, 200);
+        va.update(AlertLevel::WARNING, 1000);
+        CHECK(fb.warningCount() == 1);
+        va.update(AlertLevel::DANGER, 1100);
+        CHECK(fb.dangerCount() == 1);
+        CHECK(fb.warningCount() == 1);  // 未重复播警告
+        CHECK(va.playingLevel() == AlertLevel::DANGER);
+    }
+
+    // 7.4 DANGER 维持时按周期重播（100ms）
+    {
+        FakeVoiceBackend fb;
+        VoiceAlert va(&fb, 100, 100, 200);
+        va.update(AlertLevel::DANGER, 1000);
+        CHECK(fb.dangerCount() == 1);
+        va.update(AlertLevel::DANGER, 1050);  // 未到周期
+        CHECK(fb.dangerCount() == 1);
+        va.update(AlertLevel::DANGER, 1100);  // 到周期（100ms）
+        CHECK(fb.dangerCount() == 2);
+    }
+
+    // 7.5 WARNING 维持时按周期重播（100ms）
+    {
+        FakeVoiceBackend fb;
+        VoiceAlert va(&fb, 100, 100, 200);
+        va.update(AlertLevel::WARNING, 1000);
+        CHECK(fb.warningCount() == 1);
+        va.update(AlertLevel::WARNING, 1099);  // 差 1ms 不到
+        CHECK(fb.warningCount() == 1);
+        va.update(AlertLevel::WARNING, 1100);  // 到周期
+        CHECK(fb.warningCount() == 2);
+    }
+
+    // 7.6 DANGER→WARNING 降级：冷却 200ms 内不立即播报，冷却后播报
+    {
+        FakeVoiceBackend fb;
+        VoiceAlert va(&fb, 100, 100, 200);
+        va.update(AlertLevel::DANGER, 1000);
+        CHECK(fb.dangerCount() == 1);
+        va.update(AlertLevel::WARNING, 1100);   // 降级，距上次播放仅 100ms < 200ms
+        CHECK(fb.warningCount() == 0);          // 冷却抑制
+        CHECK(va.lastLevel() == AlertLevel::WARNING);
+        va.update(AlertLevel::WARNING, 1300);   // 距上次播放 300ms >= 200ms 冷却
+        CHECK(fb.warningCount() == 1);
+    }
+
+    // 7.7 SAFE 停止播报
+    {
+        FakeVoiceBackend fb;
+        VoiceAlert va(&fb, 100, 100, 200);
+        va.update(AlertLevel::DANGER, 1000);
+        CHECK(fb.dangerCount() == 1);
+        va.update(AlertLevel::SAFE, 1100);
+        CHECK(fb.stopCount() == 1);
+        CHECK(va.playingLevel() == AlertLevel::SAFE);
+        // 继续 SAFE 不重复 stop
+        va.update(AlertLevel::SAFE, 1200);
+        CHECK(fb.stopCount() == 1);
+    }
+
+    // 7.8 后端不可用：update 不播报、不崩溃
+    {
+        FakeVoiceBackend fb;
+        fb.setAvailable(false);
+        VoiceAlert va(&fb, 100, 100, 200);
+        CHECK(!va.available());
+        va.update(AlertLevel::DANGER, 1000);
+        va.update(AlertLevel::WARNING, 1100);
+        va.update(AlertLevel::SAFE, 1200);
+        CHECK(fb.totalPlayCount() == 0);
+        CHECK(fb.stopCount() == 0);
+    }
+
+    // 7.9 NULL 后端：构造/update 安全
+    {
+        VoiceAlert va((hw::VoiceBackend*)0, 100, 100, 200);
+        CHECK(!va.available());
+        va.update(AlertLevel::DANGER, 1000);
+        va.playWarning();
+        va.stop();
+        CHECK(va.playingLevel() == AlertLevel::SAFE);
+    }
+}
+
 }  // namespace
 
 int main() {
@@ -187,6 +309,7 @@ int main() {
     testRgbLed();
     testButtonActiveHigh();
     testButtonActiveLow();
+    testVoiceAlert();
     std::printf("passed=%d failed=%d\n", g_passed, g_failed);
     return g_failed ? 1 : 0;
 }
