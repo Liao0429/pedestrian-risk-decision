@@ -14,7 +14,7 @@
 - **Risk grading**: real-time **SAFE / WARNING / DANGER** three-level output
 - **Configurable**: rule thresholds loaded from JSON (`config/default_config.json`)
 - **Edge performance**: NEON-optimized preprocessing (CPU preprocess 136ms→33ms), **7.46 FPS** measured, ~11MB RSS, 2.5h+ long-run with zero restart (watchdog + bounded timeouts)
-- **Extensible hardware**: dual-servo gimbal, RGB risk LED, debounced push button, voice alert (USB speaker + aplay, level-triggered/preemption/debounce), color touchscreen, physical switch drivers ready (`docs/hardware/`); **boot-time hardware self-test** (6 PASS/FAIL checks: GPIO/PWM/SPI LCD/USB audio/WiFi/button — demo mode only starts when all pass, `docs/hardware/selftest.md`)
+- **Extensible hardware**: dual-servo gimbal, RGB risk LED, debounced push button, voice alert (USB speaker + aplay, level-triggered/preemption/debounce), **touchscreen menu state machine** (LVGL-agnostic: page navigation / 4-key handling / risk-color mapping / throttled parameter refresh, `docs/hardware/lvgl_menu.md`), physical switch drivers ready (`docs/hardware/`); **boot-time hardware self-test** (6 PASS/FAIL checks: GPIO/PWM/SPI LCD/USB audio/WiFi/button — demo mode only starts when all pass, `docs/hardware/selftest.md`)
 
 ## 🏗️ System Architecture
 
@@ -43,7 +43,7 @@ pedestrian-risk-decision/
 │ ├── crowd_test_enhanced.py # video mode (Kalman + FSM)
 ├── src/
 │ ├── algorithms/ # Algorithm modules (Graph Laplacian/Kalman/ByteTrack/DBSCAN/FSM/IPM/EMA, Python + C++)
-│ ├── hardware/ # Hardware drivers (gpio/led/button/servo/pan_tilt/voice_alert/selftest)
+│ ├── hardware/ # Hardware drivers (gpio/led/button/servo/pan_tilt/voice_alert/selftest/lcd_menu)
 │ └── luckfox_rtsp_yolov5/ # On-board C++ project (RKNN, NEON-optimized)
 ├── config/ # Threshold config
 ├── results/ # Experimental results (image baseline + video enhanced + ablation + edge performance)
@@ -114,7 +114,7 @@ python scripts/crowd_test_enhanced.py --input <video.mp4> --output results/video
 2. scp the binary to the board, run `sudo ./luckfox_pico_rtsp_yolov5` (systemd-managed + watchdog auto-restart)
 3. RTSP stream: `rtsp://<board-ip>:554/live/0`
 4. Algorithm modules (graph/Kalman/FSM) C++ headers in `src/algorithms/*.h`, cross-compilable
-5. Host unit tests (no board): `cd src/luckfox_rtsp_yolov5 && make test` — covers algorithm modules plus **118 hardware driver tests** (GPIO/LED/button/servo gimbal/voice alert) and **80 hardware self-test cases** (GPIO loopback/PWM/SPI LCD ID/USB audio/WiFi/button PASS-FAIL logic), all with in-memory fakes
+5. Host unit tests (no board): `cd src/luckfox_rtsp_yolov5 && make test` — covers algorithm modules plus **118 hardware driver tests** (GPIO/LED/button/servo gimbal/voice alert), **80 hardware self-test cases** (GPIO loopback/PWM/SPI LCD ID/USB audio/WiFi/button PASS-FAIL logic) and **99 touchscreen menu cases** (page navigation/4-key/risk-color mapping/throttled refresh/NULL tolerance), all with in-memory fakes
 
 ## 📚 Documentation Index
 
@@ -132,6 +132,7 @@ python scripts/crowd_test_enhanced.py --input <video.mp4> --output results/video
 | `docs/hardware/tracking_servo.md` | Dual-servo gimbal tracking (PWM abstraction, angle mapping, PanTilt control, tests) |
 | `docs/hardware/voice_module.md` | Voice alert solution (USB speaker recommended / DFPlayer fallback) and alert policy |
 | `docs/hardware/selftest.md` | Boot-time hardware self-test (6 PASS/FAIL checks, systemd gate, deploy steps) |
+| `docs/hardware/lvgl_menu.md` | Touchscreen menu (LVGL porting research, menu state machine, 99 tests, board adaptation roadmap) |
 
 ## 🧩 Extensible Modules
 

@@ -23,14 +23,14 @@ ALGO_HEADERS = include/enhanced_decision.h include/risk_config.h \
                ../algorithms/risk_fsm.h ../algorithms/minijson.h
 
 .PHONY: all test test-enhanced test-minijson test-risk-config test-golden \
-        test-preprocess test-selftest clean help luckfox hardware-selftest
+        test-preprocess test-selftest test-lcd-menu clean help luckfox hardware-selftest
 
 all: test
 
 # ---------------------------------------------------------------------------
 # 主机单元测试
 # ---------------------------------------------------------------------------
-test: test-enhanced test-minijson test-risk-config test-golden test-preprocess test-hardware test-selftest
+test: test-enhanced test-minijson test-risk-config test-golden test-preprocess test-hardware test-selftest test-lcd-menu
 
 test-enhanced: $(TEST_DIR)/test_enhanced_decision.cc $(SRC_DIR)/enhanced_decision.cc $(ALGO_HEADERS)
 	$(CXX) $(CXXFLAGS) $(INC) $(TEST_DIR)/test_enhanced_decision.cc $(SRC_DIR)/enhanced_decision.cc \
@@ -92,6 +92,14 @@ test-selftest: $(TEST_DIR)/test_selftest.cc ../hardware/selftest.h \
 	    -o $(TEST_DIR)/test_selftest
 	./$(TEST_DIR)/test_selftest
 
+# 触摸屏菜单状态机框架（LVGL 前端无关逻辑）：使用 FakeMenuBackend 内存
+# 替身，验证页面导航/四键处理/风险等级颜色映射/参数刷新节流/NULL 容错，
+# 无 LVGL/ILI9341 硬件依赖。
+test-lcd-menu: $(TEST_DIR)/test_lcd_menu.cc ../hardware/lcd_menu.h
+	$(CXX) $(CXXFLAGS) -I../hardware $(TEST_DIR)/test_lcd_menu.cc \
+	    -o $(TEST_DIR)/test_lcd_menu
+	./$(TEST_DIR)/test_lcd_menu
+
 # 板端硬件自检 CLI（真实 Sysfs 检测，退出码=失败数，供 systemd 门禁）
 hardware-selftest: ../hardware/selftest_main.cc ../hardware/selftest.h \
                    ../hardware/gpio.h ../hardware/servo.h
@@ -141,6 +149,7 @@ clean:
 	      $(TEST_DIR)/test_preprocess \
 	      $(TEST_DIR)/test_hardware_modules \
 	      $(TEST_DIR)/test_selftest \
+	      $(TEST_DIR)/test_lcd_menu \
 	      hardware_selftest \
 	      luckfox_pico_rtsp_yolov5
 

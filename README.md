@@ -16,7 +16,7 @@
 - **真机性能**：NEON 优化预处理（CPU 预处理 136ms→33ms），实测 **7.46 FPS**、内存 ~11MB、2.5 小时+ 长稳零重启（看门狗 + 有限超时）
 - **网页免安装观看**：开发板 go2rtc 转 WebRTC/HLS，手机/电脑浏览器直接打开网页看监控（`docs/WEB_VIEWER.md`）
 - **可配置**：规则阈值、目标类别与**外部 IPM 标定文件**通过 JSON 配置文件加载（`config/default_config.json`；`homography_file` 指向文本 3x3 单应，相机位姿变化无需重编译）
-- **可扩展硬件**：双舵机云台、三色 LED 风险灯、防抖按键、语音告警（USB 喇叭 + aplay，等级触发/抢占/防重复）、彩色触控屏、物理开关驱动已就绪（`docs/hardware/`）；**开机硬件自检**（GPIO/PWM/SPI 屏幕/USB 声卡/WiFi/按键 6 项 PASS/FAIL，全部通过才进入演示模式，`docs/hardware/selftest.md`）
+- **可扩展硬件**：双舵机云台、三色 LED 风险灯、防抖按键、语音告警（USB 喇叭 + aplay，等级触发/抢占/防重复）、**触摸屏菜单状态机**（LVGL 前端无关：页面导航/四键/风险等级颜色映射/参数节流刷新，`docs/hardware/lvgl_menu.md`）、物理开关驱动已就绪（`docs/hardware/`）；**开机硬件自检**（GPIO/PWM/SPI 屏幕/USB 声卡/WiFi/按键 6 项 PASS/FAIL，全部通过才进入演示模式，`docs/hardware/selftest.md`）
 
 ## 🏗️ 系统架构
 
@@ -47,7 +47,7 @@ pedestrian-risk-decision/
 │ └── start_demo.sh # 开发板一键启动（RTSP + 网页观看）
 ├── src/
 │ ├── algorithms/ # 算法模块（图拉普拉斯/Kalman/ByteTrack/DBSCAN/FSM/IPM/EMA，含 Python+C++ 接口）
-│ ├── hardware/ # 硬件驱动（gpio/led/button/servo/pan_tilt/voice_alert/selftest）
+│ ├── hardware/ # 硬件驱动（gpio/led/button/servo/pan_tilt/voice_alert/selftest/lcd_menu）
 │ └── luckfox_rtsp_yolov5/ # 开发板 C++ 工程（RKNN，NEON 优化）
 ├── config/ # 阈值配置
 ├── results/ # 实验结果（图片基线 + 视频增强 + 消融 + 真机性能）
@@ -145,7 +145,7 @@ make test # 编译并运行增强决策/JSON 配置/阈值引擎单元测试（�
 # 等价 CMake 方式：
 # cmake -S . -B build && cmake --build build && ctest --test-dir build
 ```
-- 测试覆盖：`EnhancedDecision`（Kalman+FSM 确定性输出）、`minijson` JSON 解析、`RiskConfig` 运行时阈值读取、`Preprocess` NEON vs 标量对照、**硬件驱动模块 118 项**（GPIO/LED/按键/舵机云台/语音告警）+ **硬件自检 80 项**（GPIO 写读回/PWM/SPI 屏幕 ID/USB 声卡/WiFi/按键的 PASS/FAIL 判定与容错），全部用内存替身测试，无需真实硬件。
+- 测试覆盖：`EnhancedDecision`（Kalman+FSM 确定性输出）、`minijson` JSON 解析、`RiskConfig` 运行时阈值读取、`Preprocess` NEON vs 标量对照、**硬件驱动模块 118 项**（GPIO/LED/按键/舵机云台/语音告警）+ **硬件自检 80 项**（GPIO 写读回/PWM/SPI 屏幕 ID/USB 声卡/WiFi/按键的 PASS/FAIL 判定与容错）+ **触摸屏菜单 99 项**（页面导航/四键/风险颜色映射/参数刷新节流/NULL 容错），全部用内存替身测试，无需真实硬件。
 - 交叉编译完整工程：`make luckfox LUCKFOX_SDK_ROOT=<SDK路径>`（需 Luckfox SDK 库与工具链）。
 - 阈值通过 `config/default_config.json` 运行时加载（`RiskEngine::setConfig`），失败自动回退默认值，“可配置”承诺在 C++ 端落地。
 
@@ -165,6 +165,7 @@ make test # 编译并运行增强决策/JSON 配置/阈值引擎单元测试（�
 | `docs/hardware/tracking_servo.md` | 双舵机云台跟踪（PWM 抽象、角度换算、PanTilt 控制、测试） |
 | `docs/hardware/voice_module.md` | 语音告警方案（USB 喇叭推荐 / DFPlayer 兜底）与播报策略 |
 | `docs/hardware/selftest.md` | 开机硬件自检（6 项 PASS/FAIL、systemd 门禁、部署步骤） |
+| `docs/hardware/lvgl_menu.md` | 触摸屏菜单方案（LVGL 移植调研、菜单状态机框架、99 项测试、板端适配路线） |
 
 ## 🧩 可扩展模块（后续）
 
