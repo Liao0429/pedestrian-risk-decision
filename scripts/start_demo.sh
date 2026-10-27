@@ -2,14 +2,29 @@
 # ============================================================
 # 开发板一键启动脚本（答辩现场用）
 # 自动拉起：行人检测 RTSP 源 + go2rtc 网页观看，并打印访问地址
-# 用法：sudo bash start_demo.sh
+# 用法：sudo bash start_demo.sh [--force]
 # 说明：需先部署好 luckfox_pico_rtsp_yolov5（daima目录）和 go2rtc（/home/pico）
+#       默认要求硬件自检全部 PASS（存在 /tmp/hardware_selftest.pass）；
+#       --force 可跳过自检门禁（现场紧急兜底）。
 # ============================================================
 
 DAIMA=/home/pico/daima/luckfox_pico_rtsp_yolov5_demo
 GO2RTC_DIR=/home/pico
 GO2RTC_BIN=$GO2RTC_DIR/go2rtc
 GO2RTC_CFG=$GO2RTC_DIR/go2rtc.yaml
+
+# --- 硬件自检门禁（全部 PASS 才进入演示模式） ---
+if [ "$1" != "--force" ]; then
+  if [ ! -f /tmp/hardware_selftest.pass ]; then
+    echo "!! 硬件自检未通过或未运行（缺少 /tmp/hardware_selftest.pass）"
+    echo "   请先运行: sudo bash $DAIMA/hardware_selftest.sh"
+    echo "   或强制启动: sudo bash start_demo.sh --force"
+    exit 1
+  fi
+  echo "[0/4] 硬件自检已通过，进入演示模式"
+else
+  echo "[0/4] --force：跳过硬件自检门禁"
+fi
 
 echo "=============================================="
 echo " 毕设演示：边缘端行人感知与风险决策系统"

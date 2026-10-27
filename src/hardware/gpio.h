@@ -105,7 +105,9 @@ private:
 
 // =============================================================================
 // FakeGpio — 内存替身（单元测试用）
-//   输出模式：记录最近一次写入电平与写入次数；
+//   输出模式：记录最近一次写入电平与写入次数；默认不可读，启用
+//   setOutputReadback(true) 后可读回最近写入值（模拟 sysfs 输出电平读回，
+//   供硬件自检 GPIO_LOOPBACK 用例使用）；
 //   输入模式：电平由外部 setInputLevel() 注入，模拟按键/开关。
 // =============================================================================
 class FakeGpio : public Gpio {
@@ -114,7 +116,8 @@ public:
         : m_output(false),
           m_inputLevel(initialInputLevel),
           m_lastWritten(false),
-          m_writeCount(0) {}
+          m_writeCount(0),
+          m_outputReadback(false) {}
 
     bool setDirection(bool output) override {
         m_output = output;
@@ -129,7 +132,13 @@ public:
     }
 
     bool read(bool* high) override {
-        if (m_output) return false;
+        if (m_output) {
+            // 输出模式默认不可读（与真实 sysfs 只写语义一致）；
+            // 启用读回后返回最近写入值，模拟 sysfs GPIO 输出电平读回。
+            if (!m_outputReadback) return false;
+            if (high) *high = m_lastWritten;
+            return true;
+        }
         if (high) *high = m_inputLevel;
         return true;
     }
@@ -138,12 +147,15 @@ public:
     int   writeCount() const { return m_writeCount; }
     bool  isOutput() const { return m_output; }
     void  setInputLevel(bool high) { m_inputLevel = high; }
+    // 启用/禁用输出模式读回（默认禁用，硬件自检用例需启用）
+    void  setOutputReadback(bool en) { m_outputReadback = en; }
 
 private:
     bool m_output;
     bool m_inputLevel;
     bool m_lastWritten;
     int  m_writeCount;
+    bool m_outputReadback;
 };
 
 }  // namespace hw

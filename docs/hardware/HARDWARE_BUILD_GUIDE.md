@@ -51,5 +51,7 @@
 - `src/hardware/servo.h`：SG90 PWM 驱动（hw::Pwm 抽象 + SysfsPwm 板端实现 + FakePwm 测试替身，角度→脉宽换算可测）
 - `src/hardware/pan_tilt.h`：双舵机云台追踪（P控制+死区+机械/角速度限幅+一阶低通，逻辑可主机测试）
 - `src/hardware/voice_alert.h` + `voice_alert.cc`：语音告警（USB 喇叭 + aplay，等级触发/抢占/防重复；含 FakeVoiceBackend 可测）
-- 以上驱动均有主机单元测试（`make test-hardware`，共 118 项用例，无需真实硬件即可在 PC/CI 验证）
+- `src/hardware/selftest.h` + `selftest_main.cc`：**开机硬件自检**（GPIO 写读回/PWM 节点/SPI 屏幕 ID 0x9341/USB 声卡/WiFi/按键 6 项 PASS/FAIL；`make hardware-selftest` 生成板端 CLI，退出码=失败数）
+- 以上驱动均有主机单元测试（`make test-hardware` 共 118 项用例 + `make test-selftest` 80 项用例，无需真实硬件即可在 PC/CI 验证）
 - `docs/hardware/voice_module.md`：语音方案对比（USB 喇叭推荐，DFPlayer 兜底）与播报策略
+- `docs/hardware/selftest.md`：自检框架说明、systemd 开机自检部署、演示模式门禁

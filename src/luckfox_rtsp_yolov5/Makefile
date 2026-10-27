@@ -23,14 +23,14 @@ ALGO_HEADERS = include/enhanced_decision.h include/risk_config.h \
                ../algorithms/risk_fsm.h ../algorithms/minijson.h
 
 .PHONY: all test test-enhanced test-minijson test-risk-config test-golden \
-        clean help luckfox
+        test-preprocess test-selftest clean help luckfox hardware-selftest
 
 all: test
 
 # ---------------------------------------------------------------------------
 # 主机单元测试
 # ---------------------------------------------------------------------------
-test: test-enhanced test-minijson test-risk-config test-golden test-preprocess test-hardware
+test: test-enhanced test-minijson test-risk-config test-golden test-preprocess test-hardware test-selftest
 
 test-enhanced: $(TEST_DIR)/test_enhanced_decision.cc $(SRC_DIR)/enhanced_decision.cc $(ALGO_HEADERS)
 	$(CXX) $(CXXFLAGS) $(INC) $(TEST_DIR)/test_enhanced_decision.cc $(SRC_DIR)/enhanced_decision.cc \
@@ -83,6 +83,21 @@ test-hardware: $(TEST_DIR)/test_hardware_modules.cc ../hardware/gpio.h \
 	    -o $(TEST_DIR)/test_hardware_modules
 	./$(TEST_DIR)/test_hardware_modules
 
+# 硬件自检框架（GPIO 写读回/PWM 节点/SPI 屏幕 ID/USB 声卡/WiFi/按键）
+# 主机测试：使用 FakeGpio/FakePwm/FakeSelftestProbe 内存替身，验证
+# PASS/FAIL 判定、统计接口与 NULL 容错，无 Linux/GPIO 依赖。
+test-selftest: $(TEST_DIR)/test_selftest.cc ../hardware/selftest.h \
+               ../hardware/gpio.h ../hardware/servo.h
+	$(CXX) $(CXXFLAGS) -I../hardware $(TEST_DIR)/test_selftest.cc \
+	    -o $(TEST_DIR)/test_selftest
+	./$(TEST_DIR)/test_selftest
+
+# 板端硬件自检 CLI（真实 Sysfs 检测，退出码=失败数，供 systemd 门禁）
+hardware-selftest: ../hardware/selftest_main.cc ../hardware/selftest.h \
+                   ../hardware/gpio.h ../hardware/servo.h
+	$(CXX) $(CXXFLAGS) -I../hardware ../hardware/selftest_main.cc \
+	    -o hardware_selftest
+
 # ---------------------------------------------------------------------------
 # 开发板交叉编译（需 Luckfox SDK）
 #
@@ -125,6 +140,8 @@ clean:
 	      $(TEST_DIR)/test_golden_regression \
 	      $(TEST_DIR)/test_preprocess \
 	      $(TEST_DIR)/test_hardware_modules \
+	      $(TEST_DIR)/test_selftest \
+	      hardware_selftest \
 	      luckfox_pico_rtsp_yolov5
 
 help:

@@ -1,0 +1,37 @@
+# ============================================================
+# hardware-selftest.service — 开发板开机硬件自检（演示模式门禁）
+# ------------------------------------------------------------
+# 部署（开发板）：
+#   1. 交叉编译自检 CLI 并部署：
+#        cd src/luckfox_rtsp_yolov5 && make hardware-selftest
+#        产物 hardware_selftest 拷到
+#        /home/pico/daima/luckfox_pico_rtsp_yolov5_demo/
+#   2. 部署脚本与单元：
+#        sudo cp scripts/hardware_selftest.sh \
+#            /home/pico/daima/luckfox_pico_rtsp_yolov5_demo/
+#        sudo cp scripts/hardware-selftest.service /etc/systemd/system/
+#   3. 启用（开机自检）：
+#        sudo systemctl daemon-reload
+#        sudo systemctl enable --now hardware-selftest.service
+#   4. 查看结果：
+#        systemctl status hardware-selftest
+#        cat /tmp/hardware_selftest.log
+#   5. 手动运行：
+#        sudo bash /home/pico/daima/luckfox_pico_rtsp_yolov5_demo/hardware_selftest.sh
+#
+# 门禁语义：全部 PASS 时脚本创建 /tmp/hardware_selftest.pass；
+# start_demo.sh 只在看到该标记时才进入演示模式（可 --force 跳过）。
+# ============================================================
+[Unit]
+Description=Luckfox hardware self-test (demo mode gate)
+DefaultDependencies=no
+After=local-fs.target sysinit.target
+Before=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/bash /home/pico/daima/luckfox_pico_rtsp_yolov5_demo/hardware_selftest.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
