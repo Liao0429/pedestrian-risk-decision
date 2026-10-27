@@ -1,28 +1,52 @@
-// pan_tilt.h
-// 来自 docs/hardware/ 方案文档，供 Luckfox 开发板硬件扩展集成参考。
-// 实际集成时请按板面丝印和 /sys/class/pwm、/dev/ttyS* 实际节点核对。
-
-// pan_tilt.h
+// =============================================================================
+// pan_tilt.h — 双舵机云台跟踪控制器
+// -----------------------------------------------------------------------------
+// 用途：答辩硬件展示的“摄像头云台自动跟踪”——检测/决策主循环给出目标
+// 中心（原图像素坐标），PanTilt 换算为 PAN/TILT 角度并平滑输出。
+// 设计：
+//   - 依赖 hw::Servo 抽象（servo.h），板端传 SysfsPwm，测试传 FakePwm；
+//   - 控制逻辑全部与硬件无关（死区/P 增益/机械限幅/角速度限幅/一阶低通），
+//     可在 PC/CI 上单元测试；
+//   - 无目标时保持不动；舵机不可用时 update 安全跳过。
+//
+// 集成示例（接入主循环，每帧调用一次）：
+//   hw::SysfsPwm panPwm(0, 0), tiltPwm(0, 1);
+//   hw::Servo pan(&panPwm), tilt(&tiltPwm);
+//   hw::PanTilt gimbal(pan, tilt);
+//   gimbal.init();
+//   ...
+//   gimbal.update(imgW, imgH, targetX, targetY, hasTarget);
+// =============================================================================
 #pragma once
-#include "servo.h"
 #include <cmath>
+
+#include "servo.h"
+
+namespace hw {
 
 class PanTilt {
 public:
-    PanTilt(Servo &pan, Servo &tilt)
+    PanTilt(Servo& pan, Servo& tilt)
         : m_pan(pan), m_tilt(tilt),
+          m_ok(false),
           m_panAngle(90), m_tiltAngle(90),
           m_smoothPan(90), m_smoothTilt(90) {}
 
-    void init() {
-        m_pan.init();  m_tilt.init();
-        m_pan.setAngle(90);  m_tilt.setAngle(90);
+    bool init() {
+        m_ok = m_pan.init() && m_tilt.init();
+        if (m_ok) {
+            m_pan.setAngle(90);
+            m_tilt.setAngle(90);
+        }
+        return m_ok;
     }
 
+    bool available() const { return m_ok; }
+
     // imgW/imgH: 图像宽高; tx,ty: 目标中心(原图像素坐标)
-    // mode: 0 追踪最大行人, 1 追踪人群质心
+    // hasTarget: 本帧是否有有效目标（无目标保持不动）
     void update(int imgW, int imgH, float tx, float ty, bool hasTarget) {
-        if (!hasTarget) return;   // 无目标保持不动
+        if (!hasTarget || !m_ok) return;   // 无目标或舵机不可用，保持不动
 
         const float cx = imgW / 2.0f, cy = imgH / 2.0f;
         float errX = tx - cx;
@@ -60,8 +84,8 @@ public:
         m_tilt.setAngle(m_smoothTilt);
     }
 
-    // 查询当前目标中心（供其它线程使用）：由调用方在多线程时加锁
-    void currentAngles(float &pan, float &tilt) const {
+    // 查询当前目标角度（供其它线程使用）：由调用方在多线程时加锁
+    void currentAngles(float& pan, float& tilt) const {
         pan = m_smoothPan; tilt = m_smoothTilt;
     }
 
@@ -69,7 +93,11 @@ private:
     static float clamp(float v, float lo, float hi) {
         return v < lo ? lo : (v > hi ? hi : v);
     }
-    Servo &m_pan, &m_tilt;
-    float m_panAngle, m_tiltAngle;
-    float m_smoothPan, m_smoothTilt;
+    Servo& m_pan;
+    Servo& m_tilt;
+    bool   m_ok;
+    float  m_panAngle, m_tiltAngle;
+    float  m_smoothPan, m_smoothTilt;
 };
+
+}  // namespace hw

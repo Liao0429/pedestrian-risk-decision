@@ -69,9 +69,10 @@ public:
     }
 
     void stop() override {
-        // 结束正在播放的 aplay 进程（忽略找不到进程的错误）
+        // 结束正在播放的 aplay 进程（pkill 找不到进程时返回非 0，属预期）
         std::string killCmd = "pkill -f 'aplay .*" + m_audioDir + "' >/dev/null 2>&1 || true";
-        (void)system(killCmd.c_str());
+        int rc = system(killCmd.c_str());
+        (void)rc;  // 无残留进程/命令不可用：静默忽略
     }
 
 private:

@@ -48,7 +48,8 @@
 - 整体：RTSP 推流 + 大屏显示 + 语音告警同时工作
 
 ## 五、C++ 驱动代码
-- `src/hardware/servo.h`：SG90 PWM 驱动
-- `src/hardware/pan_tilt.h`：双舵机云台追踪（P控制+死区+限幅）
+- `src/hardware/servo.h`：SG90 PWM 驱动（hw::Pwm 抽象 + SysfsPwm 板端实现 + FakePwm 测试替身，角度→脉宽换算可测）
+- `src/hardware/pan_tilt.h`：双舵机云台追踪（P控制+死区+机械/角速度限幅+一阶低通，逻辑可主机测试）
 - `src/hardware/voice_alert.h` + `voice_alert.cc`：语音告警（USB 喇叭 + aplay，等级触发/抢占/防重复；含 FakeVoiceBackend 可测）
+- 以上驱动均有主机单元测试（`make test-hardware`，共 118 项用例，无需真实硬件即可在 PC/CI 验证）
 - `docs/hardware/voice_module.md`：语音方案对比（USB 喇叭推荐，DFPlayer 兜底）与播报策略

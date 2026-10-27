@@ -18,6 +18,8 @@
 #include "button.h"
 #include "gpio.h"
 #include "led.h"
+#include "pan_tilt.h"
+#include "servo.h"
 #include "voice_alert.h"
 
 namespace {
@@ -301,6 +303,148 @@ void testVoiceAlert() {
     }
 }
 
+// ---------------------------------------------------------------------------
+// 8. Servo 角度换算与容错（FakePwm 内存替身）
+// ---------------------------------------------------------------------------
+void testServo() {
+    using hw::FakePwm;
+    using hw::Servo;
+
+    // 8.1 角度 -> 脉宽换算：0°/90°/180° 对应 0.5/1.5/2.5ms
+    {
+        FakePwm fp;
+        Servo s(&fp);
+        CHECK(s.init());          // configure 20ms + enable + 回中位
+        CHECK(fp.period() == 20000000L);
+        CHECK(fp.enabled());
+        CHECK(fp.duty() == 1500000L);  // init 后中位 90°
+        CHECK(s.available());
+
+        s.setAngle(0);
+        CHECK(fp.duty() == 500000L);
+        s.setAngle(90);
+        CHECK(fp.duty() == 1500000L);
+        s.setAngle(180);
+        CHECK(fp.duty() == 2500000L);
+        s.setAngle(45);
+        CHECK(fp.duty() == 1000000L);  // 0.5ms + 45/180*2ms
+    }
+
+    // 8.2 角度限幅：<-0 和 >180 被钳位
+    {
+        FakePwm fp;
+        Servo s(&fp);
+        CHECK(s.init());
+        s.setAngle(-30);
+        CHECK(fp.duty() == 500000L);
+        CHECK(s.lastAngle() == 0);    // lastAngle 也是限幅后的值
+        s.setAngle(270);
+        CHECK(fp.duty() == 2500000L);
+        CHECK(s.lastAngle() == 180);
+        s.setAngle(200);
+        CHECK(s.lastAngle() == 180);
+    }
+
+    // 8.3 NULL PWM：构造/init/update 安全，不崩溃
+    {
+        Servo s((hw::Pwm*)0);
+        CHECK(!s.init());
+        CHECK(!s.available());
+        s.setAngle(45);               // 不应崩溃
+        CHECK(s.lastAngle() == 45);   // 逻辑角度仍可查询
+    }
+
+    // 8.4 未 init 时 setDutyCycle 被拒绝（FakePwm 语义：未使能不可写）
+    {
+        FakePwm fp;
+        Servo s(&fp);
+        s.setAngle(90);               // 未 init
+        CHECK(fp.dutyCount() == 0);   // 未使能，不写入
+        CHECK(s.init());
+        CHECK(fp.dutyCount() >= 1);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 9. PanTilt 云台跟踪逻辑（无硬件依赖）
+// ---------------------------------------------------------------------------
+void testPanTilt() {
+    using hw::FakePwm;
+    using hw::PanTilt;
+    using hw::Servo;
+
+    // 9.1 无目标：角度保持不变
+    {
+        FakePwm fpP, fpT;
+        Servo pan(&fpP), tilt(&fpT);
+        PanTilt gimbal(pan, tilt);
+        CHECK(gimbal.init());
+        int dutyBefore = fpP.dutyCount() + fpT.dutyCount();
+        gimbal.update(640, 360, 500, 200, false);
+        CHECK(fpP.dutyCount() + fpT.dutyCount() == dutyBefore);
+        float p = 0, t = 0;
+        gimbal.currentAngles(p, t);
+        CHECK(p == 90 && t == 90);
+    }
+
+    // 9.2 目标在图像中心附近（死区内）：不转动
+    {
+        FakePwm fpP, fpT;
+        Servo pan(&fpP), tilt(&fpT);
+        PanTilt gimbal(pan, tilt);
+        CHECK(gimbal.init());
+        int dutyBefore = fpP.dutyCount() + fpT.dutyCount();
+        gimbal.update(640, 360, 321, 181, true);  // 偏差 (1, 1) < 死区 15
+        CHECK(fpP.dutyCount() + fpT.dutyCount() == dutyBefore);
+    }
+
+    // 9.3 目标偏右：PAN 增大（>90°），TILT 随偏差变化；角速度限幅 2°/次
+    {
+        FakePwm fpP, fpT;
+        Servo pan(&fpP), tilt(&fpT);
+        PanTilt gimbal(pan, tilt);
+        CHECK(gimbal.init());
+        // 目标 (600, 180)：errX = +280, errY = 0
+        gimbal.update(640, 360, 600, 180, true);
+        float p = 0, t = 0;
+        gimbal.currentAngles(p, t);
+        CHECK(p > 90 && p <= 92);          // 每步最多 +2°
+        CHECK(t >= 89 && t <= 90);         // TILT 偏差为 0，几乎不动
+        // 多次调用后向目标逼近，但每次最多 2°
+        for (int i = 0; i < 20; ++i) gimbal.update(640, 360, 600, 180, true);
+        gimbal.currentAngles(p, t);
+        CHECK(p > 90 && p <= 125);         // 目标 90+0.125*280=125，限幅逼近
+        CHECK(p <= 125.0001f);
+    }
+
+    // 9.4 机械限幅：极端目标不超 10°~170°
+    {
+        FakePwm fpP, fpT;
+        Servo pan(&fpP), tilt(&fpT);
+        PanTilt gimbal(pan, tilt);
+        CHECK(gimbal.init());
+        for (int i = 0; i < 200; ++i) {
+            gimbal.update(640, 360, 0, 0, true);    // 左上角极端
+        }
+        float p = 0, t = 0;
+        gimbal.currentAngles(p, t);
+        CHECK(p >= 10 && p <= 170);
+        CHECK(t >= 10 && t <= 170);
+    }
+
+    // 9.5 舵机不可用（NULL PWM）：init 失败，update 安全跳过
+    {
+        Servo pan((hw::Pwm*)0), tilt((hw::Pwm*)0);
+        PanTilt gimbal(pan, tilt);
+        CHECK(!gimbal.init());
+        CHECK(!gimbal.available());
+        gimbal.update(640, 360, 600, 180, true);   // 不应崩溃
+        float p = 0, t = 0;
+        gimbal.currentAngles(p, t);
+        CHECK(p == 90 && t == 90);
+    }
+}
+
 }  // namespace
 
 int main() {
@@ -310,6 +454,8 @@ int main() {
     testButtonActiveHigh();
     testButtonActiveLow();
     testVoiceAlert();
+    testServo();
+    testPanTilt();
     std::printf("passed=%d failed=%d\n", g_passed, g_failed);
     return g_failed ? 1 : 0;
 }

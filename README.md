@@ -145,7 +145,7 @@ make test # 编译并运行增强决策/JSON 配置/阈值引擎单元测试（�
 # 等价 CMake 方式：
 # cmake -S . -B build && cmake --build build && ctest --test-dir build
 ```
-- 测试覆盖：`EnhancedDecision`（Kalman+FSM 确定性输出）、`minijson` JSON 解析、`RiskConfig` 运行时阈值读取、`Preprocess` NEON vs 标量对照。
+- 测试覆盖：`EnhancedDecision`（Kalman+FSM 确定性输出）、`minijson` JSON 解析、`RiskConfig` 运行时阈值读取、`Preprocess` NEON vs 标量对照、**硬件驱动模块 118 项**（GPIO/LED/按键/舵机云台/语音告警，全部用内存替身测试，无需真实硬件）。
 - 交叉编译完整工程：`make luckfox LUCKFOX_SDK_ROOT=<SDK路径>`（需 Luckfox SDK 库与工具链）。
 - 阈值通过 `config/default_config.json` 运行时加载（`RiskEngine::setConfig`），失败自动回退默认值，“可配置”承诺在 C++ 端落地。
 
@@ -162,6 +162,7 @@ make test # 编译并运行增强决策/JSON 配置/阈值引擎单元测试（�
 | `docs/LUCKFOX_VOICE_ASSISTANT_PLAN.md` | 语音对话大模型方案（网络/本地双方案） |
 | `docs/hardware/` | 硬件扩展（LED/按键/舵机/语音/大屏/开关/PCB） |
 | `docs/hardware/led_button_driver.md` | 三色 LED + 按键驱动（GPIO 抽象、颜色映射、防抖、测试） |
+| `docs/hardware/tracking_servo.md` | 双舵机云台跟踪（PWM 抽象、角度换算、PanTilt 控制、测试） |
 | `docs/hardware/voice_module.md` | 语音告警方案（USB 喇叭推荐 / DFPlayer 兜底）与播报策略 |
 
 ## 🧩 可扩展模块（后续）

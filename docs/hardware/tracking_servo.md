@@ -243,10 +243,16 @@ duty_ns = 500000 + (angle / 180.0) * 2000000 // 0.5ms ~ 2.5ms
 
 ## 5. C++ 实现与集成
 
+> **重要**：以下 5.1/5.2 为早期设计参考代码。仓库 `src/hardware/servo.h` 与
+> `src/hardware/pan_tilt.h` 已重构为 `hw::` 命名空间下的 **Pwm 抽象接口 +
+> SysfsPwm（板端）/ FakePwm（测试替身）**，支持在 PC/CI 直接单元测试
+> （`make test-hardware`：角度换算、限幅、PanTilt 云台跟踪等 118 项用例）。
+> **集成时请以仓库最新代码为准**，以下代码仅用于理解控制原理。
+
 ### 5.1 Servo 类（PWM sysfs 封装）
 
 ```cpp
-// servo.h
+// servo.h（历史参考，仓库已重构为 hw::Servo + hw::Pwm 抽象）
 #pragma once
 #include <cstdio>
 #include <cstring>

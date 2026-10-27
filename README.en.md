@@ -114,6 +114,7 @@ python scripts/crowd_test_enhanced.py --input <video.mp4> --output results/video
 2. scp the binary to the board, run `sudo ./luckfox_pico_rtsp_yolov5` (systemd-managed + watchdog auto-restart)
 3. RTSP stream: `rtsp://<board-ip>:554/live/0`
 4. Algorithm modules (graph/Kalman/FSM) C++ headers in `src/algorithms/*.h`, cross-compilable
+5. Host unit tests (no board): `cd src/luckfox_rtsp_yolov5 && make test` — covers algorithm modules plus **118 hardware driver tests** (GPIO/LED/button/servo gimbal/voice alert, in-memory fakes)
 
 ## 📚 Documentation Index
 
@@ -128,6 +129,7 @@ python scripts/crowd_test_enhanced.py --input <video.mp4> --output results/video
 | `docs/LUCKFOX_VOICE_ASSISTANT_PLAN.md` | Voice assistant LLM plan (cloud/local) |
 | `docs/hardware/` | Hardware extensions (LED/button/servo/voice/display/switch/PCB) |
 | `docs/hardware/led_button_driver.md` | RGB LED + button drivers (GPIO abstraction, color mapping, debounce, tests) |
+| `docs/hardware/tracking_servo.md` | Dual-servo gimbal tracking (PWM abstraction, angle mapping, PanTilt control, tests) |
 | `docs/hardware/voice_module.md` | Voice alert solution (USB speaker recommended / DFPlayer fallback) and alert policy |
 
 ## 🧩 Extensible Modules
