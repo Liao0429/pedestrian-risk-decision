@@ -169,6 +169,7 @@ public:
 
 private:
     void play(AlertLevel level, uint64_t nowMs) {
+        if (!m_backend || !m_backend->available()) return;
         if (level == AlertLevel::DANGER) {
             m_backend->playDanger();
             m_playingLevel = AlertLevel::DANGER;
