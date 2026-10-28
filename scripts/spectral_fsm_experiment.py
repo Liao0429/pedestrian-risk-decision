@@ -56,7 +56,11 @@ def fiedler_norm(fiedler):
 class SpectralRiskFSM(RiskFSM):
     """带谱修正的 FSM（仅实验用，不修改生产 risk_fsm.py）。"""
     def __init__(self, config=None, mode="M2", w4=0.1):
-        super().__init__(config)
+        # 复制配置并禁用父类谱项（w4=0）：M1/M2 是独立的实验谱修正，避免双重计算
+        cfg_copy = RiskFSMConfig(**vars(config)) if isinstance(config, RiskFSMConfig) else config
+        if cfg_copy is not None:
+            cfg_copy.w4 = 0.0
+        super().__init__(cfg_copy)
         self.mode = mode
         self.w4 = w4
 
@@ -105,6 +109,7 @@ SCENARIOS = [
 def fsm_final_level(cfg, feat, mode="M0", w4=0.1):
     kwargs = dict(cfg.get("fsm", {})) if cfg else {}
     if mode == "M0":
+        kwargs["w4"] = 0.0   # M0 = 无谱特征基线对照
         fsm = RiskFSM(RiskFSMConfig(**kwargs))
     else:
         fsm = SpectralRiskFSM(RiskFSMConfig(**kwargs), mode=mode, w4=w4)
@@ -140,10 +145,15 @@ def load_timelines():
             timelines.append((d.name, data))
     return timelines
 
-def replay(timeline, cfg, mode="M0", w4=0.1, now_ms_mode="frame"):
-    """从特征重算等级序列，返回 (levels, switches, dist)。"""
+def replay(timeline, cfg, mode="M0", w4=0.1, now_ms_mode="frame", m0_spectral=False, fps=None):
+    """从特征重算等级序列，返回 (levels, switches, dist)。
+    m0_spectral=True 时 M0 使用生产配置（含 w4 谱项），用于验证离线重算与真实推理一致；
+    默认 False 保持 M0 为无谱特征基线对照（离线实验语义）。
+    now_ms_mode="fps" 时按真实帧率计算时间戳（与在线推理一致）。"""
     kwargs = dict(cfg.get("fsm", {})) if cfg else {}
     if mode == "M0":
+        if not m0_spectral:
+            kwargs["w4"] = 0.0   # M0 = 无谱特征基线对照
         fsm = RiskFSM(RiskFSMConfig(**kwargs))
     else:
         fsm = SpectralRiskFSM(RiskFSMConfig(**kwargs), mode=mode, w4=w4)
@@ -153,6 +163,8 @@ def replay(timeline, cfg, mode="M0", w4=0.1, now_ms_mode="frame"):
                  "r_gcc": it.get("r_gcc", 0.0), "fiedler": it.get("fiedler", 0.0)}
         if now_ms_mode == "frame":
             now_ms = None  # 仅帧计数保持（danger_hold_frames）
+        elif now_ms_mode == "fps":
+            now_ms = int(i * 1000.0 / fps) if fps else i * 33
         else:
             now_ms = i * 33  # 近似 30fps（danger_hold_ms 保持）
         levels.append(fsm.update(feats, now_ms))

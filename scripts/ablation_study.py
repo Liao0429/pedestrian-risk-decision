@@ -2,10 +2,10 @@
 """消融实验（Ablation Study）——论文核心工作量章节。
 对代表性视频，分别关闭/开启 Kalman / 谱特征 / FSM，量化各组件的贡献。
 配置组合：
-  A. 基线（无 Kalman、无谱特征、无 FSM）：逐帧规则判定
-  B. +Kalman（仅跟踪平滑）
-  C. +Kalman + 谱特征
-  D. +Kalman + 谱特征 + FSM（完整增强）
+  A. 基线（无 Kalman、无 FSM）：逐帧规则判定
+  B. +Kalman（仅跟踪平滑，规则判定）
+  C. +Kalman + FSM（无谱特征）：量化 FSM 滞回稳定性贡献
+  D. +Kalman + 谱特征 + FSM（完整增强）：量化谱特征贡献
 输出：每视频每组等级分布/切换次数 + 汇总图 docs/figures/fig_ablation.png
 运行：python scripts/ablation_study.py
 """
@@ -33,11 +33,17 @@ from src.algorithms.graph_laplacian import compute_laplacian_features  # noqa: E
 
 VIDEOS = ["mixkit_134", "mixkit_13192", "mixkit_3428", "mixkit_4519",
           "mixkit_4178", "mixkit_50134"]
+# 消融组合（修正：C 组用 FSM 但关闭谱项，D 组开启谱项，使谱特征贡献可量化）
+#   元组：(标签, use_kalman, use_spectral, use_fsm)
+#   A 基线：逐帧规则判定（无增强）
+#   B +Kalman：Kalman 平滑 + 规则判定（无 FSM）
+#   C +FSM(无谱特征)：Kalman + FSM（谱项 w4 不生效，fiedler=0）
+#   D 完整(增强)：Kalman + 谱特征 + FSM（w4 谱项生效）
 COMBOS = [
-    ("A 基线(无增强)", False, False, False),
-    ("B +Kalman",      True,  False, False),
-    ("C +Kalman+谱特征", True, True,  False),
-    ("D 完整(增强)",    True,  True,  True),
+    ("A 基线(无增强)",    False, False, False),
+    ("B +Kalman",         True,  False, False),
+    ("C +FSM(无谱特征)",   True,  False,  True),
+    ("D 完整(增强)",       True,   True,   True),
 ]
 
 
@@ -78,7 +84,8 @@ def run_one(model, video, H, cfg, edge_dist, use_kalman, use_spectral, use_fsm):
             except Exception:
                 pass
         if use_fsm and fsm is not None:
-            fsm.update({"n": n, "density": density, "r_gcc": r_gcc}, now_ms)
+            fsm.update({"n": n, "density": density, "r_gcc": r_gcc,
+                        "fiedler": feat.get("fiedler", 0.0)}, now_ms)
             lv = fsm.level
         else:
             lv = rule_level(n, density, r_gcc, cfg)

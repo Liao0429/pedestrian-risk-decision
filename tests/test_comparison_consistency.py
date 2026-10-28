@@ -39,7 +39,7 @@ def test_comparison_uses_fair_and_baseline():
     assert cmp["base_sw"] < 3000, f"base_sw={cmp['base_sw']} 仍像 OR 基线（旧值 5147）"
     assert cmp["base_lv"]["DANGER"] < 5000, f"基线 DANGER 帧 {cmp['base_lv']['DANGER']} 仍像 OR 基线（旧值 21969）"
     assert cmp["base_danger"] == 24, "出现 DANGER 的基线视频数应为 24（AND 基线）"
-    assert cmp["enh_danger"] == 40, "出现 DANGER 的增强视频数应为 40"
+    assert cmp["enh_danger"] == 66, "出现 DANGER 的增强视频数应为 66（谱特征接入后）"
     assert cmp["base_safe"] == 63, "基线全程 SAFE 视频数应为 63"
     assert cmp["enh_safe"] == 31, "增强全程 SAFE 视频数应为 31"
 

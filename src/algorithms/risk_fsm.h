@@ -14,7 +14,9 @@
 //
 // 综合拥挤度评分（归一化到 [0,1]）：
 //   score = w1 * norm(n) + w2 * density + w3 * r_gcc
+//           + w4 * fiedler_norm * r_gcc        // 谱特征修正项
 //   norm(n) = min(n / n_ref, 1.0)
+//   fiedler_norm = fiedler / (fiedler + 1)     // 单调映射到 [0,1)
 //   可选运动趋势 trend（[-1,1]，>0 表示聚集/人数上升）：
 //   score += trend_bias * clamp(trend, -1, 1)
 //
@@ -46,6 +48,7 @@ struct FsmFeatures {
     double density = 0.0; // 网络密度 [0,1]
     double r_gcc = 0.0;    // 最大连通分量占比 [0,1]
     double clustering = 0.0; // 平均聚类系数（预留，当前不参与评分）
+    double fiedler = 0.0; // Fiedler 特征值（谱连通度），参与 w4 谱项
     double trend = 0.0;    // 运动趋势 [-1,1]，>0 聚集/人数上升
 };
 
@@ -55,6 +58,7 @@ struct RiskFSMConfig {
     double w1 = 0.4;
     double w2 = 0.3;
     double w3 = 0.3;
+    double w4 = 0.1;          // 谱特征权重（score += w4 * fiedler/(fiedler+1) * r_gcc，0=禁用）
     int    n_ref = 20;         // 人数归一化参考值
     // 动态（状态相关）滞回阈值
     double up_warning = 0.40;  // SAFE -> WARNING
@@ -73,8 +77,9 @@ struct RiskFSMConfig {
     // 校验配置合法性（与 Python 端 RiskFSMConfig.__post_init__ 一致）。
     // 返回 true 表示合法；false 时 err 填充具体原因，便于 JSON 加载时报错。
     bool validate(std::string& err) const {
-        if (w1 < 0.0 || w2 < 0.0 || w3 < 0.0) { err = "权重 w1/w2/w3 必须为非负值"; return false; }
+        if (w1 < 0.0 || w2 < 0.0 || w3 < 0.0 || w4 < 0.0) { err = "权重 w1/w2/w3/w4 必须为非负值"; return false; }
         if (w1 + w2 + w3 <= 0.0)              { err = "权重之和必须大于 0"; return false; }
+        if (w4 > 1.0)                          { err = "w4 权重不应超过 1.0（谱项为辅助修正）"; return false; }
         if (n_ref <= 0)                       { err = "n_ref 必须为正整数"; return false; }
         if (confirm_up < 1 || confirm_down < 1) { err = "confirm_up / confirm_down 必须 >= 1"; return false; }
         if (danger_hold_frames < 0 || danger_hold_ms < 0) { err = "danger_hold_frames / danger_hold_ms 必须 >= 0"; return false; }
@@ -139,6 +144,12 @@ private:
         double density = clamp01(f.density);
         double r_gcc = clamp01(f.r_gcc);
         double s = cfg_.w1 * normN + cfg_.w2 * density + cfg_.w3 * r_gcc;
+        // 谱特征修正项：仅对连通结构生效，紧密聚集（fiedler 大）加分明显、
+        // 链状伪聚集（r_gcc=1 但 fiedler 小）加分极小、分散场景（r_gcc≈0）不加分
+        if (cfg_.w4 != 0.0 && r_gcc > 0.0 && f.fiedler > 0.0) {
+            double fiedlerNorm = f.fiedler / (f.fiedler + 1.0);
+            s += cfg_.w4 * fiedlerNorm * r_gcc;
+        }
         if (cfg_.trend_bias != 0.0 && f.trend != 0.0) {
             s += cfg_.trend_bias * clamp(f.trend, -1.0, 1.0);
         }

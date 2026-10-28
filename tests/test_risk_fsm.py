@@ -230,6 +230,29 @@ def test_score_formula():
     assert abs(fsm2.score - (0.425 - 0.05)) < 1e-9, fsm2.score
 
 
+def test_score_formula_with_spectral_term():
+    """谱特征修正项：score += w4 * fiedler/(fiedler+1) * r_gcc。"""
+    # 无 fiedler 输入时，谱项不生效
+    fsm = make_fsm()
+    fsm.update({"n": 10, "density": 0.5, "r_gcc": 0.25}, 0)
+    assert abs(fsm.score - 0.425) < 1e-9, fsm.score
+
+    # 有 fiedler、r_gcc=1：score = 0.65 + 0.1 * (4.3187/5.3187) * 1.0 = 0.731198...
+    fsm.update({"n": 10, "density": 0.5, "r_gcc": 1.0, "fiedler": 4.3187}, 0)
+    expected = 0.65 + 0.1 * (4.3187 / 5.3187) * 1.0
+    assert abs(fsm.score - expected) < 1e-9, fsm.score
+
+    # 链状伪聚集：r_gcc=1 但 fiedler 很小（0.0979），加分极小
+    fsm.update({"n": 10, "density": 0.2, "r_gcc": 1.0, "fiedler": 0.0979}, 0)
+    expected_chain = 0.4*0.5 + 0.3*0.2 + 0.3*1.0 + 0.1*(0.0979/1.0979)*1.0
+    assert abs(fsm.score - expected_chain) < 1e-9, fsm.score
+
+    # w4=0 时谱项禁用
+    fsm3 = make_fsm(w4=0.0)
+    fsm3.update({"n": 10, "density": 0.5, "r_gcc": 1.0, "fiedler": 4.3187}, 0)
+    assert abs(fsm3.score - 0.65) < 1e-9, fsm3.score
+
+
 def test_score_clamped_to_unit_interval():
     fsm = make_fsm(w1=1.0, w2=1.0, w3=1.0, trend_bias=1.0)
     fsm.update({"n": 100, "density": 1.0, "r_gcc": 1.0, "trend": 1.0}, 0)
@@ -252,6 +275,8 @@ def test_config_validation():
     expect_raise(up_danger=0.50, down_warning=0.60)
     expect_raise(confirm_up=0)                     # 确认帧必须 >= 1
     expect_raise(w1=-1.0)                           # 权重不能为负
+    expect_raise(w4=-1.0)                           # 谱权重不能为负
+    expect_raise(w4=1.5)                                 # 谱权重不能超过 1.0
     expect_raise(w1=0.0, w2=0.0, w3=0.0)           # 权重和必须 > 0
     expect_raise(n_ref=0)                          # n_ref 必须为正
     expect_raise(danger_hold_frames=-1)            # 保持帧数不能为负
@@ -280,7 +305,7 @@ def test_cpp_header_defaults_consistent():
     cfg = RiskFSMConfig()
     # 每个默认值应在头文件里以 "名字 = 值" 形式出现
     pairs = [
-        ("w1", cfg.w1), ("w2", cfg.w2), ("w3", cfg.w3),
+        ("w1", cfg.w1), ("w2", cfg.w2), ("w3", cfg.w3), ("w4", cfg.w4),
         ("n_ref", cfg.n_ref),
         ("up_warning", cfg.up_warning), ("up_danger", cfg.up_danger),
         ("down_safe", cfg.down_safe), ("down_warning", cfg.down_warning),

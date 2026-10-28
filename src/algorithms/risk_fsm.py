@@ -24,12 +24,17 @@ SAFE/WARNING/DANGER 之间逐帧闪烁。
 综合拥挤度评分（归一化到 [0,1]）：
 
     score = w1 * norm(n) + w2 * density + w3 * r_gcc
+              + w4 * fiedler_norm * r_gcc     # 谱特征修正项（可选）
 
-其中：
-    norm(n) = min(n / n_ref, 1.0)   # 人数归一化
-    density, r_gcc ∈ [0,1]          # 网络密度 / 最大连通分量占比
-    trend 为可选运动趋势（∈[-1,1]），>0 表示聚集/人数上升，会小幅抬升 score：
-        score += trend_bias * clamp(trend, -1, 1)
+    其中：
+        norm(n) = min(n / n_ref, 1.0)   # 人数归一化
+        density, r_gcc ∈ [0,1]          # 网络密度 / 最大连通分量占比
+        fiedler_norm = fiedler / (fiedler + 1) ∈ [0,1)   # Fiedler 值单调归一化
+        trend 为可选运动趋势（∈[-1,1]），>0 表示聚集/人数上升，会小幅抬升 score：
+            score += trend_bias * clamp(trend, -1, 1)
+
+    谱特征修正项只对连通结构生效：紧密聚集（fiedler 大）显著加分，
+    链状伪聚集（r_gcc=1 但 fiedler 小）加分极小，分散场景（r_gcc≈0）不加分。
 
 阈值采用**状态相关（动态）滞回阈值**：同一 score 在不同状态下对应不同目标等级，
 从而形成重叠区间（滞回带）：
@@ -76,10 +81,11 @@ class RiskFSMConfig:
     默认值与 C++ 端 `src/algorithms/risk_fsm.h` 的 `RiskFSMConfig` 保持一致。
     """
 
-    # ---------- 综合拥挤度评分权重（score = w1*norm(n) + w2*density + w3*r_gcc）
+    # ---------- 综合拥挤度评分权重（score = w1*norm(n) + w2*density + w3*r_gcc + w4*fn*r_gcc）
     w1: float = 0.4          # 人数权重
     w2: float = 0.3          # 密度权重
     w3: float = 0.3          # 最大连通分量占比权重
+    w4: float = 0.1           # 谱特征权重（score += w4 * fiedler/(fiedler+1) * r_gcc，0=禁用）
     n_ref: int = 20          # 人数归一化参考值（norm(n) = min(n/n_ref, 1)）
 
     # ---------- 动态（状态相关）滞回阈值，基于 score ∈ [0,1]
@@ -101,10 +107,12 @@ class RiskFSMConfig:
 
     def __post_init__(self) -> None:
         # 类型/取值校验，尽早暴露配置错误
-        if self.w1 < 0 or self.w2 < 0 or self.w3 < 0:
-            raise ValueError("权重 w1/w2/w3 必须为非负值")
+        if self.w1 < 0 or self.w2 < 0 or self.w3 < 0 or self.w4 < 0:
+            raise ValueError("权重 w1/w2/w3/w4 必须为非负值")
         if self.w1 + self.w2 + self.w3 <= 0:
             raise ValueError("权重之和必须大于 0")
+        if self.w4 > 1.0:
+            raise ValueError("w4 权重不应超过 1.0（谱项为辅助修正）")
         if self.n_ref <= 0:
             raise ValueError("n_ref 必须为正整数")
         if self.confirm_up < 1 or self.confirm_down < 1:
@@ -182,6 +190,8 @@ class RiskFSM:
               - density : float   网络密度 [0,1]
               - r_gcc   : float   最大连通分量占比 [0,1]
               - clustering : float 平均聚类系数（预留，当前不参与评分）
+              - fiedler : float   （可选）Fiedler 特征值（谱连通度），
+                                    参与评分项 w4*fiedler/(fiedler+1)*r_gcc
               - trend   : float   （可选）运动趋势 [-1,1]，>0 表示聚集/人数上升
         now_ms : int 或 None
             当前时间戳（毫秒）。为 None 时禁用基于毫秒的 DANGER 保持。
@@ -211,6 +221,16 @@ class RiskFSM:
         r_gcc = _clamp(float(r_gcc), 0.0, 1.0)
 
         score = cfg.w1 * norm_n + cfg.w2 * density + cfg.w3 * r_gcc
+
+        # 谱特征修正项：Fiedler 值（代数连通度）越大、连通占比越大，风险越高。
+        # 归一化采用 fiedler/(fiedler+1)（单调映射到 [0,1)），只对 r_gcc>0 生效：
+        # 紧密聚集（fiedler 大）加分明显，链状伪聚集（r_gcc=1 但 fiedler 小）加分极小。
+        if cfg.w4 != 0.0 and r_gcc > 0.0:
+            fiedler = features.get("fiedler", 0.0) or 0.0
+            if fiedler > 0.0:
+                fiedler_norm = fiedler / (fiedler + 1.0)
+                score += cfg.w4 * fiedler_norm * r_gcc
+
         if cfg.trend_bias != 0.0 and trend:
             score += cfg.trend_bias * _clamp(float(trend), -1.0, 1.0)
         return _clamp(score, 0.0, 1.0)

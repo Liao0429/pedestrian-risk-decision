@@ -164,6 +164,7 @@ EnhancedResult EnhancedDecision::processFrame(
     f.density   = feat.density;
     f.r_gcc     = feat.r_gcc;
     f.clustering = feat.clustering;
+    f.fiedler   = feat.fiedler;   // 谱特征参与 FSM 评分（w4 项）
     // 运动趋势：人数上升为正（增大风险），归一化到 [-1,1]
     const int delta = feat.n - prevN_;
     f.trend = clampd(static_cast<double>(delta) / 3.0, -1.0, 1.0);

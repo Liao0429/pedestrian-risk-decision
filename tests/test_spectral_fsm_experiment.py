@@ -99,9 +99,17 @@ def test_m0_replay_consistency():
     cfg = load_config(str(PROJECT_ROOT / "config" / "default_config.json"))
     timelines = TIMELINES
     assert len(timelines) >= 100, f"timeline 数量异常: {len(timelines)}"
+    try:
+        import cv2  # noqa: F401
+    except ImportError:
+        pytest.skip("缺少 cv2，无法读取视频帧率")
     total_same = total_frames = 0
-    for _, tl in timelines:
-        levels, _, _ = replay(tl, cfg, "M0", 0.0, now_ms_mode="ms33")
+    for name, tl in timelines:
+        cap = cv2.VideoCapture(str(PROJECT_ROOT / "dataset" / "videos50" / f"{name}.mp4"))
+        fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+        cap.release()
+        # 用生产配置（w4=0.1）+ 真实帧率重算，验证离线重算与真实推理一致
+        levels, _, _ = replay(tl, cfg, "M0", 0.0, now_ms_mode="fps", m0_spectral=True, fps=fps)
         same = sum(1 for a, b in zip(levels, [x["level"] for x in tl]) if a == b)
         total_same += same
         total_frames += len(tl)

@@ -221,6 +221,11 @@ inline RiskConfig loadRiskConfig(const std::string& path) {
             if (!v->isNumber() || v->asDouble() < 0.0) throw std::runtime_error("fsm.w3 必须是非负数");
             f.w3 = v->asDouble();
         }
+        if (const minijson::Value* v = fsmObj->find("w4")) {
+            if (!v->isNumber() || v->asDouble() < 0.0 || v->asDouble() > 1.0)
+                throw std::runtime_error("fsm.w4 必须在 [0,1]");
+            f.w4 = v->asDouble();
+        }
         if (const minijson::Value* v = fsmObj->find("n_ref")) {
             if (!v->isNumber() || v->asDouble() <= 0.0) throw std::runtime_error("fsm.n_ref 必须为正数");
             f.n_ref = static_cast<int>(v->asDouble());
