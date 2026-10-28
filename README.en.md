@@ -79,6 +79,7 @@ pedestrian-risk-decision/
 ![Fiedler by risk level](docs/figures/fig6_fiedler_boxplot.png)
 ![Switch count histogram](docs/figures/fig7_switches_hist.png)
 ![Fiedler trend by level](docs/figures/fig8_fiedler_trend.png)
+![FSM decision timeline (mixkit_13192 dense crowd)](docs/figures/fig9_fsm_timeline_13192.png)
 ![DANGER video/frame comparison](docs/figures/fig_danger_compare.png)
 ![Level share comparison](docs/figures/fig_level_share_compare.png)
 

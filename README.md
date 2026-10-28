@@ -88,6 +88,7 @@ pedestrian-risk-decision/
 ![Fiedler 特征值随风险等级分布](docs/figures/fig6_fiedler_boxplot.png)
 ![增强 vs 基线切换次数分布对比](docs/figures/fig7_switches_hist.png)
 ![谱连通度随风险等级趋势](docs/figures/fig8_fiedler_trend.png)
+![FSM 决策过程时序（mixkit_13192 密集人群）](docs/figures/fig9_fsm_timeline_13192.png)
 ![DANGER 视频数/帧数对比](docs/figures/fig_danger_compare.png)
 ![等级帧占比对比](docs/figures/fig_level_share_compare.png)
 

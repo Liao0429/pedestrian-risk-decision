@@ -21,7 +21,7 @@
 1. **网页实时观看**：手机/电脑浏览器打开 `http://<开发板IP>:1984`（现场实时画面 + 风险等级）。
 2. **预录视频兜底**：若现场镜头前无人走动，播放 `mixkit_13192_enhanced.mp4`（DANGER 切换），强调"密集人群风险检测"。
 3. **真机数据**：内存 12.5MB / CPU 42.5% / 6.9 FPS（`docs/WEB_VIEWER.md`、`results/edge_board/EDGE_TEST_REPORT.md`）。
-4. **算法讲解**：用 README/ARCHITECTURE 的 Mermaid 图讲 感知→IPM→图论拓扑→FSM。
+4. **算法讲解**：用 README/ARCHITECTURE 的 Mermaid 图讲 感知→IPM→图论拓扑→FSM；配合 `docs/figures/fig9_fsm_timeline_13192.png`（FSM 决策过程时序图：等级色带/人数/r_GCC/Fiedler 四联图）讲解 FSM 如何把逐帧抖动收敛为稳定等级（305 帧仅 4 次切换）。
 
 ## 播放方法
 
