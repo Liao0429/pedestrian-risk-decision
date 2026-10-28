@@ -77,7 +77,7 @@ pedestrian-risk-decision/
 
 ### 视频增强（真实视频，Kalman+谱特征+FSM，111 条全量重跑）
 - **全量 111 条真实视频（45021 帧）**：等级分布 **SAFE 26885 / WARNING 6388 / DANGER 11748**，平均每条等级切换 **5.86 次**（中位数 4.0，FSM 滞回稳定），66 条出现 DANGER，**31 条全程输出 SAFE（系统未报警）**（无人工真值，无法判定未报警是正确不报还是漏报）
-- 谱特征修正项（w4=0.1，score += w4·fiedler/(fiedler+1)·r_gcc）已接入生产 FSM：Fiedler 均值随等级单调上升（SAFE 0.016 / WARNING 0.465 / DANGER 1.117），111 条批量 DANGER 帧 7807 → 11748（谱特征提升高风险识别）
+- 谱特征修正项（w4=0.1，score += w4·fiedler/(fiedler+1)·r_gcc）已接入生产 FSM：Fiedler 均值随等级单调上升（SAFE 0.017 / WARNING 0.214 / DANGER 1.078），111 条批量 DANGER 帧 7807 → 11748（谱特征提升高风险识别）
 - 密集人群（`mixkit_13192`）：**DANGER 179 / WARNING 120 / SAFE 6**（305 帧），等级切换仅 4 次 → 稳定（公平基线 AND 规则为 48 次/视频）
 - 稀疏/无人场景（`mixkit_50134`，光照正常）：388 帧全程 SAFE（该场景无行人，未触发告警）
 - **前后对比（公平基线，规则与真实引擎一致）**：平均切换次数 **23.2 → 5.9（↓74.8%）**；基线 24 条出现 DANGER、增强 66 条；DANGER 帧 2190 → 11748（FSM 评分含密度权重+谱特征且带保持机制，比逐帧规则更敏感、更稳定）。明细见 `results/rerun/_comparison_summary.json`；全量见 `results/rerun/`
@@ -130,7 +130,7 @@ pedestrian-risk-decision/
 - 稀疏/无人场景（真实少人，未触发告警）：
  [![稀疏场景增强](docs/figures/demo_mixkit_50134.png)](results/demo/mixkit_50134_enhanced.mp4)
 
-> 视频为真实数据集（Mixkit）经 `scripts/crowd_test_enhanced.py`（Kalman + FSM）处理生成；逐帧时间线 JSON 在 `results/rerun/video_enhanced/` 与 `results/video_enhanced_fsm/`。
+> 视频为真实数据集（Mixkit）经 `scripts/crowd_test_enhanced.py`（Kalman + FSM）处理生成；逐帧时间线 JSON 在 `results/rerun/video_enhanced/`（谱特征接入后的规范结果）。
 
 性能对比图表见 `docs/figures/`。
 

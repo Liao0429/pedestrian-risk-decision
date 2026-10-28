@@ -70,7 +70,7 @@ pedestrian-risk-decision/
 
 ### Video enhancement (111 real videos, Kalman + FSM, full rerun)
 - **All 111 real videos (45021 frames)**: level distribution **SAFE 26885 / WARNING 6388 / DANGER 11748**, average **5.86 level switches per video** (median 4.0, FSM hysteresis stabilizes), 66 videos reached DANGER, **31 videos stayed SAFE throughout** (no alert; without ground truth we cannot judge whether these are correct no-alerts or missed alerts)
-- Spectral correction term (w4=0.1, score += w4·fiedler/(fiedler+1)·r_gcc) is integrated into the production FSM: mean Fiedler rises monotonically with level (SAFE 0.016 / WARNING 0.465 / DANGER 1.117), batch DANGER frames 7807 → 11748 across 111 videos (spectral features improve high-risk detection)
+- Spectral correction term (w4=0.1, score += w4·fiedler/(fiedler+1)·r_gcc) is integrated into the production FSM: mean Fiedler rises monotonically with level (SAFE 0.017 / WARNING 0.214 / DANGER 1.078), batch DANGER frames 7807 → 11748 across 111 videos (spectral features improve high-risk detection)
 - Dense crowd (`mixkit_13192`): **DANGER 179 / WARNING 120 / SAFE 6** (305 frames), only 4 switches (fair baseline AND-rule: 48 switches)
 - Sparse/empty scene (`mixkit_50134`, normal lighting): SAFE throughout, no alert (no person present)
 - **Before/after (fair baseline, same rule as real engine)**: average switches **23.2 → 5.9 (↓74.8%)**; 24 baseline videos reached DANGER vs 66 enhanced; DANGER frames 2190 → 11748 (FSM score includes density weight, spectral features and hold mechanism — more sensitive and more stable than per-frame rule). Details: `results/rerun/_comparison_summary.json`

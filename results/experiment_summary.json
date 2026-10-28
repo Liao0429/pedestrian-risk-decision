@@ -1,67 +1,71 @@
 {
-  "_note": "2026-10-27 由 results/rerun 全量重跑数据重新生成（旧版时间线已过期）。",
-  "timelines": {
-    "mixkit_13192": {
-      "frames": 305,
-      "dist": {
-        "SAFE": 6,
-        "WARNING": 120,
-        "DANGER": 179
-      },
-      "switches": 4,
-      "avg_n": 15.4
-    },
-    "mixkit_13265": {
-      "frames": 281,
-      "dist": {
-        "SAFE": 281
-      },
-      "switches": 0,
-      "avg_n": 0.2
-    },
-    "mixkit_134": {
-      "frames": 600,
-      "dist": {
-        "SAFE": 259,
-        "WARNING": 101,
-        "DANGER": 240
-      },
-      "switches": 10,
-      "avg_n": 2.1
-    },
-    "mixkit_14084": {
-      "frames": 255,
-      "dist": {
-        "SAFE": 85,
-        "WARNING": 170
-      },
-      "switches": 11,
-      "avg_n": 6.5
-    },
-    "mixkit_151": {
-      "frames": 336,
-      "dist": {
-        "SAFE": 287,
-        "WARNING": 49
-      },
-      "switches": 2,
-      "avg_n": 1.4
-    }
+ "_note": "2026-10-28 由 results/rerun/video_enhanced/（谱特征接入后）全量时间线重新生成。",
+ "timelines": {
+  "mixkit_13192": {
+   "frames": 305,
+   "dist": {
+    "SAFE": 6,
+    "WARNING": 120,
+    "DANGER": 179
+   },
+   "switches": 4,
+   "avg_n": 15.4
   },
-  "image_baseline": {
-    "total": 500,
-    "processed": 500,
-    "failed": 0,
-    "levels": {
-      "SAFE": 414,
-      "WARNING": 61,
-      "DANGER": 25
-    },
-    "gt_total": 3089,
-    "det_total": 2548,
-    "det_rate": 0.8249,
-    "high_density_det_rate": 0.7943,
-    "high_density_images": 12,
-    "elapsed_s": null
+  "mixkit_13265": {
+   "frames": 281,
+   "dist": {
+    "SAFE": 281,
+    "WARNING": 0,
+    "DANGER": 0
+   },
+   "switches": 0,
+   "avg_n": 0.2
+  },
+  "mixkit_134": {
+   "frames": 600,
+   "dist": {
+    "SAFE": 306,
+    "WARNING": 27,
+    "DANGER": 267
+   },
+   "switches": 12,
+   "avg_n": 2.1
+  },
+  "mixkit_14084": {
+   "frames": 255,
+   "dist": {
+    "SAFE": 67,
+    "WARNING": 159,
+    "DANGER": 29
+   },
+   "switches": 13,
+   "avg_n": 6.5
+  },
+  "mixkit_151": {
+   "frames": 336,
+   "dist": {
+    "SAFE": 300,
+    "WARNING": 8,
+    "DANGER": 28
+   },
+   "switches": 4,
+   "avg_n": 1.4
   }
+ },
+ "image_baseline": {
+  "total": 500,
+  "processed": 500,
+  "failed": 0,
+  "levels": {
+   "SAFE": 414,
+   "WARNING": 61,
+   "DANGER": 25
+  },
+  "gt_total": 3089,
+  "det_total": 2548,
+  "det_rate": 0.8249,
+  "high_density_det_rate": 0.7943,
+  "high_density_images": 12,
+  "elapsed_s": null
+ }
 }
