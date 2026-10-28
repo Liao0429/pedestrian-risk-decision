@@ -125,7 +125,9 @@ MAIN（主菜单：开始检测 / 设置 / 关于 + 状态栏）
 
 1. **点亮屏幕**：优先采用 `docs/hardware/lvgl_board_port.md` 方案 B（spidev 用户态驱动，
    仅改 dts `spi@ff500000 status="okay"`，免重编内核）；ILI9341 显示驱动主机侧已实现
-   （`src/hardware/ili9341.h`，123 项测试），真机补 `SysfsSpiBus`/`SysfsLcdPins` 适配即可点亮；
+   （`src/hardware/ili9341.h`，123 项测试），XPT2046 触摸驱动主机侧已实现
+   （`src/hardware/xpt2046.h`，98 项测试：命令协议/数据提取/PENIRQ+压力阈值判定/校准坐标转换/中值抗噪），
+   真机补 `SysfsSpiBus`/`SysfsLcdPins`/`SysfsTouchPin` 适配并做电阻屏校准（raw 范围/镜像）即可点亮；
    备选官方路径：设备树启用 ILI9341 panel 验证 `/dev/fb0`（`cat /dev/zero > /dev/fb0` 清屏）；
 2. **移植 LVGL v8**：交叉编译 LVGL 库，配置 `USE_FBDEV 1`，跑通官方 demo；
 3. **实现 LvglMenuBackend**：继承 `hw::MenuBackend`，将

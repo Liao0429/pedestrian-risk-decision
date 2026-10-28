@@ -33,7 +33,7 @@
 | 方案 | 内核改动 | 收益 | 成本/风险 | 结论 |
 |---|---|---|---|---|
 | **A：fbtft 内核驱动** | 需要 `CONFIG_FB_TFT_ILI9341=y`（当前内核无此驱动，需重编内核） | 得到 `/dev/fb0`，LVGL 走 `lv_drivers` fbdev | 拉完整内核源码 + 重编 + 重打包 boot.img，工程量最大 | 备选 |
-| **B：spidev 用户态驱动** | 仅改 DTS（spi0 status=okay），**不需重编内核** | `/dev/spidev0.0` 出现，ILI9341 初始化/绘帧由用户态驱动完成 | **ILI9341 显示驱动已实现**（`src/hardware/ili9341.h`，123 项主机测试），XPT2046 触摸驱动待写 | **推荐** |
+| **B：spidev 用户态驱动** | 仅改 DTS（spi0 status=okay），**不需重编内核** | `/dev/spidev0.0` 出现，ILI9341 初始化/绘帧由用户态驱动完成 | **ILI9341 显示驱动已实现**（`src/hardware/ili9341.h`，123 项主机测试），**XPT2046 触摸驱动已实现**（`src/hardware/xpt2046.h`，98 项主机测试） | **推荐** |
 
 方案 B 的理由：
 1. 内核已有 `spidev` 驱动与 `spidev@0` 节点，改动面最小；
@@ -209,7 +209,7 @@ lv_drivers（触摸）`，编译命令以 SDK 的 CMake 工程为准，可复用
 | 3 | 板端验证 `/dev/spidev0.0`，spidev_test 回读 ID `0x9341` | 步骤 2 |
 | 4 | 板端 ILI9341 显示驱动：**驱动主机侧已实现**（`src/hardware/ili9341.h`：复位/初始化命令序列/窗口/矩形填充/帧缓冲/flush/读 ID，`SpiBus`+`LcdPins` 抽象，123 项主机测试）；剩余工作为板端 `SysfsSpiBus`（/dev/spidev0.0）+ `SysfsLcdPins`（sysfs GPIO）真机适配与验证 | 步骤 3 |
 | 5 | 实现 `LvglMenuBackend` 真机适配（对接 `lcd_menu.h`，见 `lvgl_menu.md`） | 步骤 4 |
-| 6 | XPT2046 触摸适配（中断 + SPI 读坐标） | 步骤 4 |
+| 6 | XPT2046 触摸适配（中断 + SPI 读坐标）：**驱动主机侧已实现**（`src/hardware/xpt2046.h`：0xD0/0x90 命令协议、12 位数据提取（dataShift 可调）、PENIRQ+压力阈值触摸判定、校准坐标映射（镜像/轴交换）、中值抗噪，`TouchPin` 抽象，98 项主机测试）；剩余为板端 `SysfsSpiBus`（独立片选 spidev）+ `SysfsTouchPin`（PENIRQ GPIO 中断）真机适配与校准 | 步骤 4 |
 | 7 | 中文字体子集化（`lv_font_conv`，见 `lvgl_menu.md`） | 步骤 5 |
 | 8 | 更新 `hardware_selftest` 屏幕检测项为真实 spidev 读 ID | 步骤 3 |
 | 9 | 演示模式联调（菜单 + 风险等级页 + 参数页） | 步骤 5-7 |

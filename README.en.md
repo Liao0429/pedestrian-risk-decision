@@ -14,7 +14,7 @@
 - **Risk grading**: real-time **SAFE / WARNING / DANGER** three-level output
 - **Configurable**: rule thresholds loaded from JSON (`config/default_config.json`)
 - **Edge performance**: NEON-optimized preprocessing (CPU preprocess 136ms→33ms), **7.46 FPS** measured, ~11MB RSS, 2.5h+ long-run with zero restart (watchdog + bounded timeouts)
-- **Extensible hardware**: dual-servo gimbal, RGB risk LED, debounced push button, voice alert (USB speaker + aplay, level-triggered/preemption/debounce), **touchscreen menu state machine** (LVGL-agnostic: page navigation / 4-key handling / risk-color mapping / throttled parameter refresh, `docs/hardware/lvgl_menu.md`), **ILI9341 SPI display driver** (320x240 RGB565: reset/init command sequence/window/fill-rect/full-frame flush/read ID 0x9341, `src/hardware/ili9341.h`, 123 host tests), physical switch drivers ready (`docs/hardware/`); **boot-time hardware self-test** (6 PASS/FAIL checks: GPIO/PWM/SPI LCD/USB audio/WiFi/button — demo mode only starts when all pass, `docs/hardware/selftest.md`)
+- **Extensible hardware**: dual-servo gimbal, RGB risk LED, debounced push button, voice alert (USB speaker + aplay, level-triggered/preemption/debounce), **touchscreen menu state machine** (LVGL-agnostic: page navigation / 4-key handling / risk-color mapping / throttled parameter refresh, `docs/hardware/lvgl_menu.md`), **ILI9341 SPI display driver** (320x240 RGB565: reset/init command sequence/window/fill-rect/full-frame flush/read ID 0x9341, `src/hardware/ili9341.h`, 123 host tests), **XPT2046 resistive touch driver** (SPI 12-bit ADC coordinates/pressure: command protocol / data extraction / PENIRQ+pressure-threshold touch detect / calibrated coordinate mapping / median anti-noise, `src/hardware/xpt2046.h`, 98 host tests), physical switch drivers ready (`docs/hardware/`); **boot-time hardware self-test** (6 PASS/FAIL checks: GPIO/PWM/SPI LCD/USB audio/WiFi/button — demo mode only starts when all pass, `docs/hardware/selftest.md`)
 
 ## 🏗️ System Architecture
 
@@ -115,7 +115,7 @@ python scripts/crowd_test_enhanced.py --input <video.mp4> --output results/video
 2. scp the binary to the board, run `sudo ./luckfox_pico_rtsp_yolov5` (systemd-managed + watchdog auto-restart)
 3. RTSP stream: `rtsp://<board-ip>:554/live/0`
 4. Algorithm modules (graph/Kalman/FSM) C++ headers in `src/algorithms/*.h`, cross-compilable
-5. Host unit tests (no board): `cd src/luckfox_rtsp_yolov5 && make test` — covers algorithm modules plus **118 hardware driver tests** (GPIO/LED/button/servo gimbal/voice alert), **80 hardware self-test cases** (GPIO loopback/PWM/SPI LCD ID/USB audio/WiFi/button PASS-FAIL logic), **99 touchscreen menu cases** (page navigation/4-key/risk-color mapping/throttled refresh/NULL tolerance) and **123 ILI9341 display driver cases** (reset/init sequence/window params/rect fill clipping/framebuffer/flush/read ID), all with in-memory fakes
+5. Host unit tests (no board): `cd src/luckfox_rtsp_yolov5 && make test` — covers algorithm modules plus **118 hardware driver tests** (GPIO/LED/button/servo gimbal/voice alert), **80 hardware self-test cases** (GPIO loopback/PWM/SPI LCD ID/USB audio/WiFi/button PASS-FAIL logic), **99 touchscreen menu cases** (page navigation/4-key/risk-color mapping/throttled refresh/NULL tolerance), **123 ILI9341 display driver cases** (reset/init sequence/window params/rect fill clipping/framebuffer/flush/read ID) and **98 XPT2046 touch driver cases** (command protocol/12-bit data extraction/PENIRQ+pressure-threshold touch detect/calibrated coordinate mapping/median anti-noise/fault injection), all with in-memory fakes
 
 ## 📚 Documentation Index
 
@@ -134,7 +134,7 @@ python scripts/crowd_test_enhanced.py --input <video.mp4> --output results/video
 | `docs/hardware/voice_module.md` | Voice alert solution (USB speaker recommended / DFPlayer fallback) and alert policy |
 | `docs/hardware/selftest.md` | Boot-time hardware self-test (6 PASS/FAIL checks, systemd gate, deploy steps) |
 | `docs/hardware/lvgl_menu.md` | Touchscreen menu (LVGL porting research, menu state machine, 99 tests, board adaptation roadmap) |
-| `docs/hardware/lvgl_board_port.md` | Board LVGL port prep (ILI9341 integration draft: device-tree change/boot.img signing/LVGL cross-compile; ILI9341 driver implemented, see `src/hardware/ili9341.h`) |
+| `docs/hardware/lvgl_board_port.md` | Board LVGL port prep (ILI9341 integration draft: device-tree change/boot.img signing/LVGL cross-compile; ILI9341 display driver + XPT2046 touch driver implemented, see `src/hardware/ili9341.h` and `src/hardware/xpt2046.h`) |
 
 ## 🧩 Extensible Modules
 

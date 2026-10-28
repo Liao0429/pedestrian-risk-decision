@@ -23,14 +23,15 @@ ALGO_HEADERS = include/enhanced_decision.h include/risk_config.h \
                ../algorithms/risk_fsm.h ../algorithms/minijson.h
 
 .PHONY: all test test-enhanced test-minijson test-risk-config test-golden \
-        test-preprocess test-selftest test-lcd-menu test-ili9341 clean help luckfox hardware-selftest
+        test-preprocess test-selftest test-lcd-menu test-ili9341 test-xpt2046 \
+        clean help luckfox hardware-selftest
 
 all: test
 
 # ---------------------------------------------------------------------------
 # 主机单元测试
 # ---------------------------------------------------------------------------
-test: test-enhanced test-minijson test-risk-config test-golden test-preprocess test-hardware test-selftest test-lcd-menu test-ili9341
+test: test-enhanced test-minijson test-risk-config test-golden test-preprocess test-hardware test-selftest test-lcd-menu test-ili9341 test-xpt2046
 
 test-enhanced: $(TEST_DIR)/test_enhanced_decision.cc $(SRC_DIR)/enhanced_decision.cc $(ALGO_HEADERS)
 	$(CXX) $(CXXFLAGS) $(INC) $(TEST_DIR)/test_enhanced_decision.cc $(SRC_DIR)/enhanced_decision.cc \
@@ -108,6 +109,15 @@ test-ili9341: $(TEST_DIR)/test_ili9341.cc ../hardware/ili9341.h
 	    -o $(TEST_DIR)/test_ili9341
 	./$(TEST_DIR)/test_ili9341
 
+# XPT2046 电阻触摸控制器（12 位 ADC 坐标/压力）：使用 FakeSpi/FakeTouchPin
+# 内存替身，验证命令字节/数据提取/触摸判定（PENIRQ+压力阈值）/校准坐标转换/
+# 中值抗噪/故障注入，无 XPT2046 硬件依赖。
+test-xpt2046: $(TEST_DIR)/test_xpt2046.cc ../hardware/xpt2046.h \
+               ../hardware/ili9341.h
+	$(CXX) $(CXXFLAGS) -I../hardware $(TEST_DIR)/test_xpt2046.cc \
+	    -o $(TEST_DIR)/test_xpt2046
+	./$(TEST_DIR)/test_xpt2046
+
 # 板端硬件自检 CLI（真实 Sysfs 检测，退出码=失败数，供 systemd 门禁）
 hardware-selftest: ../hardware/selftest_main.cc ../hardware/selftest.h \
                    ../hardware/gpio.h ../hardware/servo.h
@@ -159,6 +169,7 @@ clean:
 	      $(TEST_DIR)/test_selftest \
 	      $(TEST_DIR)/test_lcd_menu \
 	      $(TEST_DIR)/test_ili9341 \
+	      $(TEST_DIR)/test_xpt2046 \
 	      hardware_selftest \
 	      luckfox_pico_rtsp_yolov5
 
