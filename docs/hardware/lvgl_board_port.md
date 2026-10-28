@@ -1,8 +1,9 @@
 # 板端 LVGL 移植准备（ILI9341 触摸屏接入草案）
 
 > 文档定位：真机点亮前的**调查结论 + 实施草案**。ILI9341 2.8 寸触摸屏尚未采购，本
-> 文档基于 2026-10-27 开发板（Luckfox Pico Max）实测，给出设备树修改、boot.img 处理、
-> LVGL 交叉编译三条线的完整准备。
+> 文档基于 2026-10-27/28 开发板（Luckfox Pico Max）实测，给出设备树修改、boot.img 处理、
+> LVGL 交叉编译三条线的完整准备。**2026-10-28 新增：Luckfox 动态 overlay 方案
+> （方案 C，推荐）——无需重编内核/boot.img，一条命令启用 `/dev/spidev0.0`。**
 > 关联文档：[`lvgl_menu.md`](./lvgl_menu.md)（菜单状态机 + LVGL 移植调研）、
 > [`selftest.md`](./selftest.md)（硬件自检，含 SPI 屏幕 ID 检测项）、
 > [`DISPLAY_MENU_SYSTEM_PLAN.md`](./DISPLAY_MENU_SYSTEM_PLAN.md)。
@@ -33,9 +34,10 @@
 | 方案 | 内核改动 | 收益 | 成本/风险 | 结论 |
 |---|---|---|---|---|
 | **A：fbtft 内核驱动** | 需要 `CONFIG_FB_TFT_ILI9341=y`（当前内核无此驱动，需重编内核） | 得到 `/dev/fb0`，LVGL 走 `lv_drivers` fbdev | 拉完整内核源码 + 重编 + 重打包 boot.img，工程量最大 | 备选 |
-| **B：spidev 用户态驱动** | 仅改 DTS（spi0 status=okay），**不需重编内核** | `/dev/spidev0.0` 出现，ILI9341 初始化/绘帧由用户态驱动完成 | **ILI9341 显示驱动已实现**（`src/hardware/ili9341.h`，123 项主机测试），**XPT2046 触摸驱动已实现**（`src/hardware/xpt2046.h`，98 项主机测试） | **推荐** |
+| **B：spidev 用户态驱动（改 boot.img）** | 改 DTS（spi0 status=okay）后重编 boot.img 烧写 | `/dev/spidev0.0` 出现，ILI9341 初始化/绘帧由用户态驱动完成 | 需处理 FIT 签名；改动固化在 boot 分区，回退要重烧 | 备选 |
+| **C：Luckfox 动态 overlay（2026-10-28 实测推荐）** | **不改内核、不重编 boot.img** | `/dev/spidev0.0` 立即出现（configfs 动态加载），重启自动生效 | 需 root 权限执行一次脚本；可逆（删 dts 重启恢复出厂） | **推荐** |
 
-方案 B 的理由：
+方案 B/C 的共同理由：
 1. 内核已有 `spidev` 驱动与 `spidev@0` 节点，改动面最小；
 2. 帧率可调（SPI0 50MHz，2.8 寸 320×240 RGB565 一帧 150KB，理论 ~13ms/帧，足够 LVGL 菜单）；
 3. 出问题只影响用户态程序，不折腾内核与签名 boot.img 的兼容性。
@@ -90,6 +92,80 @@ spi@ff500000 {
 ```
 
 修改后重启应出现 `/dev/spidev0.0`，可用 `spidev_test` 回读 ILI9341 的 ID 寄存器（0xD3）验证 0x93 0x41。
+
+---
+
+## 3.5 方案 C：Luckfox 动态 overlay（2026-10-28 实测，推荐）
+
+### 背景
+
+Luckfox 出厂固件内置设备树 overlay 机制（`/etc/init.d/S99luckfoxcustomoverlay`）：
+开机时自动把 `/mnt/cfg/dtbo/*.dts` 用 `dtc` 编译成 dtbo，写入
+`/sys/kernel/config/device-tree/overlays/<name>/dtbo` 并置 status=1 动态加载。
+**因此无需重编内核、无需重打包 boot.img**——只需提供一段 overlay 设备树。
+
+### 实测结论（2026-10-28，开发板 armv7l）
+
+- 内核 `spidev` 驱动**已内置**（`/sys/bus/spi/drivers/spidev` 存在）；
+- SPI0 节点 `spi@ff500000` 的引脚复用 `pinctrl-0 = <0x43 0x44 0x45 0x46>`
+  （= `spi0m0-clk/miso/mosi/cs0`，phandle 大端存储，可从 `/proc/device-tree` 动态读取）；
+- ⚠️ **fbtft@0 必须禁用**：SPI0 下预置的官方 ST7789V 节点 `fbtft@0` 与
+  `spidev@0` **同片选（reg 均为 0）且无 status=disabled**。只把控制器
+  status 改 okay 会导致两者争用，`spidev@0` 可能注册失败。overlay 中须把
+  `fbtft@0` 置为 disabled。
+- 普通用户（`pico`）**无法**写 `/mnt/cfg` 与 configfs——执行需 root 权限。
+  运行自检程序若需无 root 访问 GPIO/PWM，另见下方 udev 建议。
+
+### 一键脚本
+
+```bash
+sudo ./scripts/enable_spi0_overlay.sh
+```
+
+脚本行为：① 检查 root；② 动态读取当前固件的 SPI0 引脚 phandle（兼容不同固件版本）；
+③ 生成 `/mnt/cfg/dtbo/spi0.dts`；④ 调用 `/etc/init.d/S99luckfoxcustomoverlay start`
+立即加载（无需重启）；⑤ 验证 `/dev/spidev0.0` 是否生成并给出排障命令。
+
+**可逆**：`sudo rm /mnt/cfg/dtbo/spi0.dts` 后重启即恢复出厂设备树。
+
+### overlay 内容（脚本自动生成，等价如下）
+
+```dts
+/dts-v1/;
+/plugin/;
+
+&{/spi@ff500000}{
+    status = "okay";
+    pinctrl-0 = <0x43 0x44 0x45 0x46>;   /* 动态读取，此处为 2026-03-14 固件实测值 */
+
+    fbtft@0 {
+        status = "disabled";             /* 与 spidev@0 同片选，必须禁用 */
+    };
+};
+```
+
+`dtc -I dts -O dtb` 编译验证通过（仅 `unit_address_vs_reg` 一个无害警告，因 overlay
+只改状态不重复 reg）；`fdtoverlay` 反编译确认 target-path=`/spi@ff500000` 正确。
+
+### 权限与 udev 建议（可选）
+
+`pico` 用户不在 root 组，`/sys/class/gpio/export`、`/sys/class/pwm/.../export`、
+`/dev/spidev0.0` 默认 root 所有。若希望 `hardware_selftest` 以 `pico` 用户运行，
+可加 udev 规则（root 执行一次）：
+
+```bash
+cat > /etc/udev/rules.d/99-luckfox-hardware.rules <<'EOF'
+SUBSYSTEM=="gpio", KERNEL=="gpiochip*", GROUP="gpio", MODE="0660"
+SUBSYSTEM=="pwm",  MODE="0660", GROUP="gpio"
+KERNEL=="spidev*", MODE="0666"
+SUBSYSTEM=="sound", KERNEL=="controlC*", MODE="0666"
+EOF
+udevadm control --reload-rules && udevadm trigger
+```
+
+> 注：sysfs gpio/pwm 的权限实际由内核 `gpio_sysfs`/`pwm_sysfs` 决定，规则对
+> `/sys/class/gpio/export` 的归属控制有限；若仍受限，直接以 root 运行自检或
+> 将自检程序接入 systemd 服务（root 执行）即可。
 
 ### GPIO 引脚（ILI9341 接线参考）
 
@@ -205,7 +281,7 @@ lv_drivers（触摸）`，编译命令以 SDK 的 CMake 工程为准，可复用
 | 步骤 | 内容 | 依赖 |
 |---|---|---|
 | 1 | 采购 ILI9341 2.8 寸屏（含 XPT2046 触摸）+ 排线 | 硬件 |
-| 2 | 老电脑拉 Luckfox SDK，改 dts（spi0 status=okay），重编 boot.img 并烧写 | SDK 下载 |
+| 2 | **root 执行一次 `scripts/enable_spi0_overlay.sh`**（Luckfox 动态 overlay，无需 SDK/重编 boot.img；需人工提供 root 凭据） | root 权限 |
 | 3 | 板端验证 `/dev/spidev0.0`，spidev_test 回读 ID `0x9341` | 步骤 2 |
 | 4 | 板端 ILI9341 显示驱动：**驱动主机侧已实现**（`src/hardware/ili9341.h`：复位/初始化命令序列/窗口/矩形填充/帧缓冲/flush/读 ID，`SpiBus`+`LcdPins` 抽象，123 项主机测试）；**板端适配层已实现**（`src/hardware/sysfs_spi.{h,cc}`：`SysfsSpiBus` 打开 /dev/spidev0.0 并配置 mode/bits/speed、全双工 transfer；`SysfsLcdPins` 通过 sysfs GPIO 控制 DC/RESET/背光；40 项 Linux 单元测试，已在开发板 armv7l 真机编译运行通过）。剩余为真机接线验证与屏幕 ID 回读 | 步骤 3 |
 | 5 | 实现 `LvglMenuBackend` 真机适配（对接 `lcd_menu.h`，见 `lvgl_menu.md`） | 步骤 4 |
@@ -226,7 +302,12 @@ for d in spi@ff500000 spi@ff510000 spi@ffac0000; do
 done
 # fbtft/spidev 驱动是否内置
 ls /sys/bus/platform/drivers/ | grep -E 'fb_|fbtft'
-grep spidev /proc/kallsyms | head
+ls /sys/bus/spi/drivers/ | grep spidev
+# 读取 SPI0 引脚复用 phandle（大端）
+od -A n -t x1 /proc/device-tree/pinctrl/spi0/spi0m0-clk/phandle
+# 启用 SPI0（Luckfox 动态 overlay，需 root）
+sudo ./scripts/enable_spi0_overlay.sh
+ls -l /dev/spidev0.0
 # 提取实际运行的 DTB
 cp /sys/firmware/fdt /tmp/current.dtb && dtc -I dtb -O dts /tmp/current.dtb -o /tmp/current.dts
 # boot 分区 FIT 提取（root）

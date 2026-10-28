@@ -89,7 +89,7 @@ public:
 
 private:
     bool writeFile(const char* attr, long val) {
-        char path[128];
+        char path[256];
         snprintf(path, sizeof(path), "%s/%s", m_base, attr);
         FILE* f = fopen(path, "w");
         if (!f) return false;
@@ -98,7 +98,7 @@ private:
         return true;
     }
     bool writeFile(const char* attr, const char* val) {
-        char path[128];
+        char path[256];
         snprintf(path, sizeof(path), "%s/%s", m_base, attr);
         FILE* f = fopen(path, "w");
         if (!f) return false;

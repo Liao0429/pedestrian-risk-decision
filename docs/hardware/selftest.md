@@ -83,6 +83,29 @@ GPIO loopback=56 button=92 PWM=pwmchip0/pwm0
 === result: 6 PASS / 0 FAIL ===
 ```
 
+## 4.5 真机验证记录（2026-10-28，开发板 armv7l）
+
+在开发板真机编译并运行自检 CLI（**无任何外设 + 普通用户 pico** 环境，验证容错）：
+
+```text
+$ g++ -std=c++11 -O2 -Wall -Wextra -I. selftest_main.cc -o hardware_selftest   # 0 警告
+$ ./hardware_selftest
+GPIO loopback=56 button=92 PWM=pwmchip0/pwm0
+[FAIL] GPIO_LOOPBACK  setDirection(out) 失败
+[FAIL] PWM_NODE       PWM configure(20ms) 失败
+[FAIL] SPI_LCD_ID     未找到 SPI 设备节点 /dev/spidev0.0
+[FAIL] USB_AUDIO      aplay 无输出（aplay 缺失或无声卡）
+[FAIL] WIFI_LINK      wlan0 不存在或未就绪
+[FAIL] BUTTON_LEVEL   setDirection(in) 失败
+=== result: 0 PASS / 6 FAIL ===   （退出码 1）
+```
+
+结论：
+
+- **程序在无硬件环境下运行健壮**：6 项全部 FAIL 但无崩溃、无空指针、报告完整、退出码正确（1=存在 FAIL）——符合"带病不演示"设计；
+- 各项 FAIL 原因与预期一致：SPI 未启用（设备树 disabled，见 `lvgl_board_port.md` 方案 C 一键启用）、GPIO/PWM 普通用户无 sysfs 写权限（root 或 udev 规则解决，见方案 C 权限小节）、wlan0 未插 WiFi 模块、aplay 无声卡；
+- 编译时发现 `servo.h` SysfsPwm 路径缓冲在板端 glibc fortify 下触发 `-Wformat-truncation` 警告，已修复（缓冲区 128→256）并回归通过（118+80 项测试）。
+
 ## 5. systemd 开机自检与演示模式门禁
 
 ### 5.1 部署步骤（开发板）
