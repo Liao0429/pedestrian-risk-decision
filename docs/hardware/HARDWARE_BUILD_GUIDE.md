@@ -30,7 +30,7 @@
 
 - **舵机**：Yaw 信号→PWM 脚，Pitch 信号→另一个 PWM 脚；红(VCC)接**独立5V轨**，棕(GND)共地。**绝不把舵机 VCC 接开发板 5V。**
 - **语音 USB 喇叭**（推荐，用户 2026-10-27 决策）：免驱 USB 喇叭插开发板 USB Host 口，内核识别为 ALSA 声卡；预录 WAV 放系统 TF 卡 `/userdata/voice/`，C++ 用 `aplay` 播放。兜底方案：DFPlayer Mini（UART /dev/ttyS4）仍见 `docs/hardware/voice_module.md`。
-- **触摸屏菜单**（LVGL + ILI9341）：`lcd_menu.h` 菜单状态机框架已就绪（页面导航/四键/风险颜色映射/参数节流，99 项主机测试），`ili9341.h` SPI 显示驱动已就绪（复位/初始化命令序列/窗口/矩形填充/整帧 flush/读 ID 0x9341，123 项主机测试），`xpt2046.h` 电阻触摸驱动已就绪（SPI 12 位坐标/压力读取、PENIRQ+压力阈值触摸判定、校准坐标映射、中值抗噪，98 项主机测试），**板端适配层 `sysfs_spi.{h,cc}` 已就绪**（`SysfsSpiBus` 打开 `/dev/spidevX.Y` 全双工传输 + `SysfsLcdPins`/`SysfsTouchPin` sysfs GPIO 控制 DC/RESET/背光/PENIRQ，40 项 Linux 单元测试已在开发板 armv7l 真机编译运行通过）；真机阶段按 `docs/hardware/lvgl_board_port.md` 路线启用 SPI0——**推荐 Luckfox 动态 overlay（2026-10-28 实测方案，`sudo ./scripts/enable_spi0_overlay.sh`，无需重编内核/boot.img）**→ 验证 `/dev/spidev0.0` → 接线点亮 ILI9341 并校准触摸（方案 C，免重编内核）。
+- **触摸屏菜单**（LVGL + ILI9341）：`lcd_menu.h` 菜单状态机框架已就绪（页面导航/四键/风险颜色映射/参数节流，99 项主机测试），`ili9341.h` SPI 显示驱动已就绪（复位/初始化命令序列/窗口/矩形填充/整帧 flush/读 ID 0x9341，123 项主机测试），`xpt2046.h` 电阻触摸驱动已就绪（SPI 12 位坐标/压力读取、PENIRQ+压力阈值触摸判定、校准坐标映射、中值抗噪，98 项主机测试），**板端适配层 `sysfs_spi.{h,cc}` 已就绪**（`SysfsSpiBus` 打开 `/dev/spidevX.Y` 全双工传输 + `SysfsLcdPins`/`SysfsTouchPin` sysfs GPIO 控制 DC/RESET/背光/PENIRQ，40 项 Linux 单元测试已在开发板 armv7l 真机编译运行通过）；真机阶段按 `docs/hardware/lvgl_board_port.md` 路线启用 SPI0——**已用 Luckfox 动态 overlay（`scripts/enable_spi0_overlay.sh`）在开发板落地：`/dev/spidev0.0` 已生成、开机自动加载（systemd oneshot 服务 `spi0-overlay.service`）、权限 0666、spidev ioctl 实测 mode0/1MHz**——剩余为接线点亮 ILI9341 并校准触摸（方案 C，免重编内核）。
 - **供电**：5V/3A 适配器 → USB 一分二 → 一路开发板 USB-C、一路面包板 5V 轨。面包板 +5V/GND 并 1000µF 电容。
 
 ## 三、组装步骤

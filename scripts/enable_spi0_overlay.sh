@@ -25,17 +25,17 @@ DTBO_DIR="/mnt/cfg/dtbo"
 DTBO_NAME="spi0"
 DTS_PATH="${DTBO_DIR}/${DTBO_NAME}.dts"
 
-echo "==> [1/5] 检查 root 权限"
+echo "==> [1/6] 检查 root 权限"
 if [ "$(id -u)" -ne 0 ]; then
     echo "错误：需要 root 权限。请使用 sudo 或以 root 用户运行。" >&2
     exit 1
 fi
 
-echo "==> [2/5] 检查依赖（dtc / python3）"
+echo "==> [2/6] 检查依赖（dtc / python3）"
 command -v dtc >/dev/null || { echo "缺少 dtc，无法编译 overlay" >&2; exit 1; }
 command -v python3 >/dev/null || { echo "缺少 python3，无法生成 dts" >&2; exit 1; }
 
-echo "==> [3/5] 生成 overlay 设备树（动态读取 SPI0 引脚复用 phandle）"
+echo "==> [3/6] 生成 overlay 设备树（动态读取 SPI0 引脚复用 phandle）"
 mkdir -p "${DTBO_DIR}"
 python3 - "${DTS_PATH}" <<'PY'
 import sys
@@ -71,10 +71,41 @@ with open(out, "w") as f:
 print(f"已生成 {out}（phandle clk={clk} miso={miso} mosi={mosi} cs0={cs0}）")
 PY
 
-echo "==> [4/5] 通过 Luckfox overlay 机制加载（立即生效，无需重启）"
-/etc/init.d/S99luckfoxcustomoverlay start
+echo "==> [4/5] 通过 configfs 加载 overlay（立即生效，无需重启）"
+# 自包含加载：不直接调用 /etc/init.d/S99luckfoxcustomoverlay start，
+# 该脚本存在官方 bug（rm 误用未定义变量 LLF_CUSTOM_DTS_PATH，报错但不影响加载），
+# 这里复刻其核心逻辑并规避 bug，保证脚本退出码干净。
+OVERLAY_SYS="/sys/kernel/config/device-tree/overlays/${DTBO_NAME}"
+mkdir -p "${DTBO_DIR}"
+dtc -I dts -O dtb "${DTS_PATH}" -o "${DTBO_DIR}/${DTBO_NAME}.dtbo"
+if [ ! -d "${OVERLAY_SYS}" ]; then
+    mkdir -p "${OVERLAY_SYS}"
+fi
+if [ ! -s "${OVERLAY_SYS}/dtbo" ]; then
+    cat "${DTBO_DIR}/${DTBO_NAME}.dtbo" > "${OVERLAY_SYS}/dtbo"
+    echo 1 > "${OVERLAY_SYS}/status"
+    echo "overlay 已加载（configfs ${OVERLAY_SYS} status=1）"
+else
+    echo "overlay 已存在（${OVERLAY_SYS}），跳过写入（当前 status=$(cat ${OVERLAY_SYS}/status)）"
+fi
+rm -f "${DTBO_DIR}/${DTBO_NAME}.dtbo"
 
-echo "==> [5/5] 验证 /dev/spidev0.0"
+echo "==> [5/6] 放行用户态访问（udev 规则 + 立即 chmod）"
+UDEV_RULE="/etc/udev/rules.d/99-luckfox-hardware.rules"
+if [ ! -f "${UDEV_RULE}" ] || ! grep -q 'spidev' "${UDEV_RULE}" 2>/dev/null; then
+    cat >> "${UDEV_RULE}" <<'EOF'
+# spidev: user-space SPI access for hardware_selftest / user drivers
+KERNEL=="spidev*", MODE="0666"
+SUBSYSTEM=="gpio", KERNEL=="gpiochip*", GROUP="gpio", MODE="0660"
+SUBSYSTEM=="pwm",  MODE="0660", GROUP="gpio"
+EOF
+    echo "已写入 ${UDEV_RULE}"
+fi
+udevadm control --reload-rules 2>/dev/null || true
+udevadm trigger 2>/dev/null || true
+chmod 0666 /dev/spidev0.0 2>/dev/null || true
+
+echo "==> [6/6] 验证 /dev/spidev0.0"
 if [ -e /dev/spidev0.0 ]; then
     echo "OK：/dev/spidev0.0 已生成"
     ls -l /dev/spidev0.0

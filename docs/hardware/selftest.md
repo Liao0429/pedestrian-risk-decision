@@ -106,6 +106,29 @@ GPIO loopback=56 button=92 PWM=pwmchip0/pwm0
 - 各项 FAIL 原因与预期一致：SPI 未启用（设备树 disabled，见 `lvgl_board_port.md` 方案 C 一键启用）、GPIO/PWM 普通用户无 sysfs 写权限（root 或 udev 规则解决，见方案 C 权限小节）、wlan0 未插 WiFi 模块、aplay 无声卡；
 - 编译时发现 `servo.h` SysfsPwm 路径缓冲在板端 glibc fortify 下触发 `-Wformat-truncation` 警告，已修复（缓冲区 128→256）并回归通过（118+80 项测试）。
 
+### 4.6 真机验证记录（2026-10-28 第二轮：SPI0 已启用后）
+
+在 `enable_spi0_overlay.sh` 落地（`/dev/spidev0.0` 生成 + 0666 权限 + 开机自动加载）后，
+再次运行同一自检程序（仍无外设，`pico` 普通用户）：
+
+```text
+$ ./hardware_selftest
+GPIO loopback=56 button=92 PWM=pwmchip0/pwm0
+[FAIL] GPIO_LOOPBACK  setDirection(out) 失败
+[FAIL] PWM_NODE       PWM configure(20ms) 失败
+[FAIL] SPI_LCD_ID     LCD ID 不匹配 0x9341     ← 变化：已能打开 /dev/spidev0.0 并传输
+[FAIL] USB_AUDIO      aplay 无输出（aplay 缺失或无声卡）
+[FAIL] WIFI_LINK      wlan0 不存在或未就绪
+[FAIL] BUTTON_LEVEL   setDirection(in) 失败
+=== result: 0 PASS / 6 FAIL ===   （退出码 1）
+```
+
+关键变化：`SPI_LCD_ID` 从「未找到 SPI 设备节点 /dev/spidev0.0」变为
+「LCD ID 不匹配 0x9341」——说明 `spidev` 设备节点已打开、SPI 时钟/数据线已实际
+传输（无屏幕时读到非 0x9341 属预期），**SPI0 硬件通路打通**。剩余 5 项 FAIL 均为
+外设未接入或用户权限（GPIO/PWM sysfs 需 root 或 udev 规则）导致，符合预期；
+待 ILI9341 到货接线后 `SPI_LCD_ID` 应转为 PASS。
+
 ## 5. systemd 开机自检与演示模式门禁
 
 ### 5.1 部署步骤（开发板）

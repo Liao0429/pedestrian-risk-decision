@@ -16,7 +16,7 @@
 - **真机性能**：NEON 优化预处理（CPU 预处理 136ms→33ms），实测 **7.46 FPS**、内存 ~11MB、**28 小时+ 长稳采样（10 点）**：看门狗 0 介入、日志 0 错误，服务中断自动恢复（看门狗 + 有限超时）
 - **网页免安装观看**：开发板 go2rtc 转 WebRTC/HLS，手机/电脑浏览器直接打开网页看监控（`docs/WEB_VIEWER.md`）
 - **可配置**：规则阈值、目标类别与**外部 IPM 标定文件**通过 JSON 配置文件加载（`config/default_config.json`；`homography_file` 指向文本 3x3 单应，相机位姿变化无需重编译）
-- **可扩展硬件**：双舵机云台、三色 LED 风险灯、防抖按键、语音告警（USB 喇叭 + aplay，等级触发/抢占/防重复）、**触摸屏菜单状态机**（LVGL 前端无关：页面导航/四键/风险等级颜色映射/参数节流刷新，`docs/hardware/lvgl_menu.md`）、**ILI9341 SPI 显示驱动**（320×240 RGB565：复位/初始化命令序列/窗口/矩形填充/整帧 flush/读 ID 0x9341，`src/hardware/ili9341.h`，123 项主机测试）、**XPT2046 电阻触摸驱动**（SPI 12 位 ADC 坐标/压力：命令协议/数据提取/PENIRQ+压力阈值触摸判定/校准坐标转换/中值抗噪，`src/hardware/xpt2046.h`，98 项主机测试）、**Linux 板端适配层**（`/dev/spidevX.Y` 全双工 SPI + DC/RESET/背光/PENIRQ 的 sysfs GPIO 实现，`src/hardware/sysfs_spi.{h,cc}`，40 项 Linux 单元测试，已在开发板 armv7l 真机编译运行通过）、物理开关驱动已就绪（`docs/hardware/`）；**开机硬件自检**（GPIO/PWM/SPI 屏幕/USB 声卡/WiFi/按键 6 项 PASS/FAIL，全部通过才进入演示模式，`docs/hardware/selftest.md`，**已在开发板真机验证无外设容错运行**）；**SPI0 一键启用脚本**（`scripts/enable_spi0_overlay.sh`：Luckfox 动态设备树 overlay，无需重编内核/boot.img，root 执行后生成 `/dev/spidev0.0`，实测方案见 `docs/hardware/lvgl_board_port.md`）
+- **可扩展硬件**：双舵机云台、三色 LED 风险灯、防抖按键、语音告警（USB 喇叭 + aplay，等级触发/抢占/防重复）、**触摸屏菜单状态机**（LVGL 前端无关：页面导航/四键/风险等级颜色映射/参数节流刷新，`docs/hardware/lvgl_menu.md`）、**ILI9341 SPI 显示驱动**（320×240 RGB565：复位/初始化命令序列/窗口/矩形填充/整帧 flush/读 ID 0x9341，`src/hardware/ili9341.h`，123 项主机测试）、**XPT2046 电阻触摸驱动**（SPI 12 位 ADC 坐标/压力：命令协议/数据提取/PENIRQ+压力阈值触摸判定/校准坐标转换/中值抗噪，`src/hardware/xpt2046.h`，98 项主机测试）、**Linux 板端适配层**（`/dev/spidevX.Y` 全双工 SPI + DC/RESET/背光/PENIRQ 的 sysfs GPIO 实现，`src/hardware/sysfs_spi.{h,cc}`，40 项 Linux 单元测试，已在开发板 armv7l 真机编译运行通过）、物理开关驱动已就绪（`docs/hardware/`）；**开机硬件自检**（GPIO/PWM/SPI 屏幕/USB 声卡/WiFi/按键 6 项 PASS/FAIL，全部通过才进入演示模式，`docs/hardware/selftest.md`，**已在开发板两轮真机验证**：无外设容错运行 + SPI0 启用后 SPI 传输实测打通）；**SPI0 已真机落地**（`scripts/enable_spi0_overlay.sh`：Luckfox 动态设备树 overlay，无需重编内核/boot.img；`/dev/spidev0.0` 已生成、systemd 开机自动加载、udev 0666 权限、ioctl 实测 mode0/1MHz，见 `docs/hardware/lvgl_board_port.md`）
 
 ## 🏗️ 系统架构
 
@@ -167,7 +167,7 @@ make test # 编译并运行增强决策/JSON 配置/阈值引擎单元测试（�
 | `docs/hardware/voice_module.md` | 语音告警方案（USB 喇叭推荐 / DFPlayer 兜底）与播报策略 |
 | `docs/hardware/selftest.md` | 开机硬件自检（6 项 PASS/FAIL、systemd 门禁、部署步骤） |
 | `docs/hardware/lvgl_menu.md` | 触摸屏菜单方案（LVGL 移植调研、菜单状态机框架、99 项测试、板端适配路线） |
-| `docs/hardware/lvgl_board_port.md` | 板端 LVGL 移植准备（ILI9341 接入草案：**方案 C Luckfox 动态 overlay 一键启用 SPI0**（`scripts/enable_spi0_overlay.sh`，2026-10-28 实测）/boot.img 签名处理/LVGL 交叉编译验证；ILI9341 显示驱动 + XPT2046 触摸驱动 + **Linux 板端适配层**（`src/hardware/sysfs_spi.{h,cc}`，已在开发板 armv7l 编译运行通过）均已实现，剩余为 root 执行 overlay 脚本与真机接线校准） |
+| `docs/hardware/lvgl_board_port.md` | 板端 LVGL 移植准备（ILI9341 接入草案：**方案 C Luckfox 动态 overlay 已真机落地**——`scripts/enable_spi0_overlay.sh` 一键启用 `/dev/spidev0.0`，systemd 开机自动加载 + udev 0666 权限，2026-10-28 实测：ioctl mode0/1MHz 成功、重启自动恢复；ILI9341 显示驱动 + XPT2046 触摸驱动 + **Linux 板端适配层**（`src/hardware/sysfs_spi.{h,cc}`，已在开发板 armv7l 编译运行通过）均已实现，剩余为 ILI9341 到货后接线与校准） |
 
 ## 🧩 可扩展模块（后续）
 

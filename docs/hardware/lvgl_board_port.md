@@ -116,6 +116,17 @@ Luckfox 出厂固件内置设备树 overlay 机制（`/etc/init.d/S99luckfoxcust
 - 普通用户（`pico`）**无法**写 `/mnt/cfg` 与 configfs——执行需 root 权限。
   运行自检程序若需无 root 访问 GPIO/PWM，另见下方 udev 建议。
 
+### 真机执行记录（2026-10-28 已完成 ✅）
+
+- **`/dev/spidev0.0` 已生成并开机自动加载**：configfs overlay `spi0` status=1，
+  `/sys/bus/spi/devices/spi0.0` 存在；`spidev` ioctl 实测 **mode=0 / 8bit / 1MHz**
+  配置成功；重启后自动恢复（见下"开机自启"）。
+- **权限**：`/etc/udev/rules.d/99-luckfox-hardware.rules` 已写入（spidev 0666 /
+  gpio / pwm），`/dev/spidev0.0` 权限实测 `crw-rw-rw-`，`pico` 用户可直接访问。
+- **selftest 联动**：`hardware_selftest` 的 SPI 项从「未找到设备节点」变为
+  「LCD ID 不匹配 0x9341」——即 SPI 传输已实际执行（未接屏幕读到非 0x9341
+  属预期 FAIL），待 ILI9341 到货接线后该项即可 PASS。
+
 ### 一键脚本
 
 ```bash
@@ -123,10 +134,43 @@ sudo ./scripts/enable_spi0_overlay.sh
 ```
 
 脚本行为：① 检查 root；② 动态读取当前固件的 SPI0 引脚 phandle（兼容不同固件版本）；
-③ 生成 `/mnt/cfg/dtbo/spi0.dts`；④ 调用 `/etc/init.d/S99luckfoxcustomoverlay start`
-立即加载（无需重启）；⑤ 验证 `/dev/spidev0.0` 是否生成并给出排障命令。
+③ 生成 `/mnt/cfg/dtbo/spi0.dts`；④ **自包含 configfs 加载 overlay**（编译 dtbo →
+写入 `/sys/kernel/config/device-tree/overlays/spi0` → status=1，无需重启，规避官方
+脚本 rm bug）；⑤ 写入 udev 规则并放行 `/dev/spidev0.0` 用户态访问；⑥ 验证
+`/dev/spidev0.0` 是否生成并给出排障命令。板上已实测：`rc=0`，`/dev/spidev0.0`
+权限 `crw-rw-rw-`。
 
-**可逆**：`sudo rm /mnt/cfg/dtbo/spi0.dts` 后重启即恢复出厂设备树。
+**可逆**：`sudo rm /mnt/cfg/dtbo/spi0.dts` 后重启即恢复出厂设备树（若已安装自启服务，先 `sudo systemctl disable spi0-overlay.service`）。
+
+### 开机自启（已实测）
+
+Luckfox 官方 `S99luckfoxcustomoverlay.service` **默认未启用**（其 init.d 脚本缺 LSB
+头，`systemctl enable` 会报 `Default-Start contains no runlevels`；且官方脚本本身有
+`rm ${LLF_CUSTOM_DTS_PATH}/...` 变量名 bug，运行退出码为 1）。因此本项目改用**原生
+systemd oneshot 服务**调用同一脚本，实测重启后 `/dev/spidev0.0` 自动出现：
+
+```bash
+# 板端已安装（2026-10-28），服务名：spi0-overlay.service
+cat > /etc/systemd/system/spi0-overlay.service <<'EOF'
+[Unit]
+Description=Enable SPI0 overlay for ILI9341/XPT2046 (Luckfox configfs)
+After=local-fs.target systemd-modules-load.service
+Before=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /usr/local/sbin/enable_spi0_overlay.sh
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo cp /usr/local/sbin/enable_spi0_overlay.sh /usr/local/sbin/  # 脚本本体
+sudo systemctl daemon-reload
+sudo ln -sf /etc/systemd/system/spi0-overlay.service /etc/systemd/system/multi-user.target.wants/spi0-overlay.service
+```
 
 ### overlay 内容（脚本自动生成，等价如下）
 
