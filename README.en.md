@@ -75,18 +75,25 @@ pedestrian-risk-decision/
 - Sparse/empty scene (`mixkit_50134`, normal lighting): SAFE throughout, no alert (no person present)
 - **Before/after (fair baseline, same rule as real engine)**: average switches **23.2 → 5.9 (↓74.8%)**; 24 baseline videos reached DANGER vs 66 enhanced; DANGER frames 2190 → 11748 (FSM score includes density weight, spectral features and hold mechanism — more sensitive and more stable than per-frame rule). Details: `results/rerun/_comparison_summary.json`
 
-See `docs/figures/` for performance comparison charts.
+![111-video enhanced level distribution](docs/figures/fig5_111videos_level.png)
+![Fiedler by risk level](docs/figures/fig6_fiedler_boxplot.png)
+![Switch count histogram](docs/figures/fig7_switches_hist.png)
+![Fiedler trend by level](docs/figures/fig8_fiedler_trend.png)
+![DANGER video/frame comparison](docs/figures/fig_danger_compare.png)
+![Level share comparison](docs/figures/fig_level_share_compare.png)
 
-### Ablation study (component contributions)
+> Data-mining takeaway: Fiedler vs risk level **Spearman ρ = 0.688** (45021 frames), spectral connectivity strongly correlates with crowd risk.
 
-![Ablation](docs/figures/fig_ablation.png)
+### Ablation study (component contributions, 6 representative videos)
 
-- **A baseline (no enhancement)**: 35.2 average switches
-- **B +Kalman smoothing**: → 11.7 switches (↓67%)
-- **C +Kalman+spectral**: identical to B (11.7) — spectral features are computed/displayed but NOT used in risk scoring; an integration experiment (M1/M2, offline re-run on 111 videos) showed no independent semantic gain, **rejected by decision**; kept as display-only
-- **D full (+FSM temporal decision)**: → 4.0 switches (hysteresis / confirm frames / DANGER hold)
+![Ablation](docs/figures/fig_ablation_pro.png)
 
-Details: `results/rerun/_ablation.json` and `docs/figures/fig_ablation.png`.
+- **A baseline (no enhancement)**: 33.2 average switches
+- **B +Kalman smoothing**: → 8.3 switches (↓75%)
+- **C +FSM (no spectral)**: → 4.3 switches (↓87%) — FSM hysteresis / confirm frames / DANGER hold bring most of the stability
+- **D complete (+spectral +FSM)**: → 4.3 switches (no extra jitter) and **DANGER frames +152 (+10.2%)** (mixkit_4519 +78, mixkit_4178 +45, mixkit_134 +29) — spectral features improve high-risk detection in medium/dense clusters without side effects on extreme-dense or sparse scenes
+
+Details: `results/rerun/_ablation.json` and `docs/figures/fig_ablation_pro.png`.
 
 ### ⚡ Edge performance (Luckfox Pico Max / RV1106)
 

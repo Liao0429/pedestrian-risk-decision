@@ -88,6 +88,10 @@ pedestrian-risk-decision/
 ![Fiedler 特征值随风险等级分布](docs/figures/fig6_fiedler_boxplot.png)
 ![增强 vs 基线切换次数分布对比](docs/figures/fig7_switches_hist.png)
 ![谱连通度随风险等级趋势](docs/figures/fig8_fiedler_trend.png)
+![DANGER 视频数/帧数对比](docs/figures/fig_danger_compare.png)
+![等级帧占比对比](docs/figures/fig_level_share_compare.png)
+
+> 数据挖掘结论：Fiedler 与风险等级的 **Spearman ρ = 0.688**（45021 帧全量），谱连通度与人群聚集风险显著正相关。
 
 ### 消融实验（各组件贡献，6 条代表性视频）
 
@@ -98,7 +102,9 @@ pedestrian-risk-decision/
 - **C +FSM（无谱特征）**：→ 4.3 次（↓87%）——FSM 滞回/确认帧/DANGER 保持带来主要稳定性
 - **D 完整（+谱特征 +FSM）**：→ 4.3 次保持稳定，且 **DANGER 帧提升 +152 帧（相对 C 组 +10.2%）**（mixkit_4519 +78、mixkit_4178 +45、mixkit_134 +29），谱特征在中等/密集聚集场景显著提升高风险识别，对极密（mixkit_3428）与稀疏（mixkit_50134）无副作用
 
-详见 `results/rerun/_ablation.json` 与 `docs/figures/fig_ablation.png`。
+![消融实验专业图](docs/figures/fig_ablation_pro.png)
+
+详见 `results/rerun/_ablation.json` 与 `docs/figures/fig_ablation_pro.png`。
 
 ### ⚡ 真机性能（Luckfox Pico Max / RV1106）
 
