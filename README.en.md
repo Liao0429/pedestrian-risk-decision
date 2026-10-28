@@ -13,8 +13,8 @@
 - **Temporal decision**: multi-object Kalman tracking (nearest-neighbor association) + FSM finite-state machine (hysteresis / debounce / DANGER hold); ByteTrack/EMA modules are standalone with unit tests (optional extension)
 - **Risk grading**: real-time **SAFE / WARNING / DANGER** three-level output
 - **Configurable**: rule thresholds loaded from JSON (`config/default_config.json`)
-- **Edge performance**: NEON-optimized preprocessing (CPU preprocess 136ms→33ms), **7.46 FPS** measured, ~11MB RSS, 2.5h+ long-run with zero restart (watchdog + bounded timeouts)
-- **Extensible hardware**: dual-servo gimbal, RGB risk LED, debounced push button, voice alert (USB speaker + aplay, level-triggered/preemption/debounce), **touchscreen menu state machine** (LVGL-agnostic: page navigation / 4-key handling / risk-color mapping / throttled parameter refresh, `docs/hardware/lvgl_menu.md`), **ILI9341 SPI display driver** (320x240 RGB565: reset/init command sequence/window/fill-rect/full-frame flush/read ID 0x9341, `src/hardware/ili9341.h`, 123 host tests), **XPT2046 resistive touch driver** (SPI 12-bit ADC coordinates/pressure: command protocol / data extraction / PENIRQ+pressure-threshold touch detect / calibrated coordinate mapping / median anti-noise, `src/hardware/xpt2046.h`, 98 host tests), physical switch drivers ready (`docs/hardware/`); **boot-time hardware self-test** (6 PASS/FAIL checks: GPIO/PWM/SPI LCD/USB audio/WiFi/button — demo mode only starts when all pass, `docs/hardware/selftest.md`)
+- **Edge performance**: NEON-optimized preprocessing (CPU preprocess 136ms→33ms), **7.46 FPS** measured, ~11MB RSS, **28h+ long-run sampling (10 points)**: zero watchdog interventions, zero log errors, auto-recovery on service interruption (watchdog + bounded timeouts)
+- **Extensible hardware**: dual-servo gimbal, RGB risk LED, debounced push button, voice alert (USB speaker + aplay, level-triggered/preemption/debounce), **touchscreen menu state machine** (LVGL-agnostic: page navigation / 4-key handling / risk-color mapping / throttled parameter refresh, `docs/hardware/lvgl_menu.md`), **ILI9341 SPI display driver** (320x240 RGB565: reset/init command sequence/window/fill-rect/full-frame flush/read ID 0x9341, `src/hardware/ili9341.h`, 123 host tests), **XPT2046 resistive touch driver** (SPI 12-bit ADC coordinates/pressure: command protocol / data extraction / PENIRQ+pressure-threshold touch detect / calibrated coordinate mapping / median anti-noise, `src/hardware/xpt2046.h`, 98 host tests), **Linux board adapter layer** (`/dev/spidevX.Y` full-duplex SPI + sysfs GPIO for DC/RESET/backlight/PENIRQ, `src/hardware/sysfs_spi.{h,cc}`, 40 Linux unit tests compiled and run on the board armv7l), physical switch drivers ready (`docs/hardware/`); **boot-time hardware self-test** (6 PASS/FAIL checks: GPIO/PWM/SPI LCD/USB audio/WiFi/button — demo mode only starts when all pass, `docs/hardware/selftest.md`)
 
 ## 🏗️ System Architecture
 
@@ -44,7 +44,7 @@ pedestrian-risk-decision/
 │ └── cross_build_lvgl.sh # Cross-compile LVGL v8 for the board (ARM smoke-test binary)
 ├── src/
 │ ├── algorithms/ # Algorithm modules (Graph Laplacian/Kalman/ByteTrack/DBSCAN/FSM/IPM/EMA, Python + C++)
-│ ├── hardware/ # Hardware drivers (gpio/led/button/servo/pan_tilt/voice_alert/selftest/lcd_menu/ili9341)
+│ ├── hardware/ # Hardware drivers (gpio/led/button/servo/pan_tilt/voice_alert/selftest/lcd_menu/ili9341/xpt2046/sysfs_spi)
 │ └── luckfox_rtsp_yolov5/ # On-board C++ project (RKNN, NEON-optimized)
 ├── config/ # Threshold config
 ├── results/ # Experimental results (image baseline + video enhanced + ablation + edge performance)
@@ -94,7 +94,7 @@ Details: `results/rerun/_ablation.json` and `docs/figures/fig_ablation.png`.
 | Frame rate (after NEON) | **6.30 → 7.46 FPS (+18%)** |
 | CPU preprocessing (letterbox+RGB) | **136ms → 33ms (-76%, NEON)** |
 | Memory (RSS) | **~10.5-10.9MB** |
-| Long-run (systemd watchdog + bounded timeouts) | **2.5h+ zero restart, zero error** (t0~t5 snapshots) |
+| Long-run (systemd watchdog + bounded timeouts) | **28h+ sampling (10 points): zero watchdog interventions, zero log errors** (board restarted once externally, systemd auto-recovered; current process 6h+ continuous) |
 | On-board golden tests | **174/174 passed** (NEON vs scalar) |
 | Main-loop protection | VI/VENC 1s bounded timeout; 30 consecutive failures → exit, watchdog restarts |
 
@@ -115,7 +115,7 @@ python scripts/crowd_test_enhanced.py --input <video.mp4> --output results/video
 2. scp the binary to the board, run `sudo ./luckfox_pico_rtsp_yolov5` (systemd-managed + watchdog auto-restart)
 3. RTSP stream: `rtsp://<board-ip>:554/live/0`
 4. Algorithm modules (graph/Kalman/FSM) C++ headers in `src/algorithms/*.h`, cross-compilable
-5. Host unit tests (no board): `cd src/luckfox_rtsp_yolov5 && make test` — covers algorithm modules plus **118 hardware driver tests** (GPIO/LED/button/servo gimbal/voice alert), **80 hardware self-test cases** (GPIO loopback/PWM/SPI LCD ID/USB audio/WiFi/button PASS-FAIL logic), **99 touchscreen menu cases** (page navigation/4-key/risk-color mapping/throttled refresh/NULL tolerance), **123 ILI9341 display driver cases** (reset/init sequence/window params/rect fill clipping/framebuffer/flush/read ID) and **98 XPT2046 touch driver cases** (command protocol/12-bit data extraction/PENIRQ+pressure-threshold touch detect/calibrated coordinate mapping/median anti-noise/fault injection), all with in-memory fakes
+5. Host unit tests (no board): `cd src/luckfox_rtsp_yolov5 && make test` — covers algorithm modules plus **118 hardware driver tests** (GPIO/LED/button/servo gimbal/voice alert), **80 hardware self-test cases** (GPIO loopback/PWM/SPI LCD ID/USB audio/WiFi/button PASS-FAIL logic), **99 touchscreen menu cases** (page navigation/4-key/risk-color mapping/throttled refresh/NULL tolerance), **123 ILI9341 display driver cases** (reset/init sequence/window params/rect fill clipping/framebuffer/flush/read ID), **98 XPT2046 touch driver cases** (command protocol/12-bit data extraction/PENIRQ+pressure-threshold touch detect/calibrated coordinate mapping/median anti-noise/fault injection), all with in-memory fakes, and **40 Linux board adapter cases** (spidev open/close/transfer failure paths, DC/RESET/backlight/PENIRQ level logic and NULL tolerance — automatically included on Linux/CI)
 
 ## 📚 Documentation Index
 
@@ -134,7 +134,7 @@ python scripts/crowd_test_enhanced.py --input <video.mp4> --output results/video
 | `docs/hardware/voice_module.md` | Voice alert solution (USB speaker recommended / DFPlayer fallback) and alert policy |
 | `docs/hardware/selftest.md` | Boot-time hardware self-test (6 PASS/FAIL checks, systemd gate, deploy steps) |
 | `docs/hardware/lvgl_menu.md` | Touchscreen menu (LVGL porting research, menu state machine, 99 tests, board adaptation roadmap) |
-| `docs/hardware/lvgl_board_port.md` | Board LVGL port prep (ILI9341 integration draft: device-tree change/boot.img signing/LVGL cross-compile; ILI9341 display driver + XPT2046 touch driver implemented, see `src/hardware/ili9341.h` and `src/hardware/xpt2046.h`) |
+| `docs/hardware/lvgl_board_port.md` | Board LVGL port prep (ILI9341 integration draft: device-tree change/boot.img signing/LVGL cross-compile; ILI9341 display driver + XPT2046 touch driver + **Linux board adapter layer** (`src/hardware/sysfs_spi.{h,cc}`, compiled and run on the board armv7l) all implemented — remaining work: real wiring and calibration) |
 
 ## 🧩 Extensible Modules
 

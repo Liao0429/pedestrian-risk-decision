@@ -24,14 +24,23 @@ ALGO_HEADERS = include/enhanced_decision.h include/risk_config.h \
 
 .PHONY: all test test-enhanced test-minijson test-risk-config test-golden \
         test-preprocess test-selftest test-lcd-menu test-ili9341 test-xpt2046 \
-        clean help luckfox hardware-selftest
+        test-sysfs-spi clean help luckfox hardware-selftest
 
 all: test
 
 # ---------------------------------------------------------------------------
 # 主机单元测试
 # ---------------------------------------------------------------------------
-test: test-enhanced test-minijson test-risk-config test-golden test-preprocess test-hardware test-selftest test-lcd-menu test-ili9341 test-xpt2046
+# Linux 板端适配层测试（SysfsSpiBus 依赖 <linux/spi/spidev.h>，仅 Linux 编译；
+# Windows 主机/交叉编译环境自动排除，CI（ubuntu）会自动纳入）。
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+LINUX_TESTS := test-sysfs-spi
+else
+LINUX_TESTS :=
+endif
+
+test: test-enhanced test-minijson test-risk-config test-golden test-preprocess test-hardware test-selftest test-lcd-menu test-ili9341 test-xpt2046 $(LINUX_TESTS)
 
 test-enhanced: $(TEST_DIR)/test_enhanced_decision.cc $(SRC_DIR)/enhanced_decision.cc $(ALGO_HEADERS)
 	$(CXX) $(CXXFLAGS) $(INC) $(TEST_DIR)/test_enhanced_decision.cc $(SRC_DIR)/enhanced_decision.cc \
@@ -118,6 +127,17 @@ test-xpt2046: $(TEST_DIR)/test_xpt2046.cc ../hardware/xpt2046.h \
 	    -o $(TEST_DIR)/test_xpt2046
 	./$(TEST_DIR)/test_xpt2046
 
+# Linux 板端适配层（spidev 总线 + sysfs GPIO 引脚）：FakeGpio 注入验证
+# DC/RESET/背光/PENIRQ 逻辑与 spidev 失败路径。依赖 Linux 头文件，仅
+# Linux 环境编译运行（CI ubuntu 自动纳入；Windows 主机被 test 排除）。
+test-sysfs-spi: $(TEST_DIR)/test_sysfs_spi.cc ../hardware/sysfs_spi.h \
+                 ../hardware/sysfs_spi.cc ../hardware/gpio.h \
+                 ../hardware/ili9341.h ../hardware/xpt2046.h
+	$(CXX) $(CXXFLAGS) -I../hardware $(TEST_DIR)/test_sysfs_spi.cc \
+	    ../hardware/sysfs_spi.cc \
+	    -o $(TEST_DIR)/test_sysfs_spi
+	./$(TEST_DIR)/test_sysfs_spi
+
 # 板端硬件自检 CLI（真实 Sysfs 检测，退出码=失败数，供 systemd 门禁）
 hardware-selftest: ../hardware/selftest_main.cc ../hardware/selftest.h \
                    ../hardware/gpio.h ../hardware/servo.h
@@ -170,6 +190,7 @@ clean:
 	      $(TEST_DIR)/test_lcd_menu \
 	      $(TEST_DIR)/test_ili9341 \
 	      $(TEST_DIR)/test_xpt2046 \
+	      $(TEST_DIR)/test_sysfs_spi \
 	      hardware_selftest \
 	      luckfox_pico_rtsp_yolov5
 

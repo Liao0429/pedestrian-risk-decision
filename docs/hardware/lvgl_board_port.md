@@ -207,9 +207,9 @@ lv_drivers（触摸）`，编译命令以 SDK 的 CMake 工程为准，可复用
 | 1 | 采购 ILI9341 2.8 寸屏（含 XPT2046 触摸）+ 排线 | 硬件 |
 | 2 | 老电脑拉 Luckfox SDK，改 dts（spi0 status=okay），重编 boot.img 并烧写 | SDK 下载 |
 | 3 | 板端验证 `/dev/spidev0.0`，spidev_test 回读 ID `0x9341` | 步骤 2 |
-| 4 | 板端 ILI9341 显示驱动：**驱动主机侧已实现**（`src/hardware/ili9341.h`：复位/初始化命令序列/窗口/矩形填充/帧缓冲/flush/读 ID，`SpiBus`+`LcdPins` 抽象，123 项主机测试）；剩余工作为板端 `SysfsSpiBus`（/dev/spidev0.0）+ `SysfsLcdPins`（sysfs GPIO）真机适配与验证 | 步骤 3 |
+| 4 | 板端 ILI9341 显示驱动：**驱动主机侧已实现**（`src/hardware/ili9341.h`：复位/初始化命令序列/窗口/矩形填充/帧缓冲/flush/读 ID，`SpiBus`+`LcdPins` 抽象，123 项主机测试）；**板端适配层已实现**（`src/hardware/sysfs_spi.{h,cc}`：`SysfsSpiBus` 打开 /dev/spidev0.0 并配置 mode/bits/speed、全双工 transfer；`SysfsLcdPins` 通过 sysfs GPIO 控制 DC/RESET/背光；40 项 Linux 单元测试，已在开发板 armv7l 真机编译运行通过）。剩余为真机接线验证与屏幕 ID 回读 | 步骤 3 |
 | 5 | 实现 `LvglMenuBackend` 真机适配（对接 `lcd_menu.h`，见 `lvgl_menu.md`） | 步骤 4 |
-| 6 | XPT2046 触摸适配（中断 + SPI 读坐标）：**驱动主机侧已实现**（`src/hardware/xpt2046.h`：0xD0/0x90 命令协议、12 位数据提取（dataShift 可调）、PENIRQ+压力阈值触摸判定、校准坐标映射（镜像/轴交换）、中值抗噪，`TouchPin` 抽象，98 项主机测试）；剩余为板端 `SysfsSpiBus`（独立片选 spidev）+ `SysfsTouchPin`（PENIRQ GPIO 中断）真机适配与校准 | 步骤 4 |
+| 6 | XPT2046 触摸适配（中断 + SPI 读坐标）：**驱动主机侧已实现**（`src/hardware/xpt2046.h`：0xD0/0x90 命令协议、12 位数据提取（dataShift 可调）、PENIRQ+压力阈值触摸判定、校准坐标映射（镜像/轴交换）、中值抗噪，`TouchPin` 抽象，98 项主机测试）；**板端适配层已实现**（`SysfsTouchPin` 通过 sysfs GPIO 读 PENIRQ 低有效电平，随 `sysfs_spi.{h,cc}` 一并验证）。剩余为真机接线（独立片选 spidev）与电阻屏校准 | 步骤 4 |
 | 7 | 中文字体子集化（`lv_font_conv`，见 `lvgl_menu.md`） | 步骤 5 |
 | 8 | 更新 `hardware_selftest` 屏幕检测项为真实 spidev 读 ID | 步骤 3 |
 | 9 | 演示模式联调（菜单 + 风险等级页 + 参数页） | 步骤 5-7 |
