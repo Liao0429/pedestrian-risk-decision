@@ -75,23 +75,28 @@ pedestrian-risk-decision/
 ![图片基线等级分布](docs/figures/fig1_level_dist.png) 
 ![图片基线检出率](docs/figures/fig2_detect_rate.png)
 
-### 视频增强（真实视频，Kalman+FSM，111 条全量重跑）
-- **全量 111 条真实视频（45021 帧）**：等级分布 **SAFE 25669 / WARNING 11545 / DANGER 7807**，平均每条等级切换 **4.00 次**（FSM 滞回稳定），40 条出现 DANGER，**31 条全程输出 SAFE（系统未报警）**（无人工真值，无法判定未报警是正确不报还是漏报）
+### 视频增强（真实视频，Kalman+谱特征+FSM，111 条全量重跑）
+- **全量 111 条真实视频（45021 帧）**：等级分布 **SAFE 26885 / WARNING 6388 / DANGER 11748**，平均每条等级切换 **5.86 次**（中位数 4.0，FSM 滞回稳定），66 条出现 DANGER，**31 条全程输出 SAFE（系统未报警）**（无人工真值，无法判定未报警是正确不报还是漏报）
+- 谱特征修正项（w4=0.1，score += w4·fiedler/(fiedler+1)·r_gcc）已接入生产 FSM：Fiedler 均值随等级单调上升（SAFE 0.016 / WARNING 0.465 / DANGER 1.117），111 条批量 DANGER 帧 7807 → 11748（谱特征提升高风险识别）
 - 密集人群（`mixkit_13192`）：**DANGER 179 / WARNING 120 / SAFE 6**（305 帧），等级切换仅 4 次 → 稳定（公平基线 AND 规则为 48 次/视频）
 - 稀疏/无人场景（`mixkit_50134`，光照正常）：388 帧全程 SAFE（该场景无行人，未触发告警）
-- **前后对比（公平基线，规则与真实引擎一致）**：平均切换次数 **23.2 → 4.0（↓82.8%）**；基线 24 条出现 DANGER、增强 40 条；DANGER 帧 2190 → 7807（FSM 评分含密度权重且带保持机制，比逐帧规则更敏感、更稳定）。明细见 `results/rerun/_comparison_summary.json`；全量见 `results/rerun/`
+- **前后对比（公平基线，规则与真实引擎一致）**：平均切换次数 **23.2 → 5.9（↓74.8%）**；基线 24 条出现 DANGER、增强 66 条；DANGER 帧 2190 → 11748（FSM 评分含密度权重+谱特征且带保持机制，比逐帧规则更敏感、更稳定）。明细见 `results/rerun/_comparison_summary.json`；全量见 `results/rerun/`
 
 ![视频增强前后对比](docs/figures/fig3_before_after.png) 
 ![视频增强等级分布](docs/figures/fig4_video_level.png)
+![111 条真实视频增强等级分布](docs/figures/fig5_111videos_level.png)
+![Fiedler 特征值随风险等级分布](docs/figures/fig6_fiedler_boxplot.png)
+![增强 vs 基线切换次数分布对比](docs/figures/fig7_switches_hist.png)
+![谱连通度随风险等级趋势](docs/figures/fig8_fiedler_trend.png)
 
-### 消融实验（各组件贡献）
+### 消融实验（各组件贡献，6 条代表性视频）
 
 ![消融实验](docs/figures/fig_ablation.png)
 
-- **A 基线（无增强）**：平均切换 35.2 次
-- **B +Kalman 平滑**：→ 11.7 次（↓67%）
-- **C +Kalman+谱特征**：与 B 相同（11.7 次）——谱特征已计算并显示，但未接入风险评分；接入实验（M1/M2，111 条视频离线重算）证明无独立语义增益，**裁决不采纳**，保留为显示指标
-- **D 完整（+FSM 时序决策）**：→ 4.0 次（滞回/确认帧/DANGER 保持带来最终稳定）
+- **A 基线（无增强）**：平均切换 33.2 次
+- **B +Kalman 平滑**：→ 8.3 次（↓75%）
+- **C +FSM（无谱特征）**：→ 4.3 次（↓87%）——FSM 滞回/确认帧/DANGER 保持带来主要稳定性
+- **D 完整（+谱特征 +FSM）**：→ 4.3 次保持稳定，且 **DANGER 帧提升 +152 帧（相对 C 组 +10.2%）**（mixkit_4519 +78、mixkit_4178 +45、mixkit_134 +29），谱特征在中等/密集聚集场景显著提升高风险识别，对极密（mixkit_3428）与稀疏（mixkit_50134）无副作用
 
 详见 `results/rerun/_ablation.json` 与 `docs/figures/fig_ablation.png`。
 

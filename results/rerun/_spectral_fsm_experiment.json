@@ -189,11 +189,11 @@
       "mode": "M0",
       "w4": 0.0,
       "frames": 45021,
-      "DANGER_frames": 7909,
-      "WARNING_frames": 11461,
-      "SAFE_frames": 25651,
-      "switches_total": 441,
-      "switches_avg_per_video": 3.97,
+      "DANGER_frames": 7906,
+      "WARNING_frames": 8901,
+      "SAFE_frames": 28214,
+      "switches_total": 546,
+      "switches_avg_per_video": 4.92,
       "DANGER_videos": 40,
       "now_ms_mode": "ms33"
     },
@@ -201,11 +201,11 @@
       "mode": "M1",
       "w4": 0.05,
       "frames": 45021,
-      "DANGER_frames": 11984,
-      "WARNING_frames": 8636,
-      "SAFE_frames": 24401,
-      "switches_total": 544,
-      "switches_avg_per_video": 4.9,
+      "DANGER_frames": 11918,
+      "WARNING_frames": 6977,
+      "SAFE_frames": 26126,
+      "switches_total": 603,
+      "switches_avg_per_video": 5.43,
       "DANGER_videos": 65,
       "now_ms_mode": "ms33"
     },
@@ -213,11 +213,11 @@
       "mode": "M1",
       "w4": 0.1,
       "frames": 45021,
-      "DANGER_frames": 12714,
-      "WARNING_frames": 9489,
-      "SAFE_frames": 22818,
-      "switches_total": 589,
-      "switches_avg_per_video": 5.31,
+      "DANGER_frames": 12659,
+      "WARNING_frames": 7604,
+      "SAFE_frames": 24758,
+      "switches_total": 650,
+      "switches_avg_per_video": 5.86,
       "DANGER_videos": 68,
       "now_ms_mode": "ms33"
     },
@@ -225,12 +225,12 @@
       "mode": "M1",
       "w4": 0.2,
       "frames": 45021,
-      "DANGER_frames": 14598,
-      "WARNING_frames": 15928,
-      "SAFE_frames": 14495,
-      "switches_total": 681,
-      "switches_avg_per_video": 6.14,
-      "DANGER_videos": 72,
+      "DANGER_frames": 14435,
+      "WARNING_frames": 7310,
+      "SAFE_frames": 23276,
+      "switches_total": 610,
+      "switches_avg_per_video": 5.5,
+      "DANGER_videos": 70,
       "now_ms_mode": "ms33"
     },
     "M2_0.05": {
@@ -238,10 +238,10 @@
       "w4": 0.05,
       "frames": 45021,
       "DANGER_frames": 4954,
-      "WARNING_frames": 13623,
-      "SAFE_frames": 26444,
-      "switches_total": 353,
-      "switches_avg_per_video": 3.18,
+      "WARNING_frames": 11000,
+      "SAFE_frames": 29067,
+      "switches_total": 473,
+      "switches_avg_per_video": 4.26,
       "DANGER_videos": 26,
       "now_ms_mode": "ms33"
     },
@@ -272,16 +272,16 @@
   },
   "m2_vs_m0_analysis": {
     "diff": {
-      "D降级为非D": 4363,
+      "D降级为非D": 4360,
       "非D升级为D": 34,
-      "W降级为S": 3560,
+      "W降级为S": 991,
       "S升级为W/D": 6
     },
     "fiedler_stats": {
       "M0_DANGER帧": {
-        "N": 7909,
-        "mean": 1.1038,
-        "median": 0.7143
+        "N": 7906,
+        "mean": 1.1008,
+        "median": 0.7123
       },
       "M2仍DANGER帧": {
         "N": 3546,
@@ -289,9 +289,9 @@
         "median": 0.6901
       },
       "M2被降级(原D)帧": {
-        "N": 4363,
-        "mean": 1.0988,
-        "median": 0.8328
+        "N": 4360,
+        "mean": 1.0933,
+        "median": 0.817
       }
     },
     "video_diff": [
@@ -324,18 +324,18 @@
         "M2_D": 288
       },
       {
-        "video": "mixkit_134",
-        "D降级帧": 191,
-        "D新增帧": 0,
-        "M0_D": 247,
-        "M2_D": 56
-      },
-      {
         "video": "mixkit_43150",
         "D降级帧": 191,
         "D新增帧": 0,
         "M0_D": 191,
         "M2_D": 0
+      },
+      {
+        "video": "mixkit_134",
+        "D降级帧": 188,
+        "D新增帧": 0,
+        "M0_D": 244,
+        "M2_D": 56
       },
       {
         "video": "mixkit_18264",

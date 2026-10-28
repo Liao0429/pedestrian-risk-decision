@@ -28,7 +28,7 @@
     "level": "SAFE",
     "n": 1,
     "density": 0.0,
-    "r_gcc": 1.0,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
@@ -36,7 +36,7 @@
     "level": "SAFE",
     "n": 1,
     "density": 0.0,
-    "r_gcc": 1.0,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
@@ -44,7 +44,7 @@
     "level": "SAFE",
     "n": 1,
     "density": 0.0,
-    "r_gcc": 1.0,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
@@ -52,7 +52,7 @@
     "level": "SAFE",
     "n": 1,
     "density": 0.0,
-    "r_gcc": 1.0,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
@@ -60,7 +60,7 @@
     "level": "SAFE",
     "n": 1,
     "density": 0.0,
-    "r_gcc": 1.0,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
@@ -68,7 +68,7 @@
     "level": "SAFE",
     "n": 1,
     "density": 0.0,
-    "r_gcc": 1.0,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
@@ -676,7 +676,7 @@
     "level": "SAFE",
     "n": 1,
     "density": 0.0,
-    "r_gcc": 1.0,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
@@ -684,7 +684,7 @@
     "level": "SAFE",
     "n": 1,
     "density": 0.0,
-    "r_gcc": 1.0,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
@@ -692,7 +692,7 @@
     "level": "SAFE",
     "n": 1,
     "density": 0.0,
-    "r_gcc": 1.0,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
@@ -700,7 +700,7 @@
     "level": "SAFE",
     "n": 1,
     "density": 0.0,
-    "r_gcc": 1.0,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
@@ -708,7 +708,7 @@
     "level": "SAFE",
     "n": 1,
     "density": 0.0,
-    "r_gcc": 1.0,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
@@ -764,7 +764,7 @@
     "level": "SAFE",
     "n": 1,
     "density": 0.0,
-    "r_gcc": 1.0,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
@@ -812,7 +812,7 @@
     "level": "SAFE",
     "n": 1,
     "density": 0.0,
-    "r_gcc": 1.0,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
@@ -820,7 +820,7 @@
     "level": "SAFE",
     "n": 1,
     "density": 0.0,
-    "r_gcc": 1.0,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
@@ -828,7 +828,7 @@
     "level": "SAFE",
     "n": 1,
     "density": 0.0,
-    "r_gcc": 1.0,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
@@ -2180,7 +2180,7 @@
     "level": "SAFE",
     "n": 1,
     "density": 0.0,
-    "r_gcc": 1.0,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
@@ -2188,7 +2188,7 @@
     "level": "SAFE",
     "n": 1,
     "density": 0.0,
-    "r_gcc": 1.0,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
@@ -2196,7 +2196,7 @@
     "level": "SAFE",
     "n": 1,
     "density": 0.0,
-    "r_gcc": 1.0,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
@@ -2204,7 +2204,7 @@
     "level": "SAFE",
     "n": 1,
     "density": 0.0,
-    "r_gcc": 1.0,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
@@ -2212,7 +2212,7 @@
     "level": "SAFE",
     "n": 1,
     "density": 0.0,
-    "r_gcc": 1.0,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
@@ -2220,7 +2220,7 @@
     "level": "SAFE",
     "n": 1,
     "density": 0.0,
-    "r_gcc": 1.0,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
