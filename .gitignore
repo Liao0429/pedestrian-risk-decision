@@ -53,3 +53,6 @@ docs/review/
 docs/DEVELOPMENT_LOG.md
 docs/KANBAN.md
 docs/AI_needle2_analysis.md
+
+# Windows 主机单元测试可执行文件（本地编译产物，不上传）
+src/luckfox_rtsp_yolov5/tests/*.exe

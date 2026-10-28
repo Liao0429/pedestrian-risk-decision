@@ -30,7 +30,7 @@
 
 - **舵机**：Yaw 信号→PWM 脚，Pitch 信号→另一个 PWM 脚；红(VCC)接**独立5V轨**，棕(GND)共地。**绝不把舵机 VCC 接开发板 5V。**
 - **语音 USB 喇叭**（推荐，用户 2026-10-27 决策）：免驱 USB 喇叭插开发板 USB Host 口，内核识别为 ALSA 声卡；预录 WAV 放系统 TF 卡 `/userdata/voice/`，C++ 用 `aplay` 播放。兜底方案：DFPlayer Mini（UART /dev/ttyS4）仍见 `docs/hardware/voice_module.md`。
-- **触摸屏菜单**（LVGL + ILI9341）：`lcd_menu.h` 菜单状态机框架已就绪（页面导航/四键/风险颜色映射/参数节流，99 项主机测试）；真机阶段按 `docs/hardware/lvgl_menu.md` 路线点亮 ILI9341（设备树 FB → LVGL v8 → LvglMenuBackend）。
+- **触摸屏菜单**（LVGL + ILI9341）：`lcd_menu.h` 菜单状态机框架已就绪（页面导航/四键/风险颜色映射/参数节流，99 项主机测试），`ili9341.h` SPI 显示驱动已就绪（复位/初始化命令序列/窗口/矩形填充/整帧 flush/读 ID 0x9341，123 项主机测试）；真机阶段按 `docs/hardware/lvgl_board_port.md` 路线改设备树（spi0 status=okay）→ 验证 `/dev/spidev0.0` → 用 spidev 实现点亮 ILI9341（方案 B，免重编内核）。
 - **供电**：5V/3A 适配器 → USB 一分二 → 一路开发板 USB-C、一路面包板 5V 轨。面包板 +5V/GND 并 1000µF 电容。
 
 ## 三、组装步骤
@@ -44,7 +44,7 @@
 ## 四、验证标准
 - 舵机云台：摄像头能自动追踪画面中最大行人/人群质心（PanTilt 类）
 - 语音：检测到 WARNING 播报警告音，DANGER 播报严重告警
-- 触摸屏菜单：ILI9341 点亮后主菜单可按键导航，DETECTION 页大字显示 人数/风险等级/FPS/IP（`lcd_menu.h` 状态机逻辑已 99 项主机测试）
+- 触摸屏菜单：ILI9341 点亮后主菜单可按键导航，DETECTION 页大字显示 人数/风险等级/FPS/IP（`lcd_menu.h` 状态机逻辑已 99 项主机测试，`ili9341.h` 显示驱动已 123 项主机测试，真机点亮待硬件采购）
 - 整体：RTSP 推流 + 触摸屏显示 + 语音告警 + 三色灯同时工作
 
 ## 五、C++ 驱动代码
@@ -53,7 +53,8 @@
 - `src/hardware/voice_alert.h` + `voice_alert.cc`：语音告警（USB 喇叭 + aplay，等级触发/抢占/防重复；含 FakeVoiceBackend 可测）
 - `src/hardware/selftest.h` + `selftest_main.cc`：**开机硬件自检**（GPIO 写读回/PWM 节点/SPI 屏幕 ID 0x9341/USB 声卡/WiFi/按键 6 项 PASS/FAIL；`make hardware-selftest` 生成板端 CLI，退出码=失败数）
 - `src/hardware/lcd_menu.h`：**触摸屏菜单状态机**（页面导航/四键/风险颜色映射/参数节流/NULL 容错，LVGL 前端无关）
-- 以上驱动均有主机单元测试（`make test-hardware` 118 项 + `make test-selftest` 80 项 + `make test-lcd-menu` 99 项，无需真实硬件即可在 PC/CI 验证）
+- `src/hardware/ili9341.h`：**ILI9341 SPI 显示驱动**（320×240 RGB565：复位/初始化命令序列/窗口/矩形填充裁剪/帧缓冲/整帧 flush/读 ID 0x9341；`SpiBus`+`LcdPins` 抽象，FakeSpi/FakeLcdPins 可主机测试）
+- 以上驱动均有主机单元测试（`make test-hardware` 118 项 + `make test-selftest` 80 项 + `make test-lcd-menu` 99 项 + `make test-ili9341` 123 项，无需真实硬件即可在 PC/CI 验证）
 - `docs/hardware/voice_module.md`：语音方案对比（USB 喇叭推荐，DFPlayer 兜底）与播报策略
 - `docs/hardware/selftest.md`：自检框架说明、systemd 开机自检部署、演示模式门禁
 - `docs/hardware/lvgl_menu.md`：LVGL 移植调研、菜单框架说明、板端适配路线图

@@ -123,8 +123,10 @@ MAIN（主菜单：开始检测 / 设置 / 关于 + 状态栏）
 
 > 需采购 2.8 寸 ILI9341 触摸屏 + XPT2046（见《答辩硬件展示方案 v2》BOM）后实施。
 
-1. **点亮屏幕**：按 Luckfox 官方 LVGL 指南在设备树启用 SPI + ILI9341 panel，
-   验证 `/dev/fb0` 可用（`cat /dev/zero > /dev/fb0` 清屏）；
+1. **点亮屏幕**：优先采用 `docs/hardware/lvgl_board_port.md` 方案 B（spidev 用户态驱动，
+   仅改 dts `spi@ff500000 status="okay"`，免重编内核）；ILI9341 显示驱动主机侧已实现
+   （`src/hardware/ili9341.h`，123 项测试），真机补 `SysfsSpiBus`/`SysfsLcdPins` 适配即可点亮；
+   备选官方路径：设备树启用 ILI9341 panel 验证 `/dev/fb0`（`cat /dev/zero > /dev/fb0` 清屏）；
 2. **移植 LVGL v8**：交叉编译 LVGL 库，配置 `USE_FBDEV 1`，跑通官方 demo；
 3. **实现 LvglMenuBackend**：继承 `hw::MenuBackend`，将
    `setParam/setRiskLevel/setMenuCursor/drawPage` 映射到 LVGL label/image 控件；

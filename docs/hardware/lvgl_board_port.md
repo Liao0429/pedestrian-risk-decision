@@ -33,7 +33,7 @@
 | 方案 | 内核改动 | 收益 | 成本/风险 | 结论 |
 |---|---|---|---|---|
 | **A：fbtft 内核驱动** | 需要 `CONFIG_FB_TFT_ILI9341=y`（当前内核无此驱动，需重编内核） | 得到 `/dev/fb0`，LVGL 走 `lv_drivers` fbdev | 拉完整内核源码 + 重编 + 重打包 boot.img，工程量最大 | 备选 |
-| **B：spidev 用户态驱动** | 仅改 DTS（spi0 status=okay），**不需重编内核** | `/dev/spidev0.0` 出现，ILI9341 初始化/绘帧由用户态驱动完成 | 需自写 ILI9341 显示驱动（约 300 行 C），触摸 XPT2046 同理 | **推荐** |
+| **B：spidev 用户态驱动** | 仅改 DTS（spi0 status=okay），**不需重编内核** | `/dev/spidev0.0` 出现，ILI9341 初始化/绘帧由用户态驱动完成 | **ILI9341 显示驱动已实现**（`src/hardware/ili9341.h`，123 项主机测试），XPT2046 触摸驱动待写 | **推荐** |
 
 方案 B 的理由：
 1. 内核已有 `spidev` 驱动与 `spidev@0` 节点，改动面最小；
@@ -181,8 +181,22 @@ deinit OK
 
 ### 5.3 后续链接方式
 
-`LvglMenuBackend` 接入时，板端程序链接：`liblvgl.a + 自写 ILI9341 spidev 驱动 +
+`LvglMenuBackend` 接入时，板端程序链接：`liblvgl.a + ili9341.h 驱动（SysfsSpiBus/SysfsLcdPins 板端适配） +
 lv_drivers（触摸）`，编译命令以 SDK 的 CMake 工程为准，可复用 `toolchain-armhf.cmake`。
+
+### 5.4 ILI9341 显示驱动（主机侧已实现 ✅）
+
+`src/hardware/ili9341.h` 提供与硬件无关的显示后端（`hw::Ili9341`）：
+
+- **抽象接口**：`hw::SpiBus`（板端实现 `/dev/spidev0.0` 读写）、`hw::LcdPins`（DC/RESET/背光 GPIO）；
+- **功能**：复位脉冲 + 标准初始化命令序列（SWRESET→SLPOUT→COLMOD 0x55→MADCTL 0x08→DISPON）、
+  窗口设置（CASET/PASET 大端参数）、矩形填充（边界裁剪、分批写入兼容 spidev 长度限制）、
+  整帧 flush（320×240 RGB565，150KB）、帧缓冲读写、读版本 ID（0xD3 → `00 93 41 00`，供自检）；
+- **测试**：`tests/test_ili9341.cc` 123 项（FakeSpi/FakeLcdPins 内存替身，校验命令序列/窗口
+  参数/裁剪/颜色字节序/flush 首尾像素/读 ID/NULL 容错），`make test-ili9341` 一键运行。
+
+真机阶段仅需实现 `SysfsSpiBus`（spidev ioctl）与 `SysfsLcdPins`（sysfs GPIO），即可把驱动
+接到 LVGL 的 `flush_cb` 或硬件自检的屏幕检测项。
 
 ---
 
@@ -193,7 +207,7 @@ lv_drivers（触摸）`，编译命令以 SDK 的 CMake 工程为准，可复用
 | 1 | 采购 ILI9341 2.8 寸屏（含 XPT2046 触摸）+ 排线 | 硬件 |
 | 2 | 老电脑拉 Luckfox SDK，改 dts（spi0 status=okay），重编 boot.img 并烧写 | SDK 下载 |
 | 3 | 板端验证 `/dev/spidev0.0`，spidev_test 回读 ID `0x9341` | 步骤 2 |
-| 4 | 编写板端 ILI9341 显示驱动（spidev 写命令/数据 + GPIO DC/RESET/BL） | 步骤 3 |
+| 4 | 板端 ILI9341 显示驱动：**驱动主机侧已实现**（`src/hardware/ili9341.h`：复位/初始化命令序列/窗口/矩形填充/帧缓冲/flush/读 ID，`SpiBus`+`LcdPins` 抽象，123 项主机测试）；剩余工作为板端 `SysfsSpiBus`（/dev/spidev0.0）+ `SysfsLcdPins`（sysfs GPIO）真机适配与验证 | 步骤 3 |
 | 5 | 实现 `LvglMenuBackend` 真机适配（对接 `lcd_menu.h`，见 `lvgl_menu.md`） | 步骤 4 |
 | 6 | XPT2046 触摸适配（中断 + SPI 读坐标） | 步骤 4 |
 | 7 | 中文字体子集化（`lv_font_conv`，见 `lvgl_menu.md`） | 步骤 5 |
