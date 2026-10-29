@@ -87,7 +87,7 @@ sudo bash /home/pico/daima/luckfox_pico_rtsp_yolov5_demo/scripts/setup_go2rtc_de
     --video /userdata/demo/mixkit_13192_enhanced.mp4
 ```
 
-- 脚本 `scripts/setup_go2rtc_demo_stream.sh` 仅依赖 bash + awk（板端无需 python3）；
+- 脚本 `scripts/setup_go2rtc_demo_stream.sh` 仅依赖 bash + 基础工具（grep/sed/curl/ip，开发板 Buildroot 自带，无需 python3 / awk）；
   支持 `--dry-run` 预览、`--stream <名>` 自定义流名、`GO2RTC_CFG`/`GO2RTC_BIN` 环境变量覆盖路径。
 - 配置编辑逻辑（新增保留 cam / 幂等 / 更新替换 / 损坏重建 / 自动备份）由
   `tests/test_go2rtc_demo_config.py` 覆盖（14 项主机测试 + 4 项 shell 测试在 Linux/CI 执行）。

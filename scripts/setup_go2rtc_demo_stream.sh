@@ -74,6 +74,7 @@ fi
 # ============================================================
 edit_yaml() {
   local cfg="$1" stream="$2" video="$3"
+  local line in_streams=0 inserted=0 skip_entry=0
 
   # 幂等：已配置且指向同一视频 → 输出原内容
   if grep -qE "^  ${stream}:" "$cfg" && grep -qF "file://${video}" "$cfg"; then
@@ -81,59 +82,80 @@ edit_yaml() {
     return 0
   fi
 
-  # 无 streams 块 → 重建最小配置（保留原文件为备份由调用方负责）
+  # 无 streams 块 → 重建最小配置（api 块尽量保留）
   if ! grep -qE "^streams:" "$cfg"; then
-    {
-      echo "streams:"
-      printf '  %s:\n' "$stream"
-      printf '  - file://%s\n' "$video"
-      if grep -qE "^api:" "$cfg"; then
-        grep -A2 -E "^api:" "$cfg" | head -3
-      else
-        echo 'api:'
-        echo '  listen: ":1984"'
-      fi
-    }
+    echo "streams:"
+    printf '  %s:\n' "$stream"
+    printf '  - file://%s\n' "$video"
+    if grep -qE "^api:" "$cfg"; then
+      sed -n '/^api:/,/^[^[:space:]]/p' "$cfg" | sed '/^$/d' | head -3
+    else
+      echo 'api:'
+      echo '  listen: ":1984"'
+    fi
     return 0
   fi
 
-  awk -v stream="$stream" -v video="$video" '
-    BEGIN { in_streams = 0; inserted = 0; skip_entry = 0 }
-    {
-      is_top = ($0 !~ /^[ \t]/) && ($0 != "")
-      if (!in_streams) {
-        print $0
-        if ($0 ~ /^streams:/) in_streams = 1
-        next
-      }
-      # ---- 在 streams 块内 ----
-      if (is_top) {
-        # streams 块结束：插入新条目，然后打印本行
-        printf "  %s:\n", stream
-        printf "  - file://%s\n", video
-        inserted = 1
-        in_streams = 0
-        print $0
-        next
-      }
-      if (skip_entry) {
-        # 跳过旧条目值行；遇到下一个流键时结束
-        if ($0 ~ /^  [A-Za-z0-9._-]+:/) skip_entry = 0
-        else next
-      }
-      if ($0 ~ ("^  " stream ":")) {
-        skip_entry = 1
-        next
-      }
-      print $0
-    }
-    END {
-      if (in_streams && !inserted) {
-        printf "  %s:\n", stream
-        printf "  - file://%s\n", video
-      }
-    }
-  ' "$cfg"
+  # 行级编辑（纯 bash，不依赖 awk）：保留其他流，原位替换/插入 demo 流
+  while IFS= read -r line; do
+    case "$line" in
+      '')
+        # 空行：若 streams 块在此结束且尚未插入 → 补插
+        if [ "$in_streams" = "1" ] && [ "$inserted" = "0" ]; then
+          printf '  %s:\n' "$stream"
+          printf '  - file://%s\n' "$video"
+          inserted=1
+          in_streams=0
+        fi
+        printf '\n'
+        continue
+        ;;
+      [[:blank:]]*)
+        # 缩进行（streams 块内的流键/值行），稍后处理
+        ;;
+      *)
+        # 顶层键：若 streams 块在此结束且尚未插入 → 补插
+        if [ "$in_streams" = "1" ] && [ "$inserted" = "0" ]; then
+          printf '  %s:\n' "$stream"
+          printf '  - file://%s\n' "$video"
+          inserted=1
+          in_streams=0
+        fi
+        [ "$line" = "streams:" ] && in_streams=1
+        printf '%s\n' "$line"
+        continue
+        ;;
+    esac
+
+    # ---- 以下为缩进行 ----
+    if [ "$in_streams" != "1" ]; then
+      printf '%s\n' "$line"
+      continue
+    fi
+
+    # 正在跳过旧 demo 条目：直到遇到下一个流键（恰好两空格缩进的 key:）才结束
+    if [ "$skip_entry" = "1" ]; then
+      if [[ "$line" =~ ^\ \ [A-Za-z0-9._-]+:$ ]]; then
+        skip_entry=0
+      else
+        continue
+      fi
+    fi
+
+    # 命中 demo 流键：跳过其整块（值行）
+    if [[ "$line" =~ ^\ \ ${stream}:$ ]]; then
+      skip_entry=1
+      continue
+    fi
+
+    printf '%s\n' "$line"
+  done < "$cfg"
+
+  # 文件在 streams 块内结束且尚未插入 → 末尾补插
+  if [ "$in_streams" = "1" ] && [ "$inserted" = "0" ]; then
+    printf '  %s:\n' "$stream"
+    printf '  - file://%s\n' "$video"
+  fi
 }
 
 # --- 执行编辑 ---
