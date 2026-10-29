@@ -133,20 +133,21 @@ edit_yaml() {
       continue
     fi
 
-    # 正在跳过旧 demo 条目：直到遇到下一个流键（恰好两空格缩进的 key:）才结束
+    # 正在跳过旧 demo 条目：直到遇到下一个流键（两空格缩进的 key:）才结束
     if [ "$skip_entry" = "1" ]; then
-      if [[ "$line" =~ ^\ \ [A-Za-z0-9._-]+:$ ]]; then
-        skip_entry=0
-      else
-        continue
-      fi
+      case "$line" in
+        "  "[A-Za-z0-9._]*:) skip_entry=0 ;;  # 下一个流键（键名不以 - 开头）
+        *) continue ;;
+      esac
     fi
 
     # 命中 demo 流键：跳过其整块（值行）
-    if [[ "$line" =~ ^\ \ ${stream}:$ ]]; then
-      skip_entry=1
-      continue
-    fi
+    case "$line" in
+      "  "${stream}:*)
+        skip_entry=1
+        continue
+        ;;
+    esac
 
     printf '%s\n' "$line"
   done < "$cfg"
