@@ -47,6 +47,23 @@ CAM_CFG = [
 ]
 
 
+def cfg_with_demo(video_path):
+    """返回 streams 块内已有 demo 流的合法配置（demo 指向 file://<video_path>）。
+
+    注意：demo 必须位于 streams 块内（go2rtc 约定所有流都在 streams 下），
+    而不是追加在 api 块之后。
+    """
+    return [
+        "streams:\n",
+        "  cam:\n",
+        "  - rtsp://127.0.0.1:554/live/0\n",
+        "  demo:\n",
+        "  - file://%s\n" % video_path,
+        "api:\n",
+        '  listen: ":1984"\n',
+    ]
+
+
 def write(path, lines):
     with open(path, "w", encoding="utf-8") as f:
         f.writelines(lines)
@@ -243,8 +260,7 @@ class TestShellScript:
     def test_shell_dry_run_idempotent(self, tmp_path):
         cfg = tmp_path / "go2rtc.yaml"
         video = tmp_path / "demo.mp4"
-        write(str(cfg), CAM_CFG + [
-            "  demo:\n", "  - file://%s\n" % video])
+        write(str(cfg), cfg_with_demo(video))
         video.write_text("fake", encoding="utf-8")
         bash = self._bash()
         env = dict(os.environ, GO2RTC_CFG=str(cfg), GO2RTC_BIN="/bin/true")
@@ -259,8 +275,7 @@ class TestShellScript:
     def test_shell_dry_run_update_old_video(self, tmp_path):
         cfg = tmp_path / "go2rtc.yaml"
         video = tmp_path / "demo.mp4"
-        write(str(cfg), CAM_CFG + [
-            "  demo:\n", "  - file:///old.mp4\n"])
+        write(str(cfg), cfg_with_demo("old.mp4"))
         video.write_text("fake", encoding="utf-8")
         bash = self._bash()
         env = dict(os.environ, GO2RTC_CFG=str(cfg), GO2RTC_BIN="/bin/true")
@@ -268,20 +283,6 @@ class TestShellScript:
             [bash, self.BASH_SCRIPT,
              "--video", str(video), "--dry-run"],
             capture_output=True, text=True, env=env)
-        if r.returncode != 0 or "file:///old.mp4" in r.stdout:
-            print("\n### DEBUG update stdout:", repr(r.stdout))
-            print("### DEBUG update stderr:", repr(r.stderr))
-            print("### DEBUG update bash:", bash)
-            print("### DEBUG update video:", repr(str(video)))
-            print("### DEBUG update cfg:", repr(read(str(cfg))))
-            try:
-                v = subprocess.run([bash, "--version"], capture_output=True, text=True)
-                print("### DEBUG bash version:", (v.stdout or v.stderr).splitlines()[0])
-                b = subprocess.run([bash, "-c", "od -c %s | head -3" % self.BASH_SCRIPT],
-                                   capture_output=True, text=True)
-                print("### DEBUG script bytes:", b.stdout or b.stderr)
-            except Exception as e:  # noqa: BLE001
-                print("### DEBUG extra failed:", repr(e))
         assert r.returncode == 0, r.stderr
         assert "file:///old.mp4" not in r.stdout
         assert "file://%s" % video in r.stdout
