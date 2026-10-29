@@ -32,11 +32,10 @@ import json
 import os
 import re
 import statistics
+import struct
 import sys
 import zipfile
 from typing import Dict, List, Optional, Tuple
-
-from PIL import Image
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_IMAGES_DIR = os.path.join("dataset", "images500")
@@ -116,6 +115,37 @@ def load_worst_lists(summary_path: str) -> Tuple[List[dict], List[dict]]:
     return s.get("worst_under_detected", []), s.get("worst_over_detected", [])
 
 
+def get_image_size(path: str) -> Tuple[int, int]:
+    """零依赖读取 JPEG/PNG 图片尺寸 (宽, 高)。"""
+    with open(path, "rb") as f:
+        head = f.read(26)
+    if head[:8] == b"\x89PNG\r\n\x1a\n":
+        return struct.unpack(">II", head[16:24])
+    if head[:2] == b"\xff\xd8":
+        with open(path, "rb") as f:
+            data = f.read(256 * 1024)
+        i = 2
+        while i < len(data) - 9:
+            if data[i] != 0xFF:
+                i += 1
+                continue
+            marker = data[i + 1]
+            # 无长度段标记：SOI/RST/EOI/TEM
+            if marker in (0xD8, 0x01) or 0xD0 <= marker <= 0xD7:
+                i += 2
+                continue
+            length = struct.unpack(">H", data[i + 2:i + 4])[0]
+            # SOF 标记含图像尺寸（除 DHT/DAC/RST/SOI/EOI/TEM）
+            if marker in (
+                0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7,
+                0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF,
+            ):
+                h, w = struct.unpack(">HH", data[i + 5:i + 9])
+                return w, h
+            i += 2 + length
+    raise ValueError(f"不支持的图片格式: {path}")
+
+
 def format_table(headers: List[str], rows: List[List[object]]) -> str:
     """渲染 Markdown 表格。"""
     col_count = len(headers)
@@ -178,8 +208,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         stem = os.path.splitext(fname)[0]
         image_path = os.path.join(images_dir, fname)
         try:
-            with Image.open(image_path) as im:
-                w_img, h_img = im.size
+            w_img, h_img = get_image_size(image_path)
         except Exception as exc:  # pragma: no cover - 异常图片防御
             print(f"[WARN] 无法读取图片尺寸 {fname}: {exc}")
             w_img, h_img = 0, 0

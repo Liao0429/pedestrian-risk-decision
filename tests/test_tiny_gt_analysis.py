@@ -9,8 +9,9 @@ import os
 import sys
 import zipfile
 
+import numpy as np
+import cv2
 import pytest
-from PIL import Image
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts"))
 
@@ -78,12 +79,9 @@ def test_main_end_to_end(tmp_path):
     # 合成 3 张图：图 1 两个正常大小 person，图 2 一个微小 person，图 3 一个中等 person
     img_dir = tmp_path / "images"
     img_dir.mkdir()
-    img1 = Image.new("RGB", (100, 100), (255, 255, 255))
-    img1.save(img_dir / "000000000001_2.jpg")
-    img2 = Image.new("RGB", (100, 100), (255, 255, 255))
-    img2.save(img_dir / "000000000002_1.jpg")
-    img3 = Image.new("RGB", (100, 100), (255, 255, 255))
-    img3.save(img_dir / "000000000003_1.jpg")
+    synth_img = np.full((100, 100, 3), 255, dtype=np.uint8)
+    for name in ("000000000001_2.jpg", "000000000002_1.jpg", "000000000003_1.jpg"):
+        cv2.imwrite(str(img_dir / name), synth_img)
 
     zip_path = tmp_path / "labels.zip"
     with zipfile.ZipFile(zip_path, "w") as z:
