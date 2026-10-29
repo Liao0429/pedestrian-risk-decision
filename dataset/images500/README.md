@@ -28,3 +28,10 @@
 - 图片模式测试（`crowd_test.py --input dataset/images500`）
 - 训练/评估检测模型（YOLO 行人检测）
 - 与视频数据（dataset/videos50）配合，覆盖静态与动态场景
+
+## GT 对比评估（自动化，可复现）
+`scripts/evaluate_images500_gt.py` 将本目录每张图的 COCO 官方人数（文件名 `_<count>` 后缀）与检测输出 `n` 对比，生成：
+- `results/images500_gt_eval/summary.json`（机器可读）
+- `results/images500_gt_eval/report.md`（整体/分桶检出率、MAE/RMSE、Pearson 相关、欠检/过检 Top 10 个案清单）
+
+当前基线（`results/rerun/images500_baseline/results.json`，yolov8n.pt conf=0.25）：整体检出率 **82.5%**（2548/3089），MAE 1.926，RMSE 3.188，Pearson r 0.802。最差个案清单可用于人工复核 COCO GT 与视觉实际一致性。

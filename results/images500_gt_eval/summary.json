@@ -1,0 +1,188 @@
+{
+  "generated_at": "2026-10-29 09:35:23",
+  "source_results": "results\\rerun\\images500_baseline\\results.json",
+  "images_total": 500,
+  "gt_total": 3089,
+  "det_total": 2548,
+  "overall_detection_rate_pct": 82.49,
+  "mae": 1.926,
+  "rmse": 3.188,
+  "pearson_r": 0.8022,
+  "level_counts": {
+    "SAFE": 414,
+    "WARNING": 61,
+    "DANGER": 25
+  },
+  "bucket_stats": {
+    "1-3": {
+      "images": 200,
+      "gt": 325,
+      "det": 307,
+      "rate_pct": 94.46
+    },
+    "4-9": {
+      "images": 150,
+      "gt": 872,
+      "det": 644,
+      "rate_pct": 73.85
+    },
+    "10-13": {
+      "images": 138,
+      "gt": 1717,
+      "det": 1458,
+      "rate_pct": 84.92
+    },
+    "14-19": {
+      "images": 12,
+      "gt": 175,
+      "det": 139,
+      "rate_pct": 79.43
+    }
+  },
+  "contingency_gt_bucket_x_level": {
+    "4-9": {
+      "SAFE": 126,
+      "WARNING": 24,
+      "DANGER": 0
+    },
+    "10-13": {
+      "SAFE": 81,
+      "WARNING": 35,
+      "DANGER": 22
+    },
+    "1-3": {
+      "SAFE": 200,
+      "WARNING": 0,
+      "DANGER": 0
+    },
+    "14-19": {
+      "SAFE": 7,
+      "WARNING": 2,
+      "DANGER": 3
+    }
+  },
+  "worst_under_detected": [
+    {
+      "filename": "000000498796_13",
+      "gt": 13,
+      "det": 0,
+      "err": -13
+    },
+    {
+      "filename": "000000577592_13",
+      "gt": 13,
+      "det": 0,
+      "err": -13
+    },
+    {
+      "filename": "000000325031_13",
+      "gt": 13,
+      "det": 1,
+      "err": -12
+    },
+    {
+      "filename": "000000336658_13",
+      "gt": 13,
+      "det": 1,
+      "err": -12
+    },
+    {
+      "filename": "000000497261_19",
+      "gt": 19,
+      "det": 7,
+      "err": -12
+    },
+    {
+      "filename": "000000075600_13",
+      "gt": 13,
+      "det": 2,
+      "err": -11
+    },
+    {
+      "filename": "000000427997_13",
+      "gt": 13,
+      "det": 2,
+      "err": -11
+    },
+    {
+      "filename": "000000007511_13",
+      "gt": 13,
+      "det": 3,
+      "err": -10
+    },
+    {
+      "filename": "000000038714_13",
+      "gt": 13,
+      "det": 3,
+      "err": -10
+    },
+    {
+      "filename": "000000308587_13",
+      "gt": 13,
+      "det": 3,
+      "err": -10
+    }
+  ],
+  "worst_over_detected": [
+    {
+      "filename": "000000538291_13",
+      "gt": 13,
+      "det": 25,
+      "err": 12
+    },
+    {
+      "filename": "000000270071_13",
+      "gt": 13,
+      "det": 22,
+      "err": 9
+    },
+    {
+      "filename": "000000051985_13",
+      "gt": 13,
+      "det": 21,
+      "err": 8
+    },
+    {
+      "filename": "000000377044_13",
+      "gt": 13,
+      "det": 21,
+      "err": 8
+    },
+    {
+      "filename": "000000153669_13",
+      "gt": 13,
+      "det": 20,
+      "err": 7
+    },
+    {
+      "filename": "000000288685_13",
+      "gt": 13,
+      "det": 20,
+      "err": 7
+    },
+    {
+      "filename": "000000031296_13",
+      "gt": 13,
+      "det": 19,
+      "err": 6
+    },
+    {
+      "filename": "000000133244_13",
+      "gt": 13,
+      "det": 19,
+      "err": 6
+    },
+    {
+      "filename": "000000097861_13",
+      "gt": 13,
+      "det": 18,
+      "err": 5
+    },
+    {
+      "filename": "000000097988_12",
+      "gt": 12,
+      "det": 17,
+      "err": 5
+    }
+  ]
+}

@@ -23,6 +23,7 @@ python scripts/crowd_test.py --input dataset/images500 --output results/rerun/im
 
 - 逐图明细：`results/rerun/images500_baseline/results.json`（含每图检测框/置信度/风险等级/可视化图）
 - 可视化：`results/rerun/images500_baseline/vis/`（真实标注图）
+- **GT 对比评估**（COCO 官方人数 vs 检测人数）：`results/images500_gt_eval/report.md`——整体/分桶检出率、MAE 1.926、RMSE 3.188、Pearson r 0.802、欠检/过检 Top 10 个案清单（供 GT 人工复核）；由 `scripts/evaluate_images500_gt.py` 自动生成，可复现。
 
 ## 2. 视频增强（111 条真实 Mixkit 视频）
 
