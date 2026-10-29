@@ -14,7 +14,7 @@
 - **风险分级**：实时输出 **SAFE / WARNING / DANGER** 三级风险
 - **多目标可切换**：通过 `target_classes` 配置检测目标类别（人[0]/车辆[2,5,7,3]/狗[16]/猫[15]/动物[14,18,19,20,21]），一键切换危险目标聚集报警
 - **真机性能**：NEON 优化预处理（CPU 预处理 136ms→33ms），实测 **7.46 FPS**、内存 ~11MB、**28 小时+ 长稳采样（10 点）**：看门狗 0 介入、日志 0 错误，服务中断自动恢复（看门狗 + 有限超时）
-- **网页免安装观看**：开发板 go2rtc 转 WebRTC/HLS，手机/电脑浏览器直接打开网页看监控（`docs/WEB_VIEWER.md`）
+- **网页免安装观看**：开发板 go2rtc 转 WebRTC/HLS，手机/电脑浏览器直接打开网页看监控（`docs/WEB_VIEWER.md`）；**本地视频流兜底演示**（P2-1）：`scripts/setup_go2rtc_demo_stream.sh` 一键向 go2rtc 注入预录增强视频 demo 流，现场镜头前无人时也能演示 DANGER 切换（配置工具 14 项主机测试 + 4 项 shell 测试由 CI 覆盖）
 - **可配置**：规则阈值、目标类别与**外部 IPM 标定文件**通过 JSON 配置文件加载（`config/default_config.json`；`homography_file` 指向文本 3x3 单应，相机位姿变化无需重编译）
 - **可扩展硬件**：双舵机云台、三色 LED 风险灯、防抖按键、语音告警（USB 喇叭 + aplay，等级触发/抢占/防重复）、**触摸屏菜单状态机**（LVGL 前端无关：页面导航/四键/风险等级颜色映射/参数节流刷新，`docs/hardware/lvgl_menu.md`）、**ILI9341 SPI 显示驱动**（320×240 RGB565：复位/初始化命令序列/窗口/矩形填充/整帧 flush/读 ID 0x9341，`src/hardware/ili9341.h`，123 项主机测试）、**XPT2046 电阻触摸驱动**（SPI 12 位 ADC 坐标/压力：命令协议/数据提取/PENIRQ+压力阈值触摸判定/校准坐标转换/中值抗噪，`src/hardware/xpt2046.h`，98 项主机测试）、**Linux 板端适配层**（`/dev/spidevX.Y` 全双工 SPI + DC/RESET/背光/PENIRQ 的 sysfs GPIO 实现，`src/hardware/sysfs_spi.{h,cc}`，40 项 Linux 单元测试，已在开发板 armv7l 真机编译运行通过）、物理开关驱动已就绪（`docs/hardware/`）；**开机硬件自检**（GPIO/PWM/SPI 屏幕/USB 声卡/WiFi/按键 6 项 PASS/FAIL，全部通过才进入演示模式，`docs/hardware/selftest.md`，**已在开发板两轮真机验证**：无外设容错运行 + SPI0 启用后 SPI 传输实测打通）；**SPI0 已真机落地**（`scripts/enable_spi0_overlay.sh`：Luckfox 动态设备树 overlay，无需重编内核/boot.img；`/dev/spidev0.0` 已生成、systemd 开机自动加载、udev 0666 权限、ioctl 实测 mode0/1MHz，见 `docs/hardware/lvgl_board_port.md`）
 
@@ -158,7 +158,7 @@ make test # 编译并运行增强决策/JSON 配置/阈值引擎单元测试（�
 # 等价 CMake 方式：
 # cmake -S . -B build && cmake --build build && ctest --test-dir build
 ```
-- 测试覆盖：`EnhancedDecision`（Kalman+FSM 确定性输出）、`minijson` JSON 解析、`RiskConfig` 运行时阈值读取、`Preprocess` NEON vs 标量对照、**硬件驱动模块 118 项**（GPIO/LED/按键/舵机云台/语音告警）+ **硬件自检 80 项**（GPIO 写读回/PWM/SPI 屏幕 ID/USB 声卡/WiFi/按键的 PASS/FAIL 判定与容错）+ **触摸屏菜单 99 项**（页面导航/四键/风险颜色映射/参数刷新节流/NULL 容错）+ **ILI9341 显示驱动 123 项**（复位/初始化命令序列/窗口参数/矩形填充裁剪/帧缓冲/flush/读 ID）+ **XPT2046 触摸驱动 98 项**（命令协议/12 位数据提取/PENIRQ+压力阈值判定/校准坐标转换/中值抗噪/故障注入），全部用内存替身测试，无需真实硬件；**Linux 板端适配层 40 项**（spidev 打开/关闭/传输失败路径、DC/RESET/背光/PENIRQ 电平逻辑与 NULL 容错，`make test` 在 Linux/CI 自动纳入）。
+- 测试覆盖：`EnhancedDecision`（Kalman+FSM 确定性输出）、`minijson` JSON 解析、`RiskConfig` 运行时阈值读取、`Preprocess` NEON vs 标量对照、**硬件驱动模块 118 项**（GPIO/LED/按键/舵机云台/语音告警）+ **硬件自检 80 项**（GPIO 写读回/PWM/SPI 屏幕 ID/USB 声卡/WiFi/按键的 PASS/FAIL 判定与容错）+ **触摸屏菜单 99 项**（页面导航/四键/风险颜色映射/参数刷新节流/NULL 容错）+ **ILI9341 显示驱动 123 项**（复位/初始化命令序列/窗口参数/矩形填充裁剪/帧缓冲/flush/读 ID）+ **XPT2046 触摸驱动 98 项**（命令协议/12 位数据提取/PENIRQ+压力阈值判定/校准坐标转换/中值抗噪/故障注入），全部用内存替身测试，无需真实硬件；**Linux 板端适配层 40 项**（spidev 打开/关闭/传输失败路径、DC/RESET/背光/PENIRQ 电平逻辑与 NULL 容错，`make test` 在 Linux/CI 自动纳入）；**go2rtc demo 流配置工具 18 项**（YAML 行级编辑：新增保留 cam/幂等/更新替换/损坏重建/自动备份/dry-run/CLI 返回码，`tests/test_go2rtc_demo_config.py`，其中 4 项 shell 脚本测试在 Linux/CI 执行）。
 - 交叉编译完整工程：`make luckfox LUCKFOX_SDK_ROOT=<SDK路径>`（需 Luckfox SDK 库与工具链）。
 - 阈值通过 `config/default_config.json` 运行时加载（`RiskEngine::setConfig`），失败自动回退默认值，“可配置”承诺在 C++ 端落地。
 
@@ -170,7 +170,7 @@ make test # 编译并运行增强决策/JSON 配置/阈值引擎单元测试（�
 | `docs/SYSTEM_PRINCIPLE.md` | 系统实现原理与算法详解 |
 | `docs/ARCHITECTURE.md` | 系统架构与模块划分 |
 | `docs/algorithms.md` | 算法设计（C++/Python 双实现、黄金回归说明） |
-| `docs/WEB_VIEWER.md` | 网页免安装观看监控（go2rtc，手机/电脑浏览器） |
+| `docs/WEB_VIEWER.md` | 网页免安装观看监控（go2rtc，手机/电脑浏览器）+ 本地视频 demo 流兜底（P2-1） |
 | `docs/DEMO_VIDEO.md` | 真实检测效果视频说明 |
 | `docs/LUCKFOX_VOICE_ASSISTANT_PLAN.md` | 语音对话大模型方案（网络/本地双方案） |
 | `docs/hardware/` | 硬件扩展（LED/按键/舵机/语音/大屏/开关/PCB） |
