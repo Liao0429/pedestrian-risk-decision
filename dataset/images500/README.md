@@ -35,3 +35,14 @@
 - `results/images500_gt_eval/report.md`（整体/分桶检出率、MAE/RMSE、Pearson 相关、欠检/过检 Top 10 个案清单）
 
 当前基线（`results/rerun/images500_baseline/results.json`，yolov8n.pt conf=0.25）：整体检出率 **82.5%**（2548/3089），MAE 1.926，RMSE 3.188，Pearson r 0.802。最差个案清单可用于人工复核 COCO GT 与视觉实际一致性。
+
+## 微小目标量化分析（GT 人工复核前置）
+
+`scripts/analyze_images500_tiny_gt.py` 对全部 500 张图做 GT 数据质量与尺寸分布分析：
+
+- **GT 一致性校验**：文件名后缀人数与 COCO 标注 person 实例数 **500/500 完全一致**，无缺失、无冲突。
+- **GT 尺寸分布**：<16px 占 9.8%、<20px 占 13.5%、<32px 占 26.3%（原始分辨率）。
+- **微小占比与检出率**：逐图「<20px 微小占比」与检出率 Pearson **r=-0.403**；微小占比 0% 的图像平均检出率 95.3%，>75% 的图像仅 27.8%——漏检主要由微小目标解释。
+- **个案明细**：欠检/过检 Top10 的 GT 尺寸（中位高/最矮/微小占比）逐图列出，供人工复核分级：欠检优先看「微小占比低但漏检多」的图（如 `000000497261_19` 是 0% 微小仍漏 12 人的真缺陷）；过检个案全部需复核（区分误检 vs GT 漏标）。
+
+产物：`results/images500_gt_eval/tiny_gt_analysis.md` + `tiny_gt_summary.json`，由 `python scripts/analyze_images500_tiny_gt.py` 一键复现。

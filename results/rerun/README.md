@@ -24,6 +24,7 @@ python scripts/crowd_test.py --input dataset/images500 --output results/rerun/im
 - 逐图明细：`results/rerun/images500_baseline/results.json`（含每图检测框/置信度/风险等级/可视化图）
 - 可视化：`results/rerun/images500_baseline/vis/`（真实标注图）
 - **GT 对比评估**（COCO 官方人数 vs 检测人数）：`results/images500_gt_eval/report.md`——整体/分桶检出率、MAE 1.926、RMSE 3.188、Pearson r 0.802、欠检/过检 Top 10 个案清单（供 GT 人工复核）；由 `scripts/evaluate_images500_gt.py` 自动生成，可复现。
+- **微小目标量化分析**（GT 人工复核前置）：`results/images500_gt_eval/tiny_gt_analysis.md`——GT 一致性 500/500 通过；<20px 微小 GT 占 13.5%；「微小占比 vs 检出率」Pearson r=-0.403（0%微小桶 95.3% → >75%微小桶 27.8%），欠检主要由微小目标解释；欠检/过检 Top10 的 GT 尺寸明细已逐图列出（`000000497261_19` 为 0% 微小仍漏 12 人的真缺陷，建议优先人工复核）。由 `scripts/analyze_images500_tiny_gt.py` 一键复现。
 
 ## 2. 视频增强（111 条真实 Mixkit 视频）
 
