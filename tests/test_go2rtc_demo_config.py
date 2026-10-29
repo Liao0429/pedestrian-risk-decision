@@ -268,6 +268,20 @@ class TestShellScript:
             [bash, self.BASH_SCRIPT,
              "--video", str(video), "--dry-run"],
             capture_output=True, text=True, env=env)
+        if r.returncode != 0 or "file:///old.mp4" in r.stdout:
+            print("\n### DEBUG update stdout:", repr(r.stdout))
+            print("### DEBUG update stderr:", repr(r.stderr))
+            print("### DEBUG update bash:", bash)
+            print("### DEBUG update video:", repr(str(video)))
+            print("### DEBUG update cfg:", repr(read(str(cfg))))
+            try:
+                v = subprocess.run([bash, "--version"], capture_output=True, text=True)
+                print("### DEBUG bash version:", (v.stdout or v.stderr).splitlines()[0])
+                b = subprocess.run([bash, "-c", "od -c %s | head -3" % self.BASH_SCRIPT],
+                                   capture_output=True, text=True)
+                print("### DEBUG script bytes:", b.stdout or b.stderr)
+            except Exception as e:  # noqa: BLE001
+                print("### DEBUG extra failed:", repr(e))
         assert r.returncode == 0, r.stderr
         assert "file:///old.mp4" not in r.stdout
         assert "file://%s" % video in r.stdout
