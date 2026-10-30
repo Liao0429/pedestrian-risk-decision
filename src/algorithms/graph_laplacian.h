@@ -107,7 +107,7 @@ inline std::vector<std::vector<char>> GraphLaplacian::adjacencyMatrix() const {
     std::vector<std::vector<char>> adj;
     std::vector<std::vector<double>> L;
     int m = 0;
-    buildLaplacian(dedupPts, m_edgeDist, adj, L, m);
+    buildLaplacian(m_pts, m_edgeDist, adj, L, m);
     return adj;
 }
 
