@@ -70,6 +70,10 @@ struct RiskFSMConfig {
     // 运动趋势偏置
     double trend_bias = 0.05;
 
+    // 最小 DANGER 人数门槛：n < min_danger_n 时永远不升 DANGER
+    // 解决"伸一只手判出两个人"导致的评分虚高 → 误升 DANGER 问题。
+    int min_danger_n = 3;
+
     // 校验配置合法性（与 Python 端 RiskFSMConfig.__post_init__ 一致）。
     // 返回 true 表示合法；false 时 err 填充具体原因，便于 JSON 加载时报错。
     bool validate(std::string& err) const {
@@ -78,6 +82,7 @@ struct RiskFSMConfig {
         if (n_ref <= 0)                       { err = "n_ref 必须为正整数"; return false; }
         if (confirm_up < 1 || confirm_down < 1) { err = "confirm_up / confirm_down 必须 >= 1"; return false; }
         if (danger_hold_frames < 0 || danger_hold_ms < 0) { err = "danger_hold_frames / danger_hold_ms 必须 >= 0"; return false; }
+        if (min_danger_n < 2) { err = "min_danger_n 必须 >= 2"; return false; }
         if (up_warning < 0.0 || up_warning > 1.0 ||
             up_danger  < 0.0 || up_danger  > 1.0 ||
             down_safe  < 0.0 || down_safe  > 1.0 ||
@@ -112,7 +117,7 @@ public:
     RiskLevel update(const FsmFeatures& f, int64_t now_ms) {
         ++frame_;
         score_ = computeScore(f);
-        RiskLevel target = rawTarget(score_, level_);
+        RiskLevel target = rawTarget(score_, level_, std::max(f.n, 0));
         return transition(target, now_ms);
     }
 
@@ -145,13 +150,14 @@ private:
         return clamp01(s);
     }
 
-    // 根据当前状态 + score 应用滞回阈值，得到"理想目标等级"
-    RiskLevel rawTarget(double score, RiskLevel state) const {
+    // 根据当前状态 + score 应用滞回阈值，得到"理想目标等级"。
+    // 新增 min_danger_n 门控：人数不足时，即使 score 达标也禁止升级到 DANGER。
+    RiskLevel rawTarget(double score, RiskLevel state, int n) const {
         if (state == RISK_SAFE) {
             return (score >= cfg_.up_warning) ? RISK_WARNING : RISK_SAFE;
         }
         if (state == RISK_WARNING) {
-            if (score >= cfg_.up_danger) return RISK_DANGER;
+            if (score >= cfg_.up_danger && n >= cfg_.min_danger_n) return RISK_DANGER;
             if (score <= cfg_.down_safe) return RISK_SAFE;
             return RISK_WARNING;
         }

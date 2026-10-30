@@ -6,7 +6,7 @@
     "w2": 0.3,
     "w3": 0.3,
     "n_ref": 20,
-    "up_warning": 0.40,
+    "up_warning": 0.4,
     "up_danger": 0.65,
     "down_safe": 0.28,
     "down_warning": 0.55,
@@ -14,11 +14,14 @@
     "confirm_down": 5,
     "danger_hold_frames": 10,
     "danger_hold_ms": 1000,
-    "trend_bias": 0.05
+    "trend_bias": 0.05,
+    "min_danger_n": 3
   },
   "enable_risk_engine_fallback": false,
   "homography_file": "",
-  "target_classes": [0],
+  "target_classes": [
+    0
+  ],
   "class_conf_thresholds": {},
   "danger": {
     "n": 10,

@@ -107,7 +107,7 @@ inline std::vector<std::vector<char>> GraphLaplacian::adjacencyMatrix() const {
     std::vector<std::vector<char>> adj;
     std::vector<std::vector<double>> L;
     int m = 0;
-    buildLaplacian(m_pts, m_edgeDist, adj, L, m);
+    buildLaplacian(dedupPts, m_edgeDist, adj, L, m);
     return adj;
 }
 
@@ -159,51 +159,55 @@ inline bool GraphLaplacian::jacobiEigenvalues(
     eigvals.clear();
     if (n == 0) return true;
 
+    // 循环 Jacobi 算法：每 sweep 遍历所有 (p,q) 对（p<q），
+    // 对每个 |a[p][q]| > tol 的非对角元执行一次 Givens 旋转。
+    // 相比旧的单主元策略（每 sweep 只消最大非对角元），循环策略
+    // 收敛性更强，n=30 时 6-9 sweeps 即可收敛，而非 100 sweeps 后仍失败。
+    // 参考：Golub & Van Loan, Matrix Computations, §8.4.
     std::vector<std::vector<double>> a = A;   // 工作矩阵(将被对角化)
-    const double tol = 1e-12;
-    const int max_sweeps = 100;
+    const double tol = 1e-10;   // 收敛容差（比旧版 1e-12 略宽松，适配 float 精度板端）
+    const int max_sweeps = 50;  // 循环 Jacobi 收敛快，50 sweeps 远超需要
     bool converged = false;
 
     for (int sweep = 0; sweep < max_sweeps; ++sweep) {
-        // 找最大非对角元 a[p][q]
-        double off = 0.0;
-        int p = 0, q = 1;
-        for (int i = 0; i < n; ++i) {
-            for (int j = i + 1; j < n; ++j) {
-                double av = std::fabs(a[i][j]);
-                if (av > off) { off = av; p = i; q = j; }
+        double max_off = 0.0;
+        // 遍历所有非对角元对 (p,q)，p<q
+        for (int p = 0; p < n; ++p) {
+            for (int q = p + 1; q < n; ++q) {
+                const double apq = a[p][q];
+                const double abs_apq = std::fabs(apq);
+                if (abs_apq > max_off) max_off = abs_apq;
+                if (abs_apq <= tol) continue;  // 跳过已足够小的非对角元
+
+                const double app = a[p][p];
+                const double aqq = a[q][q];
+                const double theta = (aqq - app) / (2.0 * apq);
+                const double t = (theta >= 0.0 ? 1.0 : -1.0)
+                              / (std::fabs(theta) + std::sqrt(theta * theta + 1.0));
+                const double c = 1.0 / std::sqrt(t * t + 1.0);
+                const double s = t * c;
+
+                // 旋转行/列(k != p, q)
+                for (int k = 0; k < n; ++k) {
+                    if (k == p || k == q) continue;
+                    const double akp = a[k][p];
+                    const double akq = a[k][q];
+                    a[k][p] = c * akp - s * akq;
+                    a[k][q] = s * akp + c * akq;
+                    a[p][k] = a[k][p];
+                    a[q][k] = a[k][q];
+                }
+                // 更新对角元
+                a[p][p] = c * c * app - 2.0 * s * c * apq + s * s * aqq;
+                a[q][q] = s * s * app + 2.0 * s * c * apq + c * c * aqq;
+                a[p][q] = 0.0;
+                a[q][p] = 0.0;
             }
         }
-        if (off < tol) { converged = true; break; }   // 已收敛
-
-        const double app = a[p][p];
-        const double aqq = a[q][q];
-        const double apq = a[p][q];
-        const double theta = (aqq - app) / (2.0 * apq);
-        const double t = (theta >= 0.0 ? 1.0 : -1.0)
-                      / (std::fabs(theta) + std::sqrt(theta * theta + 1.0));
-        const double c = 1.0 / std::sqrt(t * t + 1.0);
-        const double s = t * c;
-
-        // 旋转行/列(k != p, q)
-        for (int k = 0; k < n; ++k) {
-            if (k == p || k == q) continue;
-            const double akp = a[k][p];
-            const double akq = a[k][q];
-            a[k][p] = c * akp - s * akq;
-            a[k][q] = s * akp + c * akq;
-            a[p][k] = a[k][p];
-            a[q][k] = a[k][q];
-        }
-        // 更新对角元与 p,q 交叉项
-        a[p][p] = c * c * app - 2.0 * s * c * apq + s * s * aqq;
-        a[q][q] = s * s * app + 2.0 * s * c * apq + c * c * aqq;
-        a[p][q] = 0.0;
-        a[q][p] = 0.0;
+        if (max_off < tol) { converged = true; break; }   // 已收敛
     }
 
     if (!converged) {
-        // 达到 max_sweeps 仍未收敛：不返回不可靠特征值，由调用方回退
         eigvals.clear();
         return false;
     }
@@ -211,7 +215,6 @@ inline bool GraphLaplacian::jacobiEigenvalues(
     eigvals.resize(n);
     for (int i = 0; i < n; ++i) eigvals[i] = a[i][i];
     std::sort(eigvals.begin(), eigvals.end());
-    // 与 Python 端 np.maximum(eigvals, 0) 一致：所有负特征值一律截断为 0
     for (double& e : eigvals)
         if (e < 0.0) e = 0.0;
     return true;
@@ -219,7 +222,27 @@ inline bool GraphLaplacian::jacobiEigenvalues(
 
 inline SpectralFeatures GraphLaplacian::computeFeatures() const {
     SpectralFeatures feat;
-    const int n = (int)m_pts.size();
+
+    // ---- 脚点去重：同一位置(误差<2cm)视为重复检测，只保留一个 ----
+    // 解决"伸一只手判出两个人"——NMS可能漏掉几乎重叠的检测框，
+    // 导致同一行人在地面产生两个几乎重合的脚点。
+    const double DEDUP_TOL_M = 0.02;  // 2cm 去重容差
+    std::vector<std::pair<float,float>> dedupPts;
+    dedupPts.reserve(m_pts.size());
+    for (size_t i = 0; i < m_pts.size(); ++i) {
+        bool dup = false;
+        for (size_t j = 0; j < i; ++j) {
+            double dx = (double)m_pts[i].first - (double)m_pts[j].first;
+            double dy = (double)m_pts[i].second - (double)m_pts[j].second;
+            if (std::sqrt(dx*dx + dy*dy) < DEDUP_TOL_M) {
+                dup = true;
+                break;
+            }
+        }
+        if (!dup) dedupPts.push_back(m_pts[i]);
+    }
+
+    const int n = (int)dedupPts.size();
     feat.n = n;
 
     if (n < 2) {
@@ -238,7 +261,7 @@ inline SpectralFeatures GraphLaplacian::computeFeatures() const {
     std::vector<std::vector<char>> adj;
     std::vector<std::vector<double>> L;
     int m = 0;
-    buildLaplacian(m_pts, m_edgeDist, adj, L, m);
+    buildLaplacian(dedupPts, m_edgeDist, adj, L, m);
     feat.m = m;
 
     // ---- 网络密度 ----

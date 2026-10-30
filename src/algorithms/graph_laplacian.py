@@ -149,6 +149,21 @@ def compute_laplacian_features(pts, edge_dist):
         }
     if pts.ndim != 2 or pts.shape[1] != 2:
         raise ValueError("pts 必须是 (n,2) 的坐标数组，实际形状: %s" % (pts.shape,))
+
+    # ---- 脚点去重：同一位置(误差<2cm)视为重复检测，只保留一个 ----
+    # 与 C++ 端 graph_laplacian.h 的 DEDUP_TOL_M=0.02 保持一致。
+    # 解决"伸一只手判出两个人"问题。
+    DEDUP_TOL_M = 0.02
+    dedup_idx = []
+    for i in range(pts.shape[0]):
+        dup = False
+        for j in dedup_idx:
+            if np.hypot(pts[i, 0] - pts[j, 0], pts[i, 1] - pts[j, 1]) < DEDUP_TOL_M:
+                dup = True
+                break
+        if not dup:
+            dedup_idx.append(i)
+    pts = pts[np.array(dedup_idx)]
     n = pts.shape[0]
 
     A = build_adjacency(pts, edge_dist)

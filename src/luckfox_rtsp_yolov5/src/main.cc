@@ -345,7 +345,8 @@ int main(int argc, char *argv[]) {
 			cv::Mat bgr(height, width, CV_8UC3, data);			
 			
 			cv::cvtColor(yuv420sp, bgr, cv::COLOR_YUV420sp2BGR);
-			cv::resize(bgr, frame, cv::Size(width ,height), 0, 0, cv::INTER_LINEAR);
+			// 恒等 resize 已移除：bgr 与 frame 同尺寸、同缓冲，resize 无实际作用
+			// 原 cv::resize(bgr, frame, Size(width,height), 0,0, INTER_LINEAR);
 			
 			//letterbox
 			cv::Mat letterboxImage = letterbox(frame);	
@@ -470,7 +471,8 @@ int main(int argc, char *argv[]) {
 		// ---- 取帧成功后才编码/推流/释放（失败时跳过本帧，避免陈旧帧编码与错误释放）----
 		if (s32Ret == RK_SUCCESS)
 		{
-			memcpy(data, frame.data, width * height * 3);
+			// 自拷贝已移除：data 即 frame.data（同一 src_Blk 虚拟地址），memcpy 无实际作用
+			// 原 memcpy(data, frame.data, width * height * 3);
 
 			// encode H264
 			RK_MPI_VENC_SendFrame(0, &h264_frame,-1);
