@@ -393,7 +393,7 @@ int main(int argc, char *argv[]) {
 			//letterbox：写入常驻缓冲，零分配
 			letterbox(frame, inputScalePre, letterboxPre);	
 			memcpy(rknn_app_ctx.input_mems[0]->virt_addr, letterboxPre.data, model_width*model_height*3);		
-			inference_yolov5_model(&rknn_app_ctx, &od_results, riskCfg.conf_threshold);
+			inference_yolov5_model(&rknn_app_ctx, &od_results);
 
 			// ---- 行人空间网络：只取 person 类，提取脚点 ----
 			pedestrian::RiskLevel crowd = pedestrian::RISK_SAFE;

@@ -60,7 +60,6 @@ struct RiskConfig {
     std::map<int,float> class_conf_thresholds;  // 按类别差异化置信度阈值（COCO id -> 最低置信度 0~1）。空=不区分（仅用全局 BOX_THRESH）
     RiskFSMConfig fsm;                  // 增强决策 FSM 参数（默认与 Python 端 RiskFSMConfig 一致，可 JSON 配置）
     double frame_dt = 1.0 / 30.0;       // Kalman 平滑的帧间隔（秒）；默认 30FPS，板端实际帧率低时应按实测配置
-    double conf_threshold = 0.60;        // 全局检测置信度阈值 [0,1]，低于此值的检测框被丢弃。可通过硬件按键菜单调节。
     RiskRule danger;                // DANGER 阈值（默认 10 / 0.55 / 0.80）
     RiskRule warning{5.0, 0.28, 0.55};  // WARNING 阈值（默认 5 / 0.28 / 0.55）
 
@@ -284,12 +283,6 @@ inline RiskConfig loadRiskConfig(const std::string& path) {
     }
 
     // 语义校验：WARNING 阈值不得高于 DANGER（否则 DANGER 永远无法单独触发）
-    // 全局检测置信度阈值（可选）
-    if (const minijson::Value* v = root.find("conf_threshold")) {
-        if (!v->isNumber() || v->asDouble() < 0.0 || v->asDouble() > 1.0)
-            throw std::runtime_error("conf_threshold 必须在 [0,1] 范围内");
-        cfg.conf_threshold = v->asDouble();
-    }
     if (cfg.warning.n > cfg.danger.n) {
         throw std::runtime_error("warning.n 不得大于 danger.n（等级语义颠倒）");
     }
