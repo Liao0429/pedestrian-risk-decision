@@ -514,24 +514,23 @@ int main(int argc, char *argv[]) {
 				snprintf(line3, sizeof line3, "Assembly: %.0f%%", (featRho + featGcc) / 2.0 * 100.0);
 				cv::putText(frame, line3, cv::Point(8, 64), cv::FONT_HERSHEY_SIMPLEX, 0.5, osd_yellow, 1, cv::LINE_AA);
 			}
-			// chinese status line
+			// compact Chinese status (bottom-right, small dark bg)
 			{
 				const char *cn_lvl = "\xe5\xae\x89\xe5\x85\xa8";
-				if (crowd == pedestrian::RISK_WARNING) cn_lvl = "\xe8\xad\xa6\xe5\x91\x8a";
-				else if (crowd == pedestrian::RISK_DANGER) cn_lvl = "\xe5\x8d\xb1\xe9\x99\xa9";
-				char cn_line[128];
-				snprintf(cn_line, sizeof cn_line, "\xe7\x8a\xb6\xe6\x80\x81:%s \xe4\xba\xba\xe6\x95\xb0:%d \xe5\xaf\x86\xe5\xba\xa6:%.2f \xe8\x81\x9a\xe9\x9b\x86:%.2f \xe8\xbf\x9e\xe9\x80\x9a:%.3f",
-				         cn_lvl, featN, featRho, featGcc, featFiedler);
-				int cn_w = ((int)strlen(cn_line) / 3) * (24 + 2) + 12;
-				for (int ry = 30; ry < 54; ++ry) {
-					for (int rx = 0; rx < cn_w; ++rx) {
-						cv::Vec3b &px = frame.at<cv::Vec3b>(ry, rx);
-						px[0] = px[0] / 2;
-						px[1] = px[1] / 2;
-						px[2] = px[2] / 2;
-					}
-				}
-				draw_cn(frame, cn_line, 6, 33, cv::Scalar(255, 255, 255));
+				int cn_color_r = 0, cn_color_g = 255, cn_color_b = 0;
+				if (crowd == pedestrian::RISK_WARNING) { cn_lvl = "\xe8\xad\xa6\xe5\x91\x8a"; cn_color_r = 0; cn_color_g = 255; cn_color_b = 255; }
+				else if (crowd == pedestrian::RISK_DANGER) { cn_lvl = "\xe5\x8d\xb1\xe9\x99\xa9"; cn_color_r = 0; cn_color_g = 0; cn_color_b = 255; }
+				char cn_line[64];
+				snprintf(cn_line, sizeof cn_line, "%s %d\xe4\xba\xba", cn_lvl, featN);
+				int cn_w = ((int)strlen(cn_line) / 3) * (24 + 2) + 8;
+				int cn_x = width - cn_w - 6;
+				// small semi-transparent background just behind the text
+				cv::Mat cn_bg = frame(cv::Rect(cn_x, height - 40, cn_w, 30));
+				cv::Mat cn_bg_dark;
+				cn_bg.copyTo(cn_bg_dark);
+				cn_bg_dark *= 0.35;
+				cn_bg_dark.copyTo(cn_bg);
+				draw_cn(frame, cn_line, cn_x + 2, height - 35, cv::Scalar(cn_color_b, cn_color_g, cn_color_r));
 			}
 
 		}
