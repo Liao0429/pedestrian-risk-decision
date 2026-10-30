@@ -30,6 +30,7 @@
 
 #include "preprocess.h"
 #include "../../algorithms/crowd_dbscan.h"   // DBSCAN 簇计数（OSD Clusters 行）
+#include "board_infer.h"                      // NPU 归因：npu/submit/wait 计数（task-8）
 
 #define DISP_WIDTH  720
 #define DISP_HEIGHT 480
@@ -49,6 +50,12 @@
 //   必须保留 ≥1 行/秒：看门狗 STALE_SEC=30，心跳停 >30s 会被重启。
 #ifndef BOARD_PERF_HEARTBEAT
 #define BOARD_PERF_HEARTBEAT 1
+#endif
+// BOARD_INFER_DECIMATE=N：每 N 帧做 1 次 NPU 推理，中间帧沿用上一帧检测框
+// （Kalman 平滑仍逐帧运行）。1=每帧推理（默认，当前行为）。
+// 用途：量化"推理降频"的帧率收益（代价：检测延迟最坏 +N-1 帧）。
+#ifndef BOARD_INFER_DECIMATE
+#define BOARD_INFER_DECIMATE 1
 #endif
 // VENC 单帧最大 pack 数（SPS/PPS 与 slice 可能分成多个 pack）
 #define VENC_MAX_PACKS 8
@@ -74,10 +81,16 @@ struct StageAccum {
   uint64_t decide_us;
   uint64_t draw_us;
   uint64_t enc_us;
+  uint64_t npu_us;      // RKNN_QUERY_PERF_RUN 报的 NPU 侧真实推理时间（需 COLLECT_PERF=1）
+  uint64_t submit_us;   // non_block 提交耗时（需 BOARD_RKNN_NONBLOCK=1）
+  uint64_t wait_us;     // rknn_wait 等待耗时（同上）
+  int npu_samples;
+  int infer_skips;      // 推理降频跳过的帧数
   int frames;
   uint64_t window_start_us;
   StageAccum()
       : vi_us(0), prep_us(0), infer_us(0), decide_us(0), draw_us(0), enc_us(0),
+        npu_us(0), submit_us(0), wait_us(0), npu_samples(0), infer_skips(0),
         frames(0), window_start_us(0) {}
 };
 
@@ -467,8 +480,10 @@ int main(int argc, char *argv[]) {
   const int kVencTimeoutMs = 100;  // VENC 收发：100ms 超时视为背压
   const int kMaxConsecFail = 50;   // 连续失败上限（约 5~10s）后退出重启
 
+  uint64_t frameSeq = 0;   // 推理降频用帧序号
   while (!g_stop) {
     const uint64_t t_frame = nowUs();
+    ++frameSeq;
 
     // ---- 配置热重载：每 300 帧查一次 mtime（旧实现每帧 stat 一次）----
     {
@@ -545,11 +560,23 @@ int main(int argc, char *argv[]) {
     const uint64_t t_prep = nowUs();
 
     // ---- NPU 推理（置信度阈值来自运行时配置 conf_threshold）----
-    const int infer_ret =
-        inference_yolov5_model(&rknn_app_ctx, &od_results, riskCfg.conf_threshold);
-    if (infer_ret != 0) {
-      RK_LOGE("inference_yolov5_model fail ret=%d", infer_ret);
-      od_results.count = 0;
+    // BOARD_INFER_DECIMATE=N：每 N 帧推理一次，中间帧沿用上一帧 od_results（框/置信度）。
+    // 代价：检测框最坏滞后 N-1 帧（Kalman 平滑与 FSM 仍逐帧运行，不改变等级逻辑）。
+    int infer_ret = 0;
+    if (BOARD_INFER_DECIMATE <= 1 || ((int)(frameSeq % (uint64_t)BOARD_INFER_DECIMATE) == 0)) {
+      infer_ret = inference_yolov5_model(&rknn_app_ctx, &od_results, riskCfg.conf_threshold);
+      if (infer_ret != 0) {
+        RK_LOGE("inference_yolov5_model fail ret=%d", infer_ret);
+        od_results.count = 0;
+      }
+      const int64_t npu_us = board_infer_last_npu_us();
+      if (npu_us >= 0) { acc.npu_us += (uint64_t)npu_us; ++acc.npu_samples; }
+      const int64_t sub_us = board_infer_last_submit_us();
+      const int64_t wt_us = board_infer_last_wait_us();
+      if (sub_us >= 0) acc.submit_us += (uint64_t)sub_us;
+      if (wt_us >= 0) acc.wait_us += (uint64_t)wt_us;
+    } else {
+      ++acc.infer_skips;
     }
     const uint64_t t_infer = nowUs();
 
@@ -802,12 +829,18 @@ int main(int argc, char *argv[]) {
       const int n = acc.frames > 0 ? acc.frames : 1;
       printf("[PERF] fps=%.2f frames=%d persons=%d level=%s vi=%.1f prep=%.1f "
              "infer=%.1f decide=%.1f draw=%.1f enc=%.1f | per-frame ms: "
-             "vi=%.2f prep=%.2f infer=%.2f decide=%.2f draw=%.2f enc=%.2f\n",
+             "vi=%.2f prep=%.2f infer=%.2f decide=%.2f draw=%.2f enc=%.2f | "
+             "npu_avg=%.2f submit_avg=%.2f wait_avg=%.2f npu_samples=%d infer_skips=%d decimate=%d sync_mode=%d\n",
              acc.frames / win_s, acc.frames, featN, RiskEngine::levelName(crowd),
              acc.vi_us / 1000.0, acc.prep_us / 1000.0, acc.infer_us / 1000.0,
              acc.decide_us / 1000.0, acc.draw_us / 1000.0, acc.enc_us / 1000.0,
              acc.vi_us / 1000.0 / n, acc.prep_us / 1000.0 / n, acc.infer_us / 1000.0 / n,
-             acc.decide_us / 1000.0 / n, acc.draw_us / 1000.0 / n, acc.enc_us / 1000.0 / n);
+             acc.decide_us / 1000.0 / n, acc.draw_us / 1000.0 / n, acc.enc_us / 1000.0 / n,
+             acc.npu_samples > 0 ? acc.npu_us / 1000.0 / acc.npu_samples : -1.0,
+             acc.npu_samples > 0 ? acc.submit_us / 1000.0 / acc.npu_samples : -1.0,
+             acc.npu_samples > 0 ? acc.wait_us / 1000.0 / acc.npu_samples : -1.0,
+             acc.npu_samples, acc.infer_skips, (int)BOARD_INFER_DECIMATE,
+             board_infer_sync_mode());
       fflush(stdout);   // 心跳必须立即落盘：看门狗按文件 mtime 判活
       acc = StageAccum();
       acc.window_start_us = t_enc;
