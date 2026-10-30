@@ -444,15 +444,26 @@ int main(int argc, char *argv[]) {
 				cv::rectangle(frame, cv::Point(0,0), cv::Point(width, 30), color, -1);
 				cv::putText(frame, info, cv::Point(6, 22),
 							cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0,0,0), 2);
-				// 中文释义：SAFE→安全，WARNING→警告，DANGER→危险
-				{
-					const char *cn = "安全";
-					if (crowd == pedestrian::RISK_WARNING) cn = "警告";
-					else if (crowd == pedestrian::RISK_DANGER) cn = "危险";
-					// 语义：黑字直接画在横幅上——右对齐，不遮盖英文
-					int cn_w = (int)strlen(cn) / 3 * (24 + 2);  // 每个汉字 26px
-					draw_cn(frame, cn, width - cn_w - 6, 3, cv::Scalar(255, 255, 255));
+			}
+			// ---- 中文状态行（横幅下方，完整显示所有参数）----
+			{
+				const char *cn_lvl = "安全";
+				if (crowd == pedestrian::RISK_WARNING) cn_lvl = "警告";
+				else if (crowd == pedestrian::RISK_DANGER) cn_lvl = "危险";
+				char cn_line[128];
+				snprintf(cn_line, sizeof cn_line, "状态:%s 人数:%d 密度:%.2f 聚集:%.2f 连通:%.3f",
+				         cn_lvl, featN, featRho, featGcc, featFiedler);
+				// 深灰半透明底色：取原像素的 50% 亮度的暗底
+				int cn_w = ((int)strlen(cn_line) / 3) * (24 + 2) + 12;
+				for (int ry = 30; ry < 54; ++ry) {
+					for (int rx = 0; rx < cn_w; ++rx) {
+						cv::Vec3b &px = frame.at<cv::Vec3b>(ry, rx);
+						px[0] = px[0] / 2;
+						px[1] = px[1] / 2;
+						px[2] = px[2] / 2;
+					}
 				}
+				draw_cn(frame, cn_line, 6, 33, cv::Scalar(255, 255, 255));
 			}
 
 		}
