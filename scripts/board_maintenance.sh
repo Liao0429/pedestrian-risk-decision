@@ -33,6 +33,20 @@ say() { echo "[maintenance] $*"; }
 
 say "===== 维护开始 $(date '+%F %T' 2>/dev/null) ====="
 say "DEMO_DIR=$DEMO_DIR  APP_LOG=$APP_LOG  DRY_RUN=$DRY_RUN"
+
+# 权限自检（2026-10-31 补）：板上 SSH 登录是 pico + sudo，本脚本若以 pico 身份直接跑，
+# 清 core 仍可完成（DEMO_DIR 属主是 pico，目录可写即可 unlink），但：
+#   - 日志轮转：/tmp/enhanced_latest.log 是 root 所有 -> 截断会失败
+#   - journal vacuum：需要 root -> 会报 Access denied
+# 这里先把结论说清楚，避免"跑完了以为清干净了"。
+if [ "$(id -u 2>/dev/null || echo 1)" != "0" ]; then
+    say "警告: 当前不是 root（uid=$(id -u 2>/dev/null)）。journal vacuum 与日志轮转需要 root，"
+    say "      若未提权，这两步会被跳过或在下面明确报失败；core 清理仍可完成。建议加 sudo 运行："
+    say "      echo '<口令>' | sudo -S -p '' sh $0"
+    NOT_ROOT=1
+else
+    NOT_ROOT=0
+fi
 say "磁盘(前): $(df -h / 2>/dev/null | tail -n 1)"
 say "磁盘(前, kB): $(df -k / 2>/dev/null | tail -n 1)"
 
@@ -81,9 +95,15 @@ else
         say "日志轮转: $SZ B > $LOG_MAX_BYTES B，保留末 $LOG_KEEP_TAIL B"
         if [ "$DRY_RUN" = "1" ]; then
             echo "[dry-run] tail -c $LOG_KEEP_TAIL $APP_LOG > $APP_LOG.1 && : > $APP_LOG"
+        elif [ "$NOT_ROOT" = "1" ] && [ ! -w "$APP_LOG" ]; then
+            say "日志轮转: 跳过（$APP_LOG 非当前用户可写，需要 root）"
         else
             if tail -c "$LOG_KEEP_TAIL" "$APP_LOG" > "$APP_LOG.1" 2>/dev/null; then
-                : > "$APP_LOG" && say "日志轮转: 完成（旧内容在 $APP_LOG.1）"
+                if : > "$APP_LOG" 2>/dev/null; then
+                    say "日志轮转: 完成（旧内容在 $APP_LOG.1）"
+                else
+                    say "日志轮转: 截断失败（旧内容在 $APP_LOG.1，原日志保持原样）"
+                fi
             else
                 say "日志轮转: 失败（保留原日志）"
             fi
@@ -101,6 +121,9 @@ if command -v journalctl >/dev/null 2>&1; then
     say "警告: vacuum 会丢弃旧 journal。若还没导出 10-30~10-31 的证据，先跑 board_recover.sh（或本次用 DRY_RUN=1 跳过）。"
     if [ "$DRY_RUN" = "1" ]; then
         echo "[dry-run] journalctl --vacuum-size=$JOURNAL_KEEP"
+    elif [ "$NOT_ROOT" = "1" ]; then
+        say "journal: 跳过 vacuum（需要 root；非 root 下 journalctl 会报 Access denied）"
+        say "journal: 当前用户可见用量: $(journalctl --disk-usage 2>&1 | tail -n 1)"
     else
         journalctl --vacuum-size="$JOURNAL_KEEP" 2>&1 | tail -n 3 | sed 's/^/[maintenance] journal: /'
     fi
