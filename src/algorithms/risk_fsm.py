@@ -105,6 +105,9 @@ class RiskFSMConfig:
     # ---------- 运动趋势偏置（可选）
     trend_bias: float = 0.05  # trend ∈[-1,1] 对 score 的加成幅度
 
+    # ---------- 最小 DANGER 人数门槛（与 C++ 端一致）
+    min_danger_n: int = 3    # n < min_danger_n 时永远不升 DANGER，防止单人场景评分虚高
+
     def __post_init__(self) -> None:
         # 类型/取值校验，尽早暴露配置错误
         if self.w1 < 0 or self.w2 < 0 or self.w3 < 0 or self.w4 < 0:
@@ -119,6 +122,8 @@ class RiskFSMConfig:
             raise ValueError("confirm_up / confirm_down 必须 >= 1")
         if self.danger_hold_frames < 0 or self.danger_hold_ms < 0:
             raise ValueError("danger_hold_frames / danger_hold_ms 必须 >= 0")
+        if self.min_danger_n < 2:
+            raise ValueError("min_danger_n 必须 >= 2")
         if not (0.0 <= self.up_warning <= 1.0 and 0.0 <= self.up_danger <= 1.0
                 and 0.0 <= self.down_safe <= 1.0 and 0.0 <= self.down_warning <= 1.0):
             raise ValueError("阈值必须在 [0,1] 范围内")
@@ -203,7 +208,8 @@ class RiskFSM:
         self._frame += 1
         self._last_ms = now_ms
         self._score = self._compute_score(features)
-        target = self._raw_target(self._score, self._state)
+        n = features.get("n", 0) or 0
+        target = self._raw_target(self._score, self._state, int(n))
         return self._transition(target, now_ms)
 
     # ------------------------------------------------------------------
@@ -235,13 +241,15 @@ class RiskFSM:
             score += cfg.trend_bias * _clamp(float(trend), -1.0, 1.0)
         return _clamp(score, 0.0, 1.0)
 
-    def _raw_target(self, score: float, state: str) -> str:
-        """根据当前状态 + score，应用滞回阈值得到"理想目标等级"。"""
+    def _raw_target(self, score: float, state: str, n: int = 0) -> str:
+        """根据当前状态 + score，应用滞回阈值得到"理想目标等级"。
+        新增 min_danger_n 门控：人数不足时禁止升级到 DANGER。
+        """
         cfg = self.config
         if state == "SAFE":
             return "WARNING" if score >= cfg.up_warning else "SAFE"
         if state == "WARNING":
-            if score >= cfg.up_danger:
+            if score >= cfg.up_danger and n >= cfg.min_danger_n:
                 return "DANGER"
             if score <= cfg.down_safe:
                 return "SAFE"

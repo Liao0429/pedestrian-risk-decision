@@ -115,7 +115,7 @@ static int nms(int validCount, std::vector<float> &outputLocations, std::vector<
 {
     for (int i = 0; i < validCount; ++i)
     {
-        if (order[i] == -1 || classIds[i] != filterId)
+        if (order[i] == -1 || classIds[order[i]] != filterId)
         {
             continue;
         }
@@ -123,8 +123,6 @@ static int nms(int validCount, std::vector<float> &outputLocations, std::vector<
         for (int j = i + 1; j < validCount; ++j)
         {
             int m = order[j];
-            // 只对与当前 filterId 同类别的框做 NMS 抑制；旧版误用 classIds[i]
-            // 导致跨类别混合 NMS（person 与车辆重叠框互相误抑制），已修正。
             if (m == -1 || classIds[j] != filterId)
             {
                 continue;

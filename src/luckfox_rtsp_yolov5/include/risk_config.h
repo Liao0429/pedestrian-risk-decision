@@ -270,6 +270,10 @@ inline RiskConfig loadRiskConfig(const std::string& path) {
             if (!v->isNumber() || !std::isfinite(v->asDouble())) throw std::runtime_error("fsm.trend_bias 必须是有限数");
             f.trend_bias = v->asDouble();
         }
+        if (const minijson::Value* v = fsmObj->find("min_danger_n")) {
+            if (!v->isNumber() || v->asDouble() < 2.0) throw std::runtime_error("fsm.min_danger_n 必须 >= 2");
+            f.min_danger_n = static_cast<int>(v->asDouble());
+        }
         // 滞回一致性等语义校验（与 Python 端 RiskFSMConfig.__post_init__ 一致）
         std::string err;
         if (!f.validate(err)) {

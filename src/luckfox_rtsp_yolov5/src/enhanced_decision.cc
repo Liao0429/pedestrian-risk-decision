@@ -145,7 +145,7 @@ EnhancedResult EnhancedDecision::processFrame(
     res.smoothPts = smoothPoints(groundPts);
 
     // 2. 图拉普拉斯网络特征（含 Fiedler 值）
-    graph_.setEdgeDist(cfg_.edge_dist_m);
+    // setEdgeDist 已在构造函数中设置，每帧重设无实际作用
     graph_.setPoints(res.smoothPts);
     const SpectralFeatures feat = graph_.computeFeatures();
     res.n                      = feat.n;

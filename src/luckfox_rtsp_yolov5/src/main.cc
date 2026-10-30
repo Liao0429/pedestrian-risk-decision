@@ -12,7 +12,6 @@
 #include <time.h>
 #include <unistd.h>
 #include <algorithm>
-#include <chrono>
 #include <vector>
 
 #include "rtsp_demo.h"
@@ -21,8 +20,8 @@
 #include "risk_engine.h"
 #include "risk_config.h"
 #include "enhanced_decision.h"
-#include "preprocess.h"
 #include "ipm_transform.h"
+#include "chinese_font.h"
 
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
@@ -30,50 +29,6 @@
 
 #define DISP_WIDTH  720
 #define DISP_HEIGHT 480
-
-// ---- 主循环看门狗与有限超时配置 ----
-// 所有驱动调用使用有限超时（毫秒），避免 -1 无限阻塞导致进程假死（SIGTERM
-// 无法及时退出、外部看门狗无从自愈）。正常板端帧率约 6.9FPS（约 145ms/帧），
-// 1s 超时不会误伤正常取帧，仅在通道停滞时触发。
-#define VI_GET_FRAME_TIMEOUT_MS    1000   // 单帧取帧超时
-#define VENC_SEND_FRAME_TIMEOUT_MS 1000   // 编码输入超时
-#define VENC_GET_STREAM_TIMEOUT_MS 1000   // 编码输出超时
-#define WATCHDOG_MAX_CONSEC_VI_FAIL 30    // 连续取帧失败 N 次判定主链路挂死（约 30s），主动退出交由 systemd 重启
-#define WATCHDOG_LOG_EVERY_N_FAIL   10    // 失败日志节流：每 N 次打印一次，避免刷屏
-#define RTSP_CONSEC_TX_FAIL_WARN    60    // 连续推流失败 N 次打印汇总告警（非致命，等待新客户端连接）
-
-// ---- 主循环耗时打点（P1-6）：定位 ~6.5FPS 瓶颈的耗时分布 ----
-// 每 PROFILE_LOG_EVERY_N_FRAMES 帧打印一次各阶段平均耗时；不改变任何业务逻辑。
-#define PROFILE_LOG_EVERY_N_FRAMES  90    // 每 90 帧打印一次（约 13s @6.9FPS）
-struct ProfileTiming {
-    unsigned long long frames   = 0;
-    unsigned long long us_vi_get    = 0;  // RK_MPI_VI_GetChnFrame 取帧
-    unsigned long long us_cvt_resize= 0;  // YUV420sp->BGR + resize
-    unsigned long long us_letterbox = 0;  // letterbox + BGR2RGB + memcpy 送显存
-    unsigned long long us_rknn      = 0;  // RKNN 推理
-    unsigned long long us_decision  = 0;  // 脚点提取 + IPM + Kalman + 谱特征 + FSM
-    unsigned long long us_draw      = 0;  // 画框 + 等级叠加
-    unsigned long long us_venc_send = 0;  // 编码前 BGR2RGB + VENC_SendFrame
-    unsigned long long us_venc_get  = 0;  // VENC_GetStream + RTSP 推流 + Release
-    unsigned long long us_total     = 0;  // 整帧（含 VI 取帧）
-};
-static ProfileTiming g_prof;
-
-static inline unsigned long long profileNowUs() {
-    return (unsigned long long)std::chrono::duration_cast<std::chrono::microseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count();
-}
-static void profileReport() {
-    if (g_prof.frames == 0) return;
-    const double f = (double)g_prof.frames;
-    printf("[PROFILE] frames=%llu avg_ms: vi_get=%.2f cvt_resize=%.2f letterbox=%.2f rknn=%.2f decision=%.2f draw=%.2f venc_send=%.2f venc_get_rtsp=%.2f total=%.2f fps=%.2f\n",
-           g_prof.frames,
-           g_prof.us_vi_get/1000.0/f, g_prof.us_cvt_resize/1000.0/f, g_prof.us_letterbox/1000.0/f,
-           g_prof.us_rknn/1000.0/f, g_prof.us_decision/1000.0/f, g_prof.us_draw/1000.0/f,
-           g_prof.us_venc_send/1000.0/f, g_prof.us_venc_get/1000.0/f, g_prof.us_total/1000.0/f,
-           f / ((double)g_prof.us_total / 1000000.0));
-    g_prof = ProfileTiming();
-}
 
 // disp size
 int width    = DISP_WIDTH;
@@ -86,8 +41,27 @@ float scale ;
 int leftPadding ;
 int topPadding  ;
 
-// letterbox 预计算参数（阶段八：720x480 -> 640x640，几何与旧 letterbox() 一致）
-pedestrian::LetterboxParams g_lb_params;
+cv::Mat letterbox(cv::Mat input)
+{
+	float scaleX = (float)model_width  / (float)width; 
+	float scaleY = (float)model_height / (float)height; 
+	scale = scaleX < scaleY ? scaleX : scaleY;
+	
+	int inputWidth   = (int)((float)width * scale);
+	int inputHeight  = (int)((float)height * scale);
+
+	leftPadding = (model_width  - inputWidth) / 2;
+	topPadding  = (model_height - inputHeight) / 2;	
+	
+
+	cv::Mat inputScale;
+    cv::resize(input, inputScale, cv::Size(inputWidth,inputHeight), 0, 0, cv::INTER_LINEAR);	
+	cv::Mat letterboxImage(640, 640, CV_8UC3,cv::Scalar(0, 0, 0));
+    cv::Rect roi(leftPadding, topPadding, inputWidth, inputHeight);
+    inputScale.copyTo(letterboxImage(roi));
+
+	return letterboxImage; 	
+}
 
 void mapCoordinates(int *x, int *y) {	
 	int mx = *x - leftPadding;
@@ -95,6 +69,44 @@ void mapCoordinates(int *x, int *y) {
 
     *x = (int)((float)mx / scale);
     *y = (int)((float)my / scale);
+}
+
+// ---- 24x24 点阵中文绘制（从 chinese_font.h 读取字模，逐像素画到 frame）----
+// pixel_scale=1 → 字高 24px；不带描边（横幅背景已有填充色，描边反而不清）
+static void draw_cn(cv::Mat &img, const char *chars, int x, int y,
+                    const cv::Scalar &color) {
+    int pen_x = x;
+    for (const char *p = chars; *p;) {
+        if ((static_cast<unsigned char>(*p) & 0xE0) == 0xE0 && p[1] && p[2]) {
+            char ch[4] = {p[0], p[1], p[2], 0};
+            const uint8_t *g = cn_find_glyph(ch);
+            if (g) {
+                for (int row = 0; row < 24; ++row) {
+                    const uint32_t bits = ((uint32_t)g[row * 3] << 16) |
+                                          ((uint32_t)g[row * 3 + 1] << 8) |
+                                          (uint32_t)g[row * 3 + 2];
+                    for (int col = 0; col < 24; ++col) {
+                        if (bits & (0x800000u >> col)) {
+                            int px = pen_x + col, py = y + row;
+                            if (px >= 0 && py >= 0 && px < img.cols && py < img.rows)
+                                img.at<cv::Vec3b>(py, px) = cv::Vec3b(
+                                    (uchar)color[0], (uchar)color[1], (uchar)color[2]);
+                        }
+                    }
+                }
+                pen_x += 24 + 2;
+                p += 3;
+                continue;
+            }
+            p += 3; pen_x += 24 + 2;
+            continue;
+        }
+        // ASCII 直接 putText
+        char ascii[2] = {*p, 0};
+        cv::putText(img, ascii, cv::Point(pen_x, y + 18),
+                    cv::FONT_HERSHEY_SIMPLEX, 0.5, color, 1, cv::LINE_AA);
+        pen_x += 10; ++p;
+    }
 }
 
 
@@ -143,13 +155,13 @@ int main(int argc, char *argv[]) {
   pedestrian::EnhancedDecision enhancedDecision(enhancedCfg);
 
   // ---- 资源句柄与初始化状态（任一关键初始化失败时安全清理） ----
-    RK_S32 s32Ret = 0;
-    int sX, sY, eX, eY;
-    int ret = 0;
-    char text[32];
-    rknn_app_context_t rknn_app_ctx;
-        object_detect_result_list od_results;
-        memset(&rknn_app_ctx, 0, sizeof(rknn_app_context_t));
+  RK_S32 s32Ret = 0;
+  int sX, sY, eX, eY;
+  int ret = 0;
+  char text[32];
+  rknn_app_context_t rknn_app_ctx;
+  object_detect_result_list od_results;
+  memset(&rknn_app_ctx, 0, sizeof(rknn_app_context_t));
 
   VENC_STREAM_S stFrame;
   memset(&stFrame, 0, sizeof(stFrame));
@@ -189,9 +201,8 @@ int main(int argc, char *argv[]) {
     if (rtsp_ready && g_rtsplive) rtsp_del_demo(g_rtsplive);
     if (sys_ready)       RK_MPI_SYS_Exit();
     if (rknn_ready)      release_yolov5_model(&rknn_app_ctx);
-        if (postproc_ready)  deinit_post_process();
-        pedestrian::letterbox_params_free(&g_lb_params);
-      };
+    if (postproc_ready)  deinit_post_process();
+  };
 
   // ==== 初始化序列：任一关键初始化失败即打印明确错误并安全退出 ====
   ret = init_yolov5_model(model_path, &rknn_app_ctx);
@@ -201,26 +212,7 @@ int main(int argc, char *argv[]) {
     return -1;
   }
   rknn_ready = true;
-    printf("init rknn model success!\n");
-
-    // ---- 图像预处理参数预计算（P1-6 阶段八）----
-    // 模型输入尺寸以 RKNN 实际查询为准（不再是硬编码 640），letterbox 几何与
-    // 坐标映射表只计算一次，每帧仅执行定点插值。旧实现每帧重复 resize+颜色转换
-    // 共约 136ms（占帧间隔 85%），本模块合并为单次遍历并修复 NV12 颜色语义。
-    model_width  = rknn_app_ctx.model_width;
-    model_height = rknn_app_ctx.model_height;
-    if (pedestrian::letterbox_prepare(width, height, model_width, model_height,
-                                      &g_lb_params) != 0) {
-      fprintf(stderr, "[FATAL] letterbox_prepare 失败\n");
-      cleanup();
-      return -1;
-    }
-    scale        = (float)g_lb_params.roi_w / (float)width;
-    leftPadding  = g_lb_params.left_pad;
-    topPadding   = g_lb_params.top_pad;
-    printf("[PREPROCESS] model=%dx%d roi=%dx%d pads=(%d,%d) scale=%.6f\n",
-           model_width, model_height, g_lb_params.roi_w, g_lb_params.roi_h,
-           g_lb_params.left_pad, g_lb_params.top_pad, (double)scale);
+  printf("init rknn model success!\n");
 
   ret = init_post_process();
   if (ret != 0) {
@@ -338,53 +330,28 @@ int main(int argc, char *argv[]) {
     return -1;
   }
   venc_ready = true;
-    printf("venc init success\n");
-   	// ---- 主循环看门狗计数（取帧连续失败判定挂死；编码/RTSP 失败仅告警） ----
-	int vi_consec_fail = 0;
-	int venc_send_fail = 0;
-	int venc_stream_fail = 0;
-	int rtsp_consec_fail = 0;
-	while (!g_stop)
-	{
-		const unsigned long long t_frame0 = profileNowUs();
-		unsigned long long t_mark = t_frame0;
+  printf("venc init success\n");
+  	while (!g_stop)
+	{	
 		// get vi frame
 		h264_frame.stVFrame.u32TimeRef = H264_TimeRef++;
 		h264_frame.stVFrame.u64PTS = TEST_COMM_GetNowUs(); 
-		s32Ret = RK_MPI_VI_GetChnFrame(0, 0, &stViFrame, VI_GET_FRAME_TIMEOUT_MS);
+		s32Ret = RK_MPI_VI_GetChnFrame(0, 0, &stViFrame, -1);
 		if(s32Ret == RK_SUCCESS)
 		{
-			vi_consec_fail = 0;
 			void *vi_data = RK_MPI_MB_Handle2VirAddr(stViFrame.stVFrame.pMbBlk);	
 
-			// ---- 预处理（阶段八：NV12 单遍定点/NEON，替代 OpenCV 三遍流程）----
-						// 旧流程：cvtColor(YUV420sp2BGR 实为 NV21 语义，红蓝互换) + 恒等 resize
-						//        + letterbox(resize) + BGR2RGB + memcpy，实测 ~136ms/帧。
-						// 新流程：
-						//   1) yuv420sp_to_bgr：NV12 -> BGR 全帧（正确 NV12 语义，供画框/VENC）
-						//   2) yuv420sp_to_rgb_letterbox：直接从 NV12 采样生成 RKNN RGB 输入
-						// 均单遍处理，无 OpenCV 中间缓冲。
-						pedestrian::yuv420sp_to_bgr(static_cast<const uint8_t *>(vi_data),
-						                           width, height, data);
-						{
-							const unsigned long long t_now = profileNowUs();
-							g_prof.us_cvt_resize += t_now - t_mark;
-							t_mark = t_now;
-						}
-						pedestrian::yuv420sp_to_rgb_letterbox(
-						    static_cast<const uint8_t *>(vi_data), g_lb_params,
-						    static_cast<uint8_t *>(rknn_app_ctx.input_mems[0]->virt_addr));
-						{
-													const unsigned long long t_now = profileNowUs();
-													g_prof.us_letterbox += t_now - t_mark;
-													t_mark = t_now;
-												}
-												inference_yolov5_model(&rknn_app_ctx, &od_results);
-			{
-				const unsigned long long t_now = profileNowUs();
-				g_prof.us_rknn += t_now - t_mark;
-				t_mark = t_now;
-			}
+			cv::Mat yuv420sp(height + height / 2, width, CV_8UC1, vi_data);
+			cv::Mat bgr(height, width, CV_8UC3, data);			
+			
+			cv::cvtColor(yuv420sp, bgr, cv::COLOR_YUV420sp2BGR);
+			// 恒等 resize 已移除：bgr 与 frame 同尺寸、同缓冲，resize 无实际作用
+			// 原 cv::resize(bgr, frame, Size(width,height), 0,0, INTER_LINEAR);
+			
+			//letterbox
+			cv::Mat letterboxImage = letterbox(frame);	
+			memcpy(rknn_app_ctx.input_mems[0]->virt_addr, letterboxImage.data, model_width*model_height*3);		
+			inference_yolov5_model(&rknn_app_ctx, &od_results);
 
 			// ---- 行人空间网络：只取 person 类，提取脚点 ----
 			pedestrian::RiskLevel crowd = pedestrian::RISK_SAFE;
@@ -418,11 +385,6 @@ int main(int argc, char *argv[]) {
 				printf("[EnhancedDecision] level=%s n=%d rho=%.2f r_gcc=%.2f fiedler=%.3f\n",
 				       RiskEngine::levelName(crowd), featN, featRho, featGcc, featFiedler);
 			}
-			{
-				const unsigned long long t_now = profileNowUs();
-				g_prof.us_decision += t_now - t_mark;
-				t_mark = t_now;
-			}
 
 			// 经典决策旁路：默认关闭（enable_risk_engine_fallback=false）。
 			// 增强决策已计算网络特征，RiskEngine 旁路会重复 computeFeatures，
@@ -444,32 +406,32 @@ int main(int argc, char *argv[]) {
 			}
 
 			for(int i = 0; i < od_results.count; i++)
-						{
-							object_detect_result *det_result = &(od_results.results[i]);
-							// 只画/打印目标类别（与风险引擎 target_classes 过滤一致，避免画面框数与决策人数不一致）
-							if (std::find(riskCfg.target_classes.begin(), riskCfg.target_classes.end(), det_result->cls_id) == riskCfg.target_classes.end()
-								// 与决策路径一致：若该类配置了差异化置信度阈值且当前置信度不足，也不画框
-								|| (riskCfg.class_conf_thresholds.count(det_result->cls_id) > 0
-									&& det_result->prop < riskCfg.class_conf_thresholds.at(det_result->cls_id)))
-								continue;
-							sX = (int)(det_result->box.left);
-							sY = (int)(det_result->box.top);
-							eX = (int)(det_result->box.right);
-							eY = (int)(det_result->box.bottom);
-							mapCoordinates(&sX,&sY);
-							mapCoordinates(&eX,&eY);
+			{
+				object_detect_result *det_result = &(od_results.results[i]);
+				// 仅绘制 target_classes 中的类别（默认只画 person），贴合毕设人群分析主题
+				if (std::find(riskCfg.target_classes.begin(), riskCfg.target_classes.end(),
+				              det_result->cls_id) == riskCfg.target_classes.end())
+					continue;
+				{
+					sX = (int)(det_result->box.left   );	
+					sY = (int)(det_result->box.top 	  );	
+					eX = (int)(det_result->box.right  );	
+					eY = (int)(det_result->box.bottom );
+					mapCoordinates(&sX,&sY);
+					mapCoordinates(&eX,&eY);
+					
+				printf("%s @ (%d %d %d %d) %.3f\n", coco_cls_to_name(det_result->cls_id),
+				       sX, sY, eX, eY, det_result->prop);
 
-							printf("%s @ (%d %d %d %d) %.3f\n", coco_cls_to_name(det_result->cls_id),
-								   sX, sY, eX, eY, det_result->prop);
-
-							cv::rectangle(frame,cv::Point(sX ,sY),
-										  cv::Point(eX ,eY),
-										  cv::Scalar(0,255,0),3);
-							snprintf(text, sizeof text, "%s %.1f%%", coco_cls_to_name(det_result->cls_id), det_result->prop * 100);
-							cv::putText(frame,text,cv::Point(sX, sY - 8),
-										cv::FONT_HERSHEY_SIMPLEX,1,
-										cv::Scalar(0,255,0),2);
-						}
+				cv::rectangle(frame,cv::Point(sX ,sY),
+					      cv::Point(eX ,eY),
+					      cv::Scalar(0,255,0),3);
+				snprintf(text, sizeof text, "%s %.1f%%", coco_cls_to_name(det_result->cls_id), det_result->prop * 100);
+				cv::putText(frame,text,cv::Point(sX, sY - 8),
+					    cv::FONT_HERSHEY_SIMPLEX,1,
+					    cv::Scalar(0,255,0),2);
+				}
+			}
 
 			// ---- 叠加风险等级到画面 ----
 			{
@@ -480,114 +442,63 @@ int main(int argc, char *argv[]) {
 				char info[128];
 				snprintf(info, sizeof info, "CROWD:%s n=%d rho=%.2f r_gcc=%.2f lambda2=%.3f",
 				        lvl, featN, featRho, featGcc, featFiedler);
-				cv::rectangle(frame, cv::Point(0,0), cv::Point(width, 60), color, -1);
-				cv::putText(frame, info, cv::Point(10, 42),
-							cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0,0,0), 2);
+				cv::rectangle(frame, cv::Point(0,0), cv::Point(width, 30), color, -1);
+				cv::putText(frame, info, cv::Point(6, 22),
+							cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0,0,0), 2);
 			}
+			// ---- 中文状态行（横幅下方，完整显示所有参数）----
 			{
-				const unsigned long long t_now = profileNowUs();
-				g_prof.us_draw += t_now - t_mark;
-				t_mark = t_now;
+				const char *cn_lvl = "安全";
+				if (crowd == pedestrian::RISK_WARNING) cn_lvl = "警告";
+				else if (crowd == pedestrian::RISK_DANGER) cn_lvl = "危险";
+				char cn_line[128];
+				snprintf(cn_line, sizeof cn_line, "状态:%s 人数:%d 密度:%.2f 聚集:%.2f 连通:%.3f",
+				         cn_lvl, featN, featRho, featGcc, featFiedler);
+				// 深灰半透明底色：取原像素的 50% 亮度的暗底
+				int cn_w = ((int)strlen(cn_line) / 3) * (24 + 2) + 12;
+				for (int ry = 30; ry < 54; ++ry) {
+					for (int rx = 0; rx < cn_w; ++rx) {
+						cv::Vec3b &px = frame.at<cv::Vec3b>(ry, rx);
+						px[0] = px[0] / 2;
+						px[1] = px[1] / 2;
+						px[2] = px[2] / 2;
+					}
+				}
+				draw_cn(frame, cn_line, 6, 33, cv::Scalar(255, 255, 255));
 			}
 
-		}
-		else
-		{
-			++vi_consec_fail;
-			if (vi_consec_fail == 1 || vi_consec_fail % WATCHDOG_LOG_EVERY_N_FAIL == 0) {
-				fprintf(stderr, "[WATCHDOG] VI 取帧失败 (ret=0x%x)，连续 %d 次（超时 %dms）\n",
-				        s32Ret, vi_consec_fail, VI_GET_FRAME_TIMEOUT_MS);
-			}
-			if (vi_consec_fail >= WATCHDOG_MAX_CONSEC_VI_FAIL) {
-				fprintf(stderr,
-				        "[WATCHDOG] VI 连续取帧失败 %d 次，主链路疑似挂死，主动退出交由 systemd 看门狗重启\n",
-				        vi_consec_fail);
-				cleanup();
-				return 1;
-			}
 		}
 		// ---- 取帧成功后才编码/推流/释放（失败时跳过本帧，避免陈旧帧编码与错误释放）----
-				if (s32Ret == RK_SUCCESS)
-				{
-					// VENC 声明为 RK_FMT_RGB888（见 luckfox_mpi.cc / h264_frame），
-					// 而 OpenCV 帧为 BGR，编码前必须原位转换，否则 RTSP 画面红蓝互换
-					// （此前 memcpy(data, frame.data, ...) 为同地址自拷贝，无实际作用）。
-					cv::cvtColor(frame, frame, cv::COLOR_BGR2RGB);
-
-		// encode H264（有限超时 + 返回值检查：编码通道拥塞/停止时不再无限阻塞）
-		RK_S32 send_ret = RK_MPI_VENC_SendFrame(0, &h264_frame, VENC_SEND_FRAME_TIMEOUT_MS);
-		if (send_ret != RK_SUCCESS) {
-			++venc_send_fail;
-			if (venc_send_fail == 1 || venc_send_fail % WATCHDOG_LOG_EVERY_N_FAIL == 0) {
-				fprintf(stderr, "[WARN] RK_MPI_VENC_SendFrame 失败 (ret=0x%x)，累计 %d 次\n",
-				        send_ret, venc_send_fail);
-			}
-		} else {
-			venc_send_fail = 0;
-		}
+		if (s32Ret == RK_SUCCESS)
 		{
-			const unsigned long long t_now = profileNowUs();
-			g_prof.us_venc_send += t_now - t_mark;
-			t_mark = t_now;
-		}
+			// 自拷贝已移除：data 即 frame.data（同一 src_Blk 虚拟地址），memcpy 无实际作用
+			// 原 memcpy(data, frame.data, width * height * 3);
 
-		// rtsp（有限超时；发送/事件返回值不再忽略）
-		RK_S32 stream_ret = RK_MPI_VENC_GetStream(0, &stFrame, VENC_GET_STREAM_TIMEOUT_MS);
-		if(stream_ret == RK_SUCCESS)
-		{
-			if(g_rtsplive && g_rtsp_session)
+			// encode H264
+			RK_MPI_VENC_SendFrame(0, &h264_frame,-1);
+
+			// rtsp
+			s32Ret = RK_MPI_VENC_GetStream(0, &stFrame, -1);
+			if(s32Ret == RK_SUCCESS)
 			{
-				void *pData = RK_MPI_MB_Handle2VirAddr(stFrame.pstPack->pMbBlk);
-				// 注意：Rockchip rtsp_demo 中 rtsp_tx_video 成功时返回帧长度 len（正数），
-				// 失败时返回负数（如 -1）。不能以 !=0 判断失败（无客户端时也返回 len）。
-				int tx_ret = rtsp_tx_video(g_rtsp_session, (uint8_t *)pData, stFrame.pstPack->u32Len,
-										   stFrame.pstPack->u64PTS);
-				if (tx_ret < 0) {
-					++rtsp_consec_fail;
-					if (rtsp_consec_fail == 1 || rtsp_consec_fail % WATCHDOG_LOG_EVERY_N_FAIL == 0) {
-						fprintf(stderr, "[RTSP] rtsp_tx_video 失败 (ret=%d)，连续 %d 次\n",
-						        tx_ret, rtsp_consec_fail);
-					}
-					if (rtsp_consec_fail >= RTSP_CONSEC_TX_FAIL_WARN) {
-						fprintf(stderr,
-						        "[RTSP] 连续推流失败 %d 次（可能无客户端或网络异常），继续运行等待新连接\n",
-						        rtsp_consec_fail);
-						rtsp_consec_fail = 0;   // 已告警，重置计数避免重复刷屏
-					}
-				} else {
-					rtsp_consec_fail = 0;
+				if(g_rtsplive && g_rtsp_session)
+				{
+					//printf("len = %d PTS = %d \n",stFrame.pstPack->u32Len, stFrame.pstPack->u64PTS);
+					void *pData = RK_MPI_MB_Handle2VirAddr(stFrame.pstPack->pMbBlk);
+					rtsp_tx_video(g_rtsp_session, (uint8_t *)pData, stFrame.pstPack->u32Len,
+								  stFrame.pstPack->u64PTS);
+					rtsp_do_event(g_rtsplive);
 				}
-				int ev_ret = rtsp_do_event(g_rtsplive);
-				if (ev_ret < 0) {
-					fprintf(stderr, "[RTSP] rtsp_do_event 返回 %d\n", ev_ret);
+				s32Ret = RK_MPI_VENC_ReleaseStream(0, &stFrame);
+				if (s32Ret != RK_SUCCESS) {
+					RK_LOGE("RK_MPI_VENC_ReleaseStream fail %x", s32Ret);
 				}
 			}
-			RK_S32 rel_ret = RK_MPI_VENC_ReleaseStream(0, &stFrame);
-			if (rel_ret != RK_SUCCESS) {
-				RK_LOGE("RK_MPI_VENC_ReleaseStream fail %x", rel_ret);
-			}
-		}
-		else
-		{
-			++venc_stream_fail;
-			if (venc_stream_fail == 1 || venc_stream_fail % WATCHDOG_LOG_EVERY_N_FAIL == 0) {
-				fprintf(stderr, "[WARN] RK_MPI_VENC_GetStream 失败/超时 (ret=0x%x)，累计 %d 次\n",
-				        stream_ret, venc_stream_fail);
-			}
-		}
+
 			// release VI frame（成功取帧后必须释放）
 			s32Ret = RK_MPI_VI_ReleaseChnFrame(0, 0, &stViFrame);
 			if (s32Ret != RK_SUCCESS) {
 				RK_LOGE("RK_MPI_VI_ReleaseChnFrame fail %x", s32Ret);
-			}
-			{
-				const unsigned long long t_now = profileNowUs();
-				g_prof.us_venc_get += t_now - t_mark;
-				g_prof.us_total  += t_now - t_frame0;
-				++g_prof.frames;
-				if (g_prof.frames % PROFILE_LOG_EVERY_N_FRAMES == 0) {
-					profileReport();
-				}
 			}
 		}
 		memset(text, 0, sizeof text);
