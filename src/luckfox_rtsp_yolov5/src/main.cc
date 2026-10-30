@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/poll.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
 #include <algorithm>
@@ -374,8 +375,27 @@ int main(int argc, char *argv[]) {
   }
 
   	while (!g_stop)
-	{	
-		// get vi frame
+  		{	
+  			// 每 300 帧检查配置是否被 ROI 画框工具更新，更新则自动重载
+  			{
+  				static int cfgCheckFrame = 0;
+  				static time_t cfgMtime = 0;
+  				if (++cfgCheckFrame % 300 == 0) {
+  					struct stat st;
+  					if (stat("./config/default_config.json", &st) == 0 && st.st_mtime != cfgMtime) {
+  						cfgMtime = st.st_mtime;
+  						pedestrian::RiskConfig newCfg = pedestrian::loadRiskConfigOr("./config/default_config.json", riskCfg);
+  						if (newCfg.roi.enabled != riskCfg.roi.enabled ||
+  						    newCfg.roi.polygon.size() != riskCfg.roi.polygon.size()) {
+  							riskCfg = newCfg;
+  							fprintf(stderr, "[ROI] Config reloaded: roi enabled=%d vertices=%zu\n",
+  							        (int)riskCfg.roi.enabled, riskCfg.roi.polygon.size());
+  						}
+  					}
+  				}
+  			}
+
+  			// get vi frame
 		h264_frame.stVFrame.u32TimeRef = H264_TimeRef++;
 		h264_frame.stVFrame.u64PTS = TEST_COMM_GetNowUs(); 
 		s32Ret = RK_MPI_VI_GetChnFrame(0, 0, &stViFrame, -1);
@@ -478,17 +498,38 @@ int main(int argc, char *argv[]) {
 				            cv::FONT_HERSHEY_SIMPLEX, 0.45, cv::Scalar(255, 255, 255), 1, cv::LINE_AA);
 				int fx = (sX + eX) / 2, fy = eY;
 				cv::circle(frame, cv::Point(fx, fy), 3, cv::Scalar(0, 255, 0), -1);
-				}
-			}
 
-			// ---- ROI 危险区域绘制 ----
+							// 闯入检测：检测框中心点是否在 ROI 多边形内（射线法）
+							if (riskCfg.roi.enabled && !riskCfg.roi.polygon.empty()) {
+								int cx = (sX + eX) / 2, cy = (sY + eY) / 2;
+								bool inside = false;
+								int nv = (int)riskCfg.roi.polygon.size();
+								for (int k = 0, j = nv - 1; k < nv; j = k++) {
+									int xi = riskCfg.roi.polygon[k].first, yi = riskCfg.roi.polygon[k].second;
+									int xj = riskCfg.roi.polygon[j].first, yj = riskCfg.roi.polygon[j].second;
+									if (((yi > cy) != (yj > cy)) &&
+									    (cx < (xj - xi) * (cy - yi) / (yj - yi + 0.0001) + xi))
+										inside = !inside;
+								}
+								if (inside) {
+									// 红色粗框标记闯入者
+									cv::rectangle(frame, cv::Point(sX - 3, sY - 3), cv::Point(eX + 3, eY + 3),
+									              cv::Scalar(0, 0, 255), 3);
+									cv::putText(frame, "INTRUSION", cv::Point(sX, sY - lbsz.height - 20),
+									            cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
+								}
+							}
+								}
+							}
+
+							// ---- ROI 危险区域绘制 ----
 			if (riskCfg.roi.enabled && !riskCfg.roi.polygon.empty()) {
 				int nv = (int)riskCfg.roi.polygon.size();
 				std::vector<cv::Point> pts;
 				for (int k = 0; k < nv; ++k)
 					pts.push_back(cv::Point(riskCfg.roi.polygon[k].first, riskCfg.roi.polygon[k].second));
 				cv::polylines(frame, pts, true,
-				              cv::Scalar(riskCfg.roi.color_b, riskCfg.roi.color_g, riskCfg.roi.color_r),
+				              cv::Scalar(0, 255, 255),  // yellow ROI frame (not red, to distinguish from intrusion)
 				              riskCfg.roi.thickness, cv::LINE_AA);
 			}
 
