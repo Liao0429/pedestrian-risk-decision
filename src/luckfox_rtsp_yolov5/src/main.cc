@@ -21,6 +21,7 @@
 #include "risk_config.h"
 #include "enhanced_decision.h"
 #include "ipm_transform.h"
+#include "chinese_font.h"
 
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
@@ -68,6 +69,44 @@ void mapCoordinates(int *x, int *y) {
 
     *x = (int)((float)mx / scale);
     *y = (int)((float)my / scale);
+}
+
+// ---- 24x24 点阵中文绘制（从 chinese_font.h 读取字模，逐像素画到 frame）----
+// pixel_scale=1 → 字高 24px；不带描边（横幅背景已有填充色，描边反而不清）
+static void draw_cn(cv::Mat &img, const char *chars, int x, int y,
+                    const cv::Scalar &color) {
+    int pen_x = x;
+    for (const char *p = chars; *p;) {
+        if ((static_cast<unsigned char>(*p) & 0xE0) == 0xE0 && p[1] && p[2]) {
+            char ch[4] = {p[0], p[1], p[2], 0};
+            const uint8_t *g = cn_find_glyph(ch);
+            if (g) {
+                for (int row = 0; row < 24; ++row) {
+                    const uint32_t bits = ((uint32_t)g[row * 3] << 16) |
+                                          ((uint32_t)g[row * 3 + 1] << 8) |
+                                          (uint32_t)g[row * 3 + 2];
+                    for (int col = 0; col < 24; ++col) {
+                        if (bits & (0x800000u >> col)) {
+                            int px = pen_x + col, py = y + row;
+                            if (px >= 0 && py >= 0 && px < img.cols && py < img.rows)
+                                img.at<cv::Vec3b>(py, px) = cv::Vec3b(
+                                    (uchar)color[0], (uchar)color[1], (uchar)color[2]);
+                        }
+                    }
+                }
+                pen_x += 24 + 2;
+                p += 3;
+                continue;
+            }
+            p += 3; pen_x += 24 + 2;
+            continue;
+        }
+        // ASCII 直接 putText
+        char ascii[2] = {*p, 0};
+        cv::putText(img, ascii, cv::Point(pen_x, y + 18),
+                    cv::FONT_HERSHEY_SIMPLEX, 0.5, color, 1, cv::LINE_AA);
+        pen_x += 10; ++p;
+    }
 }
 
 
@@ -405,6 +444,15 @@ int main(int argc, char *argv[]) {
 				cv::rectangle(frame, cv::Point(0,0), cv::Point(width, 30), color, -1);
 				cv::putText(frame, info, cv::Point(6, 22),
 							cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0,0,0), 2);
+				// 中文释义：SAFE→安全，WARNING→警告，DANGER→危险
+				{
+					const char *cn = "安全";
+					if (crowd == pedestrian::RISK_WARNING) cn = "警告";
+					else if (crowd == pedestrian::RISK_DANGER) cn = "危险";
+					// 语义：黑字直接画在横幅上——右对齐，不遮盖英文
+					int cn_w = (int)strlen(cn) / 3 * (24 + 2);  // 每个汉字 26px
+					draw_cn(frame, cn, width - cn_w - 6, 3, cv::Scalar(255, 255, 255));
+				}
 			}
 
 		}
