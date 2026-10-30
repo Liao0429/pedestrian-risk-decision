@@ -2,19 +2,27 @@
 # 加固依据、实测证据与取值理由见 docs/review/20261030_round3/board_service_hardening.md
 #
 # 与 20261030 现场取证(旧版) 的差异:
-#   Restart=on-failure    -> always    : 旧版对被 systemd 主动停止的退出不再拉起
-#   StartLimitIntervalSec=30 + StartLimitBurst=5 -> StartLimitIntervalSec=0 (禁用限流)
+#   Restart=on-failure    -> always
+#   StartLimitIntervalSec=30 + StartLimitBurst=5 -> 600 + 6 (有界断路器, 见下)
 #   RestartSec=5          -> 3
 #   MemoryMax=200M        -> 160M + MemoryHigh=128M (211MB 板子上 200M 约为 95% RAM, 不合理)
-#   新增                  -> OOMPolicy=continue / LogRateLimit* / TimeoutStopSec=15
+#   新增                  -> OOMPolicy=continue / LogRateLimit* / TimeoutStopSec=15 / OnFailure 告警
 #   LimitCORE=0           : 保留
 [Unit]
 Description=Pedestrian Risk Decision Demo (Luckfox Pico Max RV1106)
 After=network.target
-# 禁用启动限流。旧配置 5 次/30s 命中后单元停在 failed, Restart= 不再尝试自动重启,
-# 必须 reset-failed + 显式 start 才能恢复 (板上 journal: "Start request repeated too quickly")。
-# man systemd.unit: "may be set to 0 to disable any kind of rate limiting."
-StartLimitIntervalSec=0
+# 有界断路器（2026-10-31 板端实证后，从"禁用限流"改回"有界限流"）：
+#   实证链：dec2 变体启动即 SIGABRT(std::length_error: vector::reserve) -> 02:01:59 起每约 5s
+#   崩溃一次，每次都要重建 VI/ISP/VENC/RKNN 全栈 -> 02:02:11 触发 "Start request repeated too
+#   quickly" -> 单元 failed -> 02:05 起整机只能 ping 通、554/1984/8554 端口都在但 SSH 12s
+#   出不了 banner（与 00:05 冻结同型）。
+#   结论：无限重启（StartLimitIntervalSec=0）会把这块 211MB 单核板拖到 sshd 都握不上手，
+#   所以改成"有界风暴"：600s 内最多 6 次启动，超过即停机并告警（配合 watchdog 的冷却与落盘告警）。
+#   实测(systemd 249, deploy/probe/probe6_breaker_results.txt)：限流命中后 NRestarts 封顶、不再继续重启。
+StartLimitIntervalSec=600
+StartLimitBurst=6
+# 进入 failed（含 start-limit-hit，实测会触发）时落盘告警，断电重启后仍可见
+OnFailure=pedestrian-risk-alert.service
 
 [Service]
 Type=simple
@@ -26,11 +34,11 @@ Restart=always
 RestartSec=3
 # 资源护栏: 板子 211MB 物理内存, 空闲基线(systemd/sshd/go2rtc/看门狗)约 65MB。
 # 200M 既保护不了系统(约 95% RAM), 又会让本服务成为 cgroup 内唯一的 OOM 受害者。
+# 160M 留约 50MB 余量; 软限 128M 先节流; OOMPolicy=continue 避免 OOM 事件被默认 stop 策略
+# 变成"systemd 主动停止 -> Restart= 不生效"的静默永久停机。
 MemoryMax=160M
-# 软限: 先触发回收/节流, 避免直接撞硬限导致整单元被终止
 MemoryHigh=128M
 TasksMax=100
-# 被 OOM killer 杀掉时不要连带终止整个单元 (默认 stop 会把服务干净地停掉)
 OOMPolicy=continue
 KillMode=mixed
 KillSignal=SIGTERM
@@ -39,7 +47,6 @@ TimeoutStopSec=15
 # 禁止产生 core dump (板上曾积累 38 个 core, 表观 3.52GiB / 实占约 477MiB)
 LimitCORE=0
 # 只限制 journald 收到的消息 (本服务 stdout 走 append: 文件, 不经过 journald)。
-# 崩溃循环时用它防止 journal/闪存被刷爆 (旧版实测 6 分钟内刷出 50+ 条重启记录)。
 LogRateLimitIntervalSec=30s
 LogRateLimitBurst=500
 StandardOutput=append:/tmp/enhanced_latest.log

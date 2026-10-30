@@ -139,6 +139,13 @@ done
 say "pedestrian-risk 关键属性:"
 systemctl show -p ActiveState -p SubState -p Result -p NRestarts -p MemoryCurrent -p MemoryMax -p OOMPolicy -p LimitCORE pedestrian-risk.service 2>/dev/null | sed 's/^/[maintenance]   /'
 say "core_pattern: $(cat /proc/sys/kernel/core_pattern 2>/dev/null)"
+# 崩溃风暴告警（持久落盘，断电重启后仍可见；见 pedestrian-risk-alert.sh）
+if [ -r /var/lib/pedestrian-risk/storm.log ]; then
+    say "崩溃风暴告警记录（末 10 行）:"
+    tail -n 10 /var/lib/pedestrian-risk/storm.log 2>/dev/null | sed 's/^/[maintenance]   /'
+else
+    say "崩溃风暴告警记录: 无（/var/lib/pedestrian-risk/storm.log 不存在，说明未触发过 OnFailure 告警）"
+fi
 say "内存 Top5 (RSS kB):"
 ps -eo rss,pid,comm --sort=-rss 2>/dev/null | head -n 6 | sed 's/^/[maintenance]   /' || ps -eo rss,pid,comm 2>/dev/null | head -n 6 | sed 's/^/[maintenance]   /'
 if [ -d "$DEMO_DIR" ]; then

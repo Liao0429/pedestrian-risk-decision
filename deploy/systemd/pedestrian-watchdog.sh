@@ -20,7 +20,8 @@
 #   7) 陈旧阈值默认 60s（旧版 30s）：7fps 下 30s 太短，正常抖动会被误判为挂死。
 #
 # 环境变量：SERVICE / LOG / STALE_SEC / DRY_RUN / HOLD_FILE /
-#           WATCHDOG_START_IF_INACTIVE / RECOVER_SETTLE_SEC
+#           WATCHDOG_START_IF_INACTIVE / RECOVER_SETTLE_SEC /
+#           STATE_DIR / STORM_DELTA / RECOVER_COOLDOWN
 set -u
 
 SERVICE=${SERVICE:-pedestrian-risk.service}
@@ -30,6 +31,21 @@ DRY_RUN=${DRY_RUN:-0}
 HOLD_FILE=${HOLD_FILE:-/run/pedestrian-risk.hold}
 START_IF_INACTIVE=${WATCHDOG_START_IF_INACTIVE:-0}
 RECOVER_SETTLE_SEC=${RECOVER_SETTLE_SEC:-5}
+# 崩溃风暴守卫（2026-10-31 板端实证后新增）：
+#   实证：崩溃-重启风暴（每次重建 VI/ISP/VENC/RKNN 全栈）能把 211MB 单核板拖到 sshd 握不上手。
+#   因此 watchdog 不再"见到 failed 就立刻拉起"（那会把断路器刚掐灭的风暴重新点着），
+#   而是：① 记录并告警重启速率；② 对 failed 的恢复尝试做冷却（默认 300s 内只尝试一次）。
+STATE_DIR=${STATE_DIR:-/var/lib/pedestrian-risk}
+STORM_DELTA=${STORM_DELTA:-3}
+RECOVER_COOLDOWN=${RECOVER_COOLDOWN:-300}
+NR_STATE="$STATE_DIR/nrestarts.state"
+STORM_LOG="$STATE_DIR/storm.log"
+RECOVER_MARK="$STATE_DIR/last-recover.epoch"
+mkdir -p "$STATE_DIR" 2>/dev/null || STATE_DIR=/tmp/pedestrian-risk
+mkdir -p "$STATE_DIR" 2>/dev/null || true
+NR_STATE="$STATE_DIR/nrestarts.state"
+STORM_LOG="$STATE_DIR/storm.log"
+RECOVER_MARK="$STATE_DIR/last-recover.epoch"
 
 note() { echo "[watchdog] $*"; logger -t pedestrian-watchdog "$*" 2>/dev/null || true; }
 
@@ -77,6 +93,24 @@ stale_seconds() {
     echo $((now - mtime))
 }
 
+# 重启速率监控与告警：相邻两次检查（timer 周期 30s）之间 NRestarts 增长 >= STORM_DELTA
+# 即视为崩溃风暴，写入持久 storm.log 并记一条 error 级日志（断电重启后仍可见）。
+storm_guard() {
+    nr=$(systemctl show -p NRestarts --value "$SERVICE" 2>/dev/null | tr -d ' ')
+    case "$nr" in ''|*[!0-9]*) return 0 ;; esac
+    prev=0
+    [ -r "$NR_STATE" ] && prev=$(head -n 1 "$NR_STATE" 2>/dev/null | tr -d ' ')
+    case "$prev" in ''|*[!0-9]*) prev=0 ;; esac
+    echo "$nr" > "$NR_STATE" 2>/dev/null
+    delta=$((nr - prev))
+    if [ "$delta" -ge "$STORM_DELTA" ]; then
+        line="[$(date '+%F %T')] NRestarts $prev -> $nr (+$delta/30s) state=$ACTIVE —— 疑似崩溃风暴"
+        echo "$line" >> "$STORM_LOG" 2>/dev/null
+        note "告警: $line"
+    fi
+    return 0
+}
+
 # 维护/部署抑制：存在即完全不动作（部署脚本在替换二进制/unit 前会 touch 它）
 if [ -f "$HOLD_FILE" ]; then
     note "检测到抑制文件 $HOLD_FILE（维护/部署窗口），本次不动作"
@@ -85,6 +119,7 @@ fi
 
 show_state
 note "检查: state=$ACTIVE sub=$SUB"
+storm_guard
 
 case "$ACTIVE" in
     active)
@@ -105,6 +140,16 @@ case "$ACTIVE" in
         exit 0
         ;;
     failed)
+        # 冷却：断路器刚掐灭的风暴不要立刻重新点着（默认 300s 内只尝试一次恢复）
+        now=$(date +%s)
+        last=0
+        [ -r "$RECOVER_MARK" ] && last=$(head -n 1 "$RECOVER_MARK" 2>/dev/null | tr -d ' ')
+        case "$last" in ''|*[!0-9]*) last=0 ;; esac
+        if [ "$last" -gt 0 ] && [ $((now - last)) -lt "$RECOVER_COOLDOWN" ]; then
+            note "failed，但距上次恢复尝试仅 $((now - last))s（冷却 ${RECOVER_COOLDOWN}s）：不重复拉起，避免把断路器的风暴重新点着"
+            exit 0
+        fi
+        echo "$now" > "$RECOVER_MARK" 2>/dev/null
         recover "单元处于 failed（StartLimit 命中 / OOM / 崩溃退出）"
         exit $?
         ;;

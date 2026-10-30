@@ -1,0 +1,75 @@
+# 断路器 / OnFailure 告警 语义实测（构建机 192.168.0.63, Ubuntu 22.04, systemd 249）
+# 生成方式: 同目录 systemd_breaker_probe.sh（口令从环境变量 PW 读取）
+# 采集时间: 2026-10-31 02:12 ~ 02:15 (Asia/Shanghai)
+# 背景: 板上 dec2 变体崩溃-重启风暴把 211MB 单核板拖到 SSH 握不上手，
+#       因此需要验证「限流断路器 + OnFailure 落盘告警」是否真能封顶并留下可见证据。
+
+========== probe6：5/30s 与 10/300s 的封顶行为 + OnFailure 触发 ==========
+===== [A] 5 次/30s：爆发后是否 failed，OnFailure 是否触发 =====
+Result=exit-code
+NRestarts=5
+ActiveState=failed
+SubState=failed
+-- alert marker --
+总计 0
+-- journal A --
+2026-10-31T02:12:22+0800 systemd[1]: dsh-probe-a.service: Failed with result 'exit-code'.
+2026-10-31T02:12:22+0800 systemd[1]: Failed to start DSH breaker probe A (5/30s + OnFailure).
+2026-10-31T02:12:22+0800 systemd[1]: dsh-probe-a.service: Triggering OnFailure= dependencies.
+2026-10-31T02:12:22+0800 systemd[1]: dsh-probe-a.service: Failed to enqueue OnFailure= job, ignoring: Unit dsh-alert.service has a bad unit file setting.
+-- journal alert --
+2026-10-31T02:12:10+0800 systemd[1]: /run/systemd/system/dsh-alert.service:6: Failed to resolve unit specifiers in date "+%F %T" >> /tmp/dsh-alert/marker.log; /bin/systemctl show -p Result -p NRestarts dsh-probe-a.service >> /tmp/dsh-alert/marker.log 2>/dev/null; echo "---" >> /tmp/dsh-alert/marker.log; logger -t dsh-alert "unit failed, marker written": Invalid slot
+2026-10-31T02:12:10+0800 systemd[1]: dsh-alert.service: Unit configuration has fatal error, unit will not be started.
+===== [B] 10 次/300s：风暴是否被封顶 =====
+T+32s:
+Result=exit-code
+NRestarts=10
+ActiveState=failed
+SubState=failed
+T+46s:
+Result=exit-code
+NRestarts=10
+ActiveState=failed
+-- journal B --
+2026-10-31T02:12:55+0800 systemd[1]: dsh-probe-b.service: Failed with result 'exit-code'.
+2026-10-31T02:12:55+0800 systemd[1]: Failed to start DSH breaker probe B (10/300s + OnFailure).
+2026-10-31T02:12:55+0800 systemd[1]: dsh-probe-b.service: Triggering OnFailure= dependencies.
+2026-10-31T02:12:55+0800 systemd[1]: dsh-probe-b.service: Failed to enqueue OnFailure= job, ignoring: Unit dsh-alert.service has a bad unit file setting.
+===== cleanup =====
+0 loaded units listed.
+To show all installed unit files use 'systemctl list-unit-files'.
+done
+
+[exit 0]
+
+========== probe7：修正 unit 文件里 % 说明符后，OnFailure 落盘告警端到端可用 ==========
+（probe6 的 alert 单元因 ExecStart 里写了 date "+%F %T"，% 被当作 systemd specifier -> 单元加载失败；
+  这条弯路本身也是证据：unit 文件里裸 % 会让单元直接起不来）
+===== 触发断路器（5/30s），验证 OnFailure 落盘 =====
+Result=exit-code
+NRestarts=5
+ActiveState=failed
+-- 落盘标记文件 --
+总计 4
+-rw-r--r-- 1 root root 66 10月 31 02:14 marker.log
+2026年 10月 31日 星期六 02:14:59 CST
+exit-code
+5
+failed
+---
+-- journal alert --
+2026-10-31T02:12:10+0800 systemd[1]: /run/systemd/system/dsh-alert.service:6: Failed to resolve unit specifiers in date "+%F %T" >> /tmp/dsh-alert/marker.log; /bin/systemctl show -p Result -p NRestarts dsh-probe-a.service >> /tmp/dsh-alert/marker.log 2>/dev/null; echo "---" >> /tmp/dsh-alert/marker.log; logger -t dsh-alert "unit failed, marker written": Invalid slot
+2026-10-31T02:12:10+0800 systemd[1]: dsh-alert.service: Unit configuration has fatal error, unit will not be started.
+2026-10-31T02:14:59+0800 systemd[1]: Starting DSH alert marker writer...
+2026-10-31T02:14:59+0800 systemd[1]: dsh-alert.service: Deactivated successfully.
+2026-10-31T02:14:59+0800 systemd[1]: Finished DSH alert marker writer.
+-- journal 断路器 --
+2026-10-31T02:14:59+0800 systemd[1]: dsh-probe-a.service: Failed with result 'exit-code'.
+2026-10-31T02:14:59+0800 systemd[1]: Failed to start DSH breaker probe A2 (5/30s + OnFailure marker).
+2026-10-31T02:14:59+0800 systemd[1]: dsh-probe-a.service: Triggering OnFailure= dependencies.
+===== cleanup =====
+0 loaded units listed.
+To show all installed unit files use 'systemctl list-unit-files'.
+done
+
+[exit 0]

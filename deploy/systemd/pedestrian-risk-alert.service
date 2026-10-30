@@ -1,0 +1,21 @@
+# 崩溃风暴落盘告警：由 pedestrian-risk.service 的 OnFailure= 触发。
+# 实测 systemd 249：限流命中(start-limit-hit)也会触发 OnFailure（见 deploy/probe/probe6_breaker_results.txt 与 probe7 段）。
+# 为什么需要它：本轮板端实证的"崩溃-重启风暴 -> 整机拖死"链条里，服务 failed 之后整机往往
+# 也随即失联，事后除了 journal 没有任何线索；本单元把事件写进**持久目录**，
+# 断电重启后仍然可见（/var/lib/pedestrian-risk/storm.log）。
+# 注意：unit 文件里 % 是 specifier，写 % 必须转义成 %%；本单元不含 %。
+[Unit]
+Description=Pedestrian Risk Decision — 崩溃风暴落盘告警
+# 自己永远不能被限流：它只在主服务 failed 时被拉起
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/pedestrian-risk-alert.sh
+TimeoutStartSec=30
+LimitCORE=0
+LogRateLimitIntervalSec=30s
+LogRateLimitBurst=60
+
+[Install]
+WantedBy=multi-user.target

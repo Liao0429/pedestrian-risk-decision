@@ -28,8 +28,11 @@ SCRIPTS = REPO / "scripts"
 PROBE_DIR = REPO / "deploy" / "probe"
 REPORT = REPO / "docs" / "review" / "20261030_round3" / "board_service_hardening.md"
 PROBE_RESULTS = PROBE_DIR / "probe_results.txt"
+BREAKER_RESULTS = PROBE_DIR / "probe6_breaker_results.txt"
 
 RISK_UNIT = UNIT_DIR / "pedestrian-risk.service"
+ALERT_UNIT = UNIT_DIR / "pedestrian-risk-alert.service"
+ALERT_SH = UNIT_DIR / "pedestrian-risk-alert.sh"
 WD_UNIT = UNIT_DIR / "pedestrian-watchdog.service"
 WD_TIMER = UNIT_DIR / "pedestrian-watchdog.timer"
 WD_SH = UNIT_DIR / "pedestrian-watchdog.sh"
@@ -115,7 +118,8 @@ SHELL = _posix_shell()
 
 # ---------------------------------------------------------------- 交付物存在
 def test_artifacts_exist():
-    for path in (RISK_UNIT, WD_UNIT, WD_TIMER, WD_SH, MAINT, RECOVER, REPORT, PROBE_RESULTS):
+    for path in (RISK_UNIT, ALERT_UNIT, ALERT_SH, WD_UNIT, WD_TIMER, WD_SH, MAINT, RECOVER, REPORT, PROBE_RESULTS,
+                 BREAKER_RESULTS):
         assert path.is_file(), "缺少交付物: %s" % path
 
 
@@ -139,7 +143,10 @@ def test_risk_unit_is_well_formed():
     [
         ("Restart", "always"),
         ("RestartSec", "3"),
-        ("StartLimitIntervalSec", "0"),
+        # 有界断路器（2026-10-31 板端实证：无限重启会把 211MB 单核板拖到 SSH 握不上手）
+        ("StartLimitIntervalSec", "600"),
+        ("StartLimitBurst", "6"),
+        ("OnFailure", "pedestrian-risk-alert.service"),
         ("LimitCORE", "0"),
         ("OOMPolicy", "continue"),
         ("TimeoutStopSec", "15"),
@@ -167,9 +174,12 @@ def test_risk_unit_legacy_hazards_do_not_come_back(key: str, legacy: str):
     assert kv.get(key) != legacy, "旧版危险配置 %s=%s 不得回潮（见报告 §3）" % (key, legacy)
 
 
-def test_risk_unit_start_limit_burst_not_set():
-    # Interval=0 已禁用限流；再写 StartLimitBurst 只会造成误读
-    assert "StartLimitBurst" not in unit_kv(RISK_UNIT)
+def test_risk_unit_has_bounded_breaker():
+    """限流必须"有界但不是静默永久停摆"：断路器跳闸后由 OnFailure 落盘告警 + 看门狗冷却恢复。"""
+    kv = unit_kv(RISK_UNIT)
+    assert int(kv["StartLimitIntervalSec"].rstrip("s")) >= 60 * 5, "窗口太短会让断路器过早重新武装"
+    assert 3 <= int(kv["StartLimitBurst"]) <= 10, "需要允许几次瞬时抖动，但不能无限"
+    assert kv["OnFailure"] == "pedestrian-risk-alert.service", "跳闸必须告警（否则又是静默停摆）"
 
 
 def test_risk_unit_memory_cap_reviewed_for_211mb_board():
@@ -300,7 +310,7 @@ def test_report_contains_key_conclusions():
     for token in (
         "Start request repeated too quickly",
         "reset-failed",
-        "StartLimitIntervalSec=0",
+        "StartLimitIntervalSec=600",
         "OOMPolicy",
         "MemoryMax",
         "38",
@@ -349,6 +359,77 @@ def test_report_documents_why_evidence_is_unavailable():
         assert token in body, "报告缺少证据不可得的说明: %s" % token
 
 
+
+
+def test_alert_unit_and_script_are_wired():
+    """断路器跳闸必须留下持久可见的证据（板端实证：failed 之后整机常常随即失联）。"""
+    assert ALERT_UNIT.is_file() and ALERT_SH.is_file()
+    u = unit_kv(ALERT_UNIT)
+    assert u.get("Type") == "oneshot"
+    assert u.get("ExecStart") == "/usr/local/bin/pedestrian-risk-alert.sh"
+    assert u.get("StartLimitIntervalSec") == "0", "告警单元自己不能被限流"
+    assert "OnFailure=pedestrian-risk-alert.service" in read(RISK_UNIT)
+    a = read(ALERT_SH)
+    assert "/var/lib/pedestrian-risk" in a and "storm.log" in a, "必须落盘到持久目录"
+    assert "user.err" in a, "必须写一条 user.err 级日志"
+
+
+def test_unit_files_escape_percent_specifiers():
+    """unit 里 % 是 specifier：实测裸 % 会让单元加载失败（probe6 的 alert 单元就栽在这）。"""
+    for unit in sorted(UNIT_DIR.glob("*.service")) + sorted(UNIT_DIR.glob("*.timer")):
+        # 只看指令行：注释里的 % 不会被 systemd 解析
+        directives = "\n".join(
+            ln for ln in read(unit).splitlines() if not ln.strip().startswith("#")
+        )
+        text = directives.replace("%%", "")
+        assert "%" not in text, "%s 的指令行含未转义的 %% 说明符" % unit.name
+
+
+def test_watchdog_storm_guard_present():
+    body = read(WD_SH)
+    for token in ("storm_guard", "STORM_DELTA", "RECOVER_COOLDOWN", "storm.log", "nrestarts.state"):
+        assert token in body, "看门狗缺少风暴守卫/冷却: %s" % token
+
+
+def test_watchdog_does_not_rearm_within_cooldown(tmp_path):
+    _, calls, _ = _run_watchdog(tmp_path, active="failed", sub="failed",
+                               seed={"last-recover.epoch": str(int(time.time())) + "\n"})
+    assert "systemctl start" not in calls, "断路器刚跳闸后不得立刻重新拉起（会重新点着风暴）"
+
+
+def test_watchdog_rearms_after_cooldown(tmp_path):
+    _, calls, _ = _run_watchdog(tmp_path, active="failed", sub="failed",
+                               seed={"last-recover.epoch": str(int(time.time()) - 3600) + "\n"})
+    assert "reset-failed" in calls and "systemctl start" in calls
+
+
+def test_watchdog_records_storm_when_restarts_spike(tmp_path):
+    _, _, out = _run_watchdog(tmp_path, active="activating", sub="auto-restart",
+                              nrestarts=9, seed={"nrestarts.state": "2\n"})
+    storm = tmp_path / "state" / "storm.log"
+    assert storm.is_file(), "重启速率飙升必须落盘到 storm.log"
+    body = storm.read_text(encoding="utf-8")
+    assert "崩溃风暴" in body and "2 -> 9" in body
+
+
+def test_maintenance_reports_storm_log():
+    body = read(MAINT)
+    assert "/var/lib/pedestrian-risk/storm.log" in body, "维护脚本必须打印崩溃风暴告警记录"
+    assert "崩溃风暴告警记录" in body
+
+
+def test_recover_installs_alert_units():
+    body = read(RECOVER)
+    assert "pedestrian-risk-alert.service" in body and "pedestrian-risk-alert.sh" in body
+    assert "install -m 755 /tmp/pedestrian-risk-alert.sh" in body
+
+
+def test_breaker_evidence_committed():
+    assert BREAKER_RESULTS.is_file()
+    body = read(BREAKER_RESULTS)
+    for token in ("Triggering OnFailure", "NRestarts=10", "marker.log"):
+        assert token in body, "断路器实测证据缺少: %s" % token
+
 def test_probe_scripts_have_valid_syntax():
     if SHELL is None:
         pytest.skip("本机未找到可用 POSIX shell")
@@ -367,6 +448,7 @@ case "$cmd" in
     case "$key" in
       ActiveState) echo "$FAKE_ACTIVE" ;;
       SubState) echo "$FAKE_SUB" ;;
+      NRestarts) echo "$FAKE_NRESTARTS" ;;
       *) echo "" ;;
     esac
     ;;
@@ -379,7 +461,8 @@ esac
 """
 
 
-def _run_watchdog(tmp_path, active="inactive", sub="dead", extra_env=None, log_age_sec=None, hold=False):
+def _run_watchdog(tmp_path, active="inactive", sub="dead", extra_env=None, log_age_sec=None, hold=False,
+                  nrestarts=0, seed=None):
     """用桩 systemctl 真跑一次看门狗脚本，返回 (rc, systemctl 调用记录, 输出)。"""
     if SHELL is None:
         pytest.skip("本机未找到可用 POSIX shell")
@@ -399,6 +482,11 @@ def _run_watchdog(tmp_path, active="inactive", sub="dead", extra_env=None, log_a
     if hold:
         holdf.write_text("", encoding="utf-8")
 
+    state = tmp_path / "state"
+    state.mkdir(exist_ok=True)
+    for name, content in (seed or {}).items():
+        (state / name).write_text(content, encoding="utf-8")
+
     calllog = tmp_path / "calls.log"
     env = dict(os.environ)
     env.update(
@@ -412,6 +500,8 @@ def _run_watchdog(tmp_path, active="inactive", sub="dead", extra_env=None, log_a
             "HOLD_FILE": holdf.as_posix(),
             "STALE_SEC": "60",
             "RECOVER_SETTLE_SEC": "0",
+            "FAKE_NRESTARTS": str(nrestarts),
+            "STATE_DIR": state.as_posix(),
         }
     )
     if extra_env:

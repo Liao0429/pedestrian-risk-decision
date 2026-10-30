@@ -75,7 +75,7 @@ bsh() {
 }
 say "传输方式: $MODE  目标: $BOARD_USER@$BOARD_HOST  sudo包装=$([ -n "$RSUDO" ] && echo yes || echo no)"
 
-for f in pedestrian-risk.service pedestrian-watchdog.service pedestrian-watchdog.timer pedestrian-watchdog.sh; do
+for f in pedestrian-risk.service pedestrian-watchdog.service pedestrian-watchdog.timer pedestrian-watchdog.sh pedestrian-risk-alert.service pedestrian-risk-alert.sh; do
     [ -f "$UNIT_DIR/$f" ] || die 2 "缺少前置文件 $UNIT_DIR/$f"
 done
 
@@ -124,7 +124,7 @@ bsh 'touch /run/pedestrian-risk.hold; systemctl stop pedestrian-watchdog.timer 2
 
 # ---------- 4. 上传并安装 ----------
 say "== 4/7 上传并安装（unit 「$BINARY」）=="
-for f in pedestrian-risk.service pedestrian-watchdog.service pedestrian-watchdog.timer pedestrian-watchdog.sh; do
+for f in pedestrian-risk.service pedestrian-watchdog.service pedestrian-watchdog.timer pedestrian-watchdog.sh pedestrian-risk-alert.service pedestrian-risk-alert.sh; do
     bput "$UNIT_DIR/$f" "/tmp/$f" || die 2 "上传 $f 失败"
     say "  已上传 $f"
 done
@@ -141,7 +141,7 @@ if [ -n "$BINARY" ]; then
         say "  二进制 md5 校验通过: $GOT"
     fi
 fi
-bsh 'install -m 644 /tmp/pedestrian-risk.service /etc/systemd/system/pedestrian-risk.service; install -m 644 /tmp/pedestrian-watchdog.service /etc/systemd/system/pedestrian-watchdog.service; install -m 644 /tmp/pedestrian-watchdog.timer /etc/systemd/system/pedestrian-watchdog.timer; install -m 755 /tmp/pedestrian-watchdog.sh /usr/local/bin/pedestrian-watchdog.sh; echo installed; md5sum /etc/systemd/system/pedestrian-risk.service /usr/local/bin/pedestrian-watchdog.sh' || die 2 "安装失败"
+bsh 'install -m 644 /tmp/pedestrian-risk.service /etc/systemd/system/pedestrian-risk.service; install -m 644 /tmp/pedestrian-watchdog.service /etc/systemd/system/pedestrian-watchdog.service; install -m 644 /tmp/pedestrian-watchdog.timer /etc/systemd/system/pedestrian-watchdog.timer; install -m 755 /tmp/pedestrian-watchdog.sh /usr/local/bin/pedestrian-watchdog.sh; install -m 644 /tmp/pedestrian-risk-alert.service /etc/systemd/system/pedestrian-risk-alert.service; install -m 755 /tmp/pedestrian-risk-alert.sh /usr/local/bin/pedestrian-risk-alert.sh; echo installed; md5sum /etc/systemd/system/pedestrian-risk.service /etc/systemd/system/pedestrian-risk-alert.service /usr/local/bin/pedestrian-watchdog.sh /usr/local/bin/pedestrian-risk-alert.sh' || die 2 "安装失败"
 
 say "单元语法自检（systemd-analyze verify，仅供参考，非致命）:"
 bsh 'command -v systemd-analyze >/dev/null 2>&1 && systemd-analyze verify /etc/systemd/system/pedestrian-risk.service /etc/systemd/system/pedestrian-watchdog.timer 2>&1 | head -n 20; echo verify-rc=$?'
