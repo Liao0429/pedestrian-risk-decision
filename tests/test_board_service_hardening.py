@@ -430,6 +430,26 @@ def test_breaker_evidence_committed():
     for token in ("Triggering OnFailure", "NRestarts=10", "marker.log"):
         assert token in body, "断路器实测证据缺少: %s" % token
 
+
+
+def test_recover_captures_strip_helper_trailer():
+    """helper 会在输出末尾追加 [stderr]/[exit N]；不剥掉的话 ACT/NR/md5 捕获全是 '[exit 0]'。"""
+    body = read(RECOVER)
+    assert "bsh_out" in body, "必须有剥尾标的捕获包装"
+    assert "NR_BEFORE=$(bsh_out" in body and "ACT=$(bsh_out" in body and "NR=$(bsh_out" in body
+    assert "[stderr]" in body and "[exit" in body, "bsh_out 必须过滤 helper 的 [stderr]/[exit N] 尾标"
+
+
+def test_recover_separates_ssh_reachability_from_sudo():
+    body = read(RECOVER)
+    assert "raw 'true'" in body, "SSH 就绪探测必须是纯 SSH（不夹 sudo），否则 sudo 故障会被误报成 SSH 不可达"
+    assert "sudo 自检" in body and "id -un" in body
+
+
+def test_recover_rejects_single_quote_in_password():
+    body = read(RECOVER)
+    assert "BOARD_PASS 含单引号" in body, "口令含单引号会让 sudo 转发命令被破坏，必须提前拒绝"
+
 def test_probe_scripts_have_valid_syntax():
     if SHELL is None:
         pytest.skip("本机未找到可用 POSIX shell")

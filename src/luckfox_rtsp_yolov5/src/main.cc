@@ -255,7 +255,7 @@ static void signal_handler(int sig) { (void)sig; g_stop = 1; }
 int main(int argc, char *argv[]) {
   signal(SIGINT, signal_handler);
   signal(SIGTERM, signal_handler);
-  system("RkLunch-stop.sh");
+  system("/oem/usr/bin/RkLunch-stop.sh");
 
   // ==== 风险决策引擎 + 逆透视变换(IPM)标定 ====
   // 画面 720x480，源四边形取画面底部地面梯形(近大远小)，映射到地面 6m x 4m
@@ -572,6 +572,10 @@ int main(int argc, char *argv[]) {
   const int kMaxConsecFail = 50;   // 连续失败上限（约 5~10s）后退出重启
 
   uint64_t frameSeq = 0;   // 推理降频用帧序号
+  // 致命路径标记：VI/VENC 连续失败说明硬件/驱动已不可用，必须以非 0 退出，
+  // 让 systemd Restart=on-failure（配合 StartLimit）接管；返回 0 会变成 inactive
+  // 只剩看门狗循环拉（2026-10-31 板端实测：VI 卡死时服务 inactive）。
+  bool fatal_exit = false;
   while (!g_stop) {
     const uint64_t t_frame = nowUs();
     ++frameSeq;
@@ -613,6 +617,7 @@ int main(int argc, char *argv[]) {
       if (++vi_fail >= kMaxConsecFail) {
         RK_LOGE("[FATAL] VI GetChnFrame 连续失败 %d 次 (ret=%x)，退出交由 systemd 重启",
                 vi_fail, s32Ret);
+        fatal_exit = true;
         break;
       }
       continue;
@@ -950,6 +955,7 @@ int main(int argc, char *argv[]) {
       if (++venc_fail >= kMaxConsecFail) {
         RK_LOGE("[FATAL] VENC SendFrame 连续失败 %d 次 (ret=%x)，退出交由 systemd 重启",
                 venc_fail, s32Ret);
+        fatal_exit = true;
         break;
       }
     } else {
@@ -972,6 +978,7 @@ int main(int argc, char *argv[]) {
       } else if (++venc_fail >= kMaxConsecFail) {
         RK_LOGE("[FATAL] VENC GetStream 连续失败 %d 次 (ret=%x)，退出交由 systemd 重启",
                 venc_fail, s32Ret);
+        fatal_exit = true;
         break;
       }
     }
@@ -1052,8 +1059,9 @@ int main(int argc, char *argv[]) {
 #endif
   }
 
-  // ---- 正常退出：安全清理所有已初始化资源 ----
+  // ---- 退出：安全清理所有已初始化资源 ----
   pedestrian::letterbox_params_free(&lbp);
   cleanup();
-  return 0;
+  // 正常 Ctrl-C/信号 退出 = 0；硬件致命失败 = 1（交给 systemd Restart=on-failure）
+  return fatal_exit ? 1 : 0;
 }

@@ -37,6 +37,9 @@ if [ -z "$BOARD_PASS" ]; then
     echo "[recover] 本脚本不提供默认口令（旧版本把默认口令写死并被推到公开仓库，2026-10-31 整改）。" >&2
     exit 2
 fi
+case "$BOARD_PASS" in
+    *"'"*) die 2 "BOARD_PASS 含单引号，无法安全经 sudo 转发（请改用 BOARD_PASS_FILE）" ;;
+esac
 SSH_WAIT_SEC=${SSH_WAIT_SEC:-180}
 CHECK_ONLY=${CHECK_ONLY:-0}
 # 维护抑制文件：部署窗口内让看门狗完全不动作（看门狗脚本会检查它）
@@ -83,6 +86,14 @@ bsh() {
         raw "$1"
     fi
 }
+
+# 捕获/展示用：剥掉 helper 在输出末尾追加的 "[stderr]" 与 "[exit N]" 标记。
+# 为什么必须这么做：tmp/net/ssh_exec.py 会把远端 stdout/stderr 合并后追加
+# "\n[exit N]\n"；若直接用 tail -n 1 捕获，拿到的是 "[exit 0]" 而不是真正的值，
+# 会导致 ACT/NR 永远不等于期望值（pico+helper 通道下 PASS 判定必失败）。
+bsh_out() {
+    bsh "$1" 2>/dev/null | sed -e '/^\[stderr\]$/,$d' -e '/^\[exit [0-9]*\]$/d' | tr -d '\r'
+}
 say "传输方式: $MODE  目标: $BOARD_USER@$BOARD_HOST  sudo包装=$([ -n "$RSUDO" ] && echo yes || echo no)"
 
 for f in pedestrian-risk.service pedestrian-watchdog.service pedestrian-watchdog.timer pedestrian-watchdog.sh pedestrian-risk-alert.service pedestrian-risk-alert.sh; do
@@ -93,11 +104,18 @@ done
 say "== 0/7 等待板子 SSH 就绪（上限 ${SSH_WAIT_SEC} 秒）=="
 waited=0; ok=0
 while [ "$waited" -lt "$SSH_WAIT_SEC" ]; do
-    if bsh 'true' >/dev/null 2>&1; then ok=1; say "SSH 就绪（等待 ${waited} 秒）"; break; fi
+    if raw 'true' >/dev/null 2>&1; then ok=1; say "SSH 就绪（等待 ${waited} 秒）"; break; fi
     sleep 10; waited=$((waited + 10))
     say "  仍不可用（${waited} 秒）；TCP22 可连但无 banner 是已知症状，需断电重启"
 done
 [ "$ok" = "1" ] || die 3 "板子 SSH 不可用（等待 ${SSH_WAIT_SEC} 秒），先断电重启再执行本脚本"
+
+# SSH 通了再单独验 sudo：把"SSH 不可达"和"sudo 口令不对/无权限"区分开
+if [ -n "$RSUDO" ]; then
+    SUDO_ID=$(raw "echo '$BOARD_PASS' | sudo -S -p '' id -un 2>/dev/null" 2>/dev/null | grep -x 'root' | head -n 1 | tr -d '\r')
+    [ "$SUDO_ID" = "root" ] || die 2 "sudo 自检失败（未返回 root）。请确认 BOARD_PASS 正确且 $BOARD_USER 可 sudo。"
+    say "sudo 自检通过（id -un = root）"
+fi
 
 # ---------- 1. 预检 ----------
 say "== 1/7 预检 =="
@@ -114,8 +132,8 @@ say "== 2/7 备份现有 unit + 导出 journal 取证（只读，先于任何 va
 bsh 'TS=$(date +%Y%m%d-%H%M%S); BK=/tmp/ped-evidence-$TS; mkdir -p $BK; cp -a /etc/systemd/system/pedestrian-*.service /etc/systemd/system/pedestrian-*.timer $BK/ 2>/dev/null; journalctl --list-boots --no-pager > $BK/journal_boots.txt 2>&1; journalctl --disk-usage > $BK/journal_disk_usage.txt 2>&1; journalctl -b -1 -n 3000 --no-pager > $BK/journal_prevboot_last3000.txt 2>/dev/null; journalctl -b -1 -u pedestrian-risk -u pedestrian-watchdog --no-pager > $BK/journal_prevboot_units.txt 2>/dev/null; journalctl -u pedestrian-risk -u pedestrian-watchdog -n 3000 --no-pager > $BK/journal_last3000_units.txt 2>/dev/null; journalctl --since "2026-10-30 20:00" --until "2026-10-31 01:40" --no-pager > $BK/journal_1030_1031_window.txt 2>/dev/null; mkdir -p /root/ped-evidence-$TS; cp -a $BK/. /root/ped-evidence-$TS/; echo "EVIDENCE=$BK"; echo "ROOT_COPY=/root/ped-evidence-$TS"; wc -l $BK/*.txt; echo "--- unit 备份 ---"; ls -l $BK'
 
 # 安装前基线（用于事后对比 NRestarts 是否被无谓地抬高）
-NR_BEFORE=$(bsh 'systemctl show -p NRestarts --value pedestrian-risk.service' 2>/dev/null | tr -d '\r' | tail -n 1)
-ACT_BEFORE=$(bsh 'systemctl is-active pedestrian-risk.service' 2>/dev/null | tr -d '\r' | tail -n 1)
+NR_BEFORE=$(bsh_out 'systemctl show -p NRestarts --value pedestrian-risk.service' | tail -n 1)
+ACT_BEFORE=$(bsh_out 'systemctl is-active pedestrian-risk.service' | tail -n 1)
 say "安装前基线: is-active=${ACT_BEFORE:-?} NRestarts=${NR_BEFORE:-?}"
 
 if [ "$CHECK_ONLY" = "1" ]; then
@@ -146,7 +164,7 @@ if [ -n "$BINARY" ]; then
     bput "$BINARY" "/tmp/ped_binary_new" || die 2 "上传二进制失败"
     bsh 'src=/tmp/ped_binary_new; dst='"$BINARY_DST"'; ls -l $src; test -s $src || exit 1; md5sum $src; install -m 755 $src $dst; md5sum $dst; test -s $dst || exit 1; echo binary_verified'
     if [ -n "$BINARY_MD5" ]; then
-        GOT=$(bsh "md5sum $BINARY_DST" 2>/dev/null | awk '{print $1}' | tail -n 1 | tr -d '\r')
+        GOT=$(bsh_out "md5sum $BINARY_DST" | awk '{print $1}' | tail -n 1)
         [ "$GOT" = "$BINARY_MD5" ] || die 2 "二进制 md5 校验失败: 期望 $BINARY_MD5 实际 $GOT"
         say "  二进制 md5 校验通过: $GOT"
     fi
@@ -171,8 +189,8 @@ bsh 'echo "--- 端口 ---"; (ss -ltn 2>/dev/null || netstat -ltn 2>/dev/null) | 
 
 # ---------- 7. 判定 + 收尾（确认服务 OK 后才放开看门狗） ----------
 say "== 7/7 判定与放开看门狗 =="
-ACT=$(bsh 'systemctl is-active pedestrian-risk.service' 2>/dev/null | tr -d '\r' | tail -n 1)
-NR=$(bsh 'systemctl show -p NRestarts --value pedestrian-risk.service' 2>/dev/null | tr -d '\r' | tail -n 1)
+ACT=$(bsh_out 'systemctl is-active pedestrian-risk.service' | tail -n 1)
+NR=$(bsh_out 'systemctl show -p NRestarts --value pedestrian-risk.service' | tail -n 1)
 say "is-active=$ACT  NRestarts: 安装前=${NR_BEFORE:-?} -> 安装后=${NR:-?}"
 if [ -n "$NR_BEFORE" ] && [ -n "$NR" ] && [ "$NR_BEFORE" != "$NR" ]; then
     say "佐证：安装期间 NRestarts 从 $NR_BEFORE 变为 $NR。本次安装已先停看门狗 + 置抑制文件，若仍增长，说明还有别的东西在拉起服务（旧看门狗的典型症状）"
