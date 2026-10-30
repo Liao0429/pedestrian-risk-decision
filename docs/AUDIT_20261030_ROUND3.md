@@ -10,7 +10,7 @@
 
 | 角色 | 地址/路径 | 说明 |
 |---|---|---|
-| 开发板 | `192.168.0.136` pico/luckfox | armv7l 5.10.160，211MB RAM，systemd 托管 `pedestrian-risk.service` + 看门狗 + go2rtc |
+| 开发板 | `192.168.0.136` pico（口令走 BOARD_PASS 环境变量） | armv7l 5.10.160，211MB RAM，systemd 托管 `pedestrian-risk.service` + 看门狗 + go2rtc |
 | 构建机 | `192.168.0.63` liao | Ubuntu 22.04，12 核，`~/board_sdk`/`~/luckfox_sdk` 完整 SDK + arm-linux-gnueabihf 交叉链 |
 | 仓库 | `G:\PedestrianRiskDecision` | exFAT（注意：node/js 的原子写/硬链接式新建会失败，用 `fs.writeFileSync` 或 base64 落盘） |
 | Host 工具链 | `G:\DevTools\mingw\w64devkit\bin` | g++ 16.2 / make（Windows 主机单测） |
@@ -274,7 +274,7 @@ H.264 High@L5.0 1920×1080@30fps、43.233s、1297 帧、2.29Mbps，B 站 DASH �
 - **T12 板端 A/B 未做**（track_counter 已接入 main.cc，编译开关 BOARD_TRACK_COUNT，host 侧 15/15 通过；板端重复计数改善幅度未实测）。
 - **板卡在 2026-10-31 02:05 再次失联**（与 00:05 同型：ping 通、22 可连无 banner、554/1984/8554 端口开），需用户再次断电重启；T10 的加固（`board_recover.sh` / `board_maintenance.sh`）**尚未在板上执行**。
 - 崩溃-重启风暴"拖垮整机"目前是**强相关**（现场时间顺序 + 同型症状），不是受控实验证明的因果，报告里按"现场证据链 + 可复现线索"表述。
-- 板上 root 直登已不可用（root/luckfox 认证失败），现用 pico/luckfox + sudo；`board_recover.sh` 已适配。
+- 板上 root 直登已不可用（root 直登认证失败），现用 pico + sudo；`board_recover.sh` 已适配。
 
 ---
 

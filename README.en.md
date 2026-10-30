@@ -160,6 +160,6 @@ python scripts/crowd_test_enhanced.py --input <video.mp4> --output results/video
 
 ## 📌 Notes
 
-- This repository is **private**; the author will make it public manually after the project is complete.
+- This repository is **public**. Thesis/defense/review documents are never uploaded here (see the privacy rule), and no credentials may be committed — a guard test (`tests/test_no_committed_credentials.py`) enforces that.
 - Thesis/defense/review internal documents are kept **locally only** (`H:\毕设论文\`) and NOT uploaded to this repository.
 - All experimental data comes from real datasets and is reproducible.

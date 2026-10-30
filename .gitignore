@@ -67,3 +67,6 @@ tmp/board_snap/
 tmp/ref_video/
 tmp/hw_check/
 tests/cpp_parity/*.exe
+
+# AI Agent 工作区（含部署记录/口令等临时内容，不入库）
+.claude/

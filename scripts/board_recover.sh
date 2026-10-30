@@ -11,11 +11,11 @@
 #   也可直接在构建机 192.168.0.63（装了 sshpass）上执行同一脚本。
 #
 # 用法：
-#   BOARD_PASS=luckfox sh scripts/board_recover.sh
-#   CHECK_ONLY=1 BOARD_PASS=luckfox sh scripts/board_recover.sh    # 只体检，不安装不重启
+#   BOARD_PASS='<板卡口令>' sh scripts/board_recover.sh
+#   CHECK_ONLY=1 BOARD_PASS='<板卡口令>' sh scripts/board_recover.sh    # 只体检，不安装不重启
 #   PED_PYTHON='X:/py311_gpu/Scripts/python.exe' PED_HELPER='G:/PedestrianRiskDecision/tmp/net/ssh_exec.py' \
-#     BOARD_PASS=luckfox sh scripts/board_recover.sh
-#   BINARY=/path/to/luckfox_pico_rtsp_yolov5 BINARY_MD5=<期望md5> BOARD_PASS=luckfox sh scripts/board_recover.sh
+#     BOARD_PASS='<板卡口令>' sh scripts/board_recover.sh
+#   BINARY=/path/to/luckfox_pico_rtsp_yolov5 BINARY_MD5=<期望md5> BOARD_PASS='<板卡口令>' sh scripts/board_recover.sh
 #       # 顺带替换主二进制：先 stop 服务 -> 上传 -> md5 校验 -> install，避免"旧进程+新文件"
 # 登录：默认 pico + sudo（板上 root 直登已不可用）；任何替换二进制的流程都必须在
 #       窗口内停看门狗并置 /run/pedestrian-risk.hold，本脚本已内置该顺序。
@@ -23,10 +23,20 @@
 set -u
 
 BOARD_HOST=${BOARD_HOST:-192.168.0.136}
-# 板端 root 的 SSH 直登不可用（2026-10-31 01:49 实测 root/luckfox -> Authentication failed）；
-# 实际可用的是 pico 登录 + sudo（已验证：echo luckfox | sudo -S -p '' id -un -> root）。
+# 板端 root 的 SSH 直登不可用（2026-10-31 01:49 实测 root -> Authentication failed）；
+# 实际可用的是 pico 登录 + sudo（已验证：echo "$BOARD_PASS" | sudo -S -p '' id -un -> root）。
 BOARD_USER=${BOARD_USER:-pico}
-BOARD_PASS=${BOARD_PASS:-luckfox}
+# 安全：**不提供默认口令**。口令必须由环境变量或 $BOARD_PASS_FILE 注入，
+# 以免真实凭据进入版本库（2026-10-31 安全整改：旧版本曾把默认口令写死并被推到公开仓库）。
+BOARD_PASS=${BOARD_PASS:-}
+if [ -z "$BOARD_PASS" ] && [ -n "${BOARD_PASS_FILE:-}" ] && [ -f "$BOARD_PASS_FILE" ]; then
+    BOARD_PASS=$(cat "$BOARD_PASS_FILE")
+fi
+if [ -z "$BOARD_PASS" ]; then
+    echo "[recover] 错误：未提供 BOARD_PASS，也未提供可读的 BOARD_PASS_FILE。" >&2
+    echo "[recover] 本脚本不提供默认口令（旧版本把默认口令写死并被推到公开仓库，2026-10-31 整改）。" >&2
+    exit 2
+fi
 SSH_WAIT_SEC=${SSH_WAIT_SEC:-180}
 CHECK_ONLY=${CHECK_ONLY:-0}
 # 维护抑制文件：部署窗口内让看门狗完全不动作（看门狗脚本会检查它）

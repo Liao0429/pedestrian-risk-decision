@@ -14,7 +14,7 @@ FPS/耗时波动、内存占用随时间的变化。
 环境变量（可覆盖默认值）:
     BOARD_HOST  默认 192.168.0.136
     BOARD_USER  默认 pico
-    BOARD_PASS  默认 luckfox（Luckfox 官方默认密码，仓库为私人仓库）
+    BOARD_PASS  必填（本脚本不提供默认口令；旧版本写死默认口令并被推到公开仓库，2026-10-31 整改）
 
 输出:
     results/edge_board/long_stability.jsonl   （追加，每行一个快照）
@@ -36,7 +36,9 @@ DEFAULT_OUT = PROJECT_ROOT / "results" / "edge_board" / "long_stability.jsonl"
 
 HOST = os.environ.get("BOARD_HOST", "192.168.0.136")
 USER = os.environ.get("BOARD_USER", "pico")
-PASS = os.environ.get("BOARD_PASS", "luckfox")
+PASS = os.environ.get("BOARD_PASS")
+if not PASS:
+    sys.exit("需要环境变量 BOARD_PASS（本脚本不提供默认口令；旧版本曾把默认口令写死并进入公开仓库）")
 
 SERVICE = "pedestrian-risk"
 WATCHDOG = "pedestrian-watchdog"

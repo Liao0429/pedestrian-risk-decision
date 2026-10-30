@@ -1,7 +1,7 @@
 """板卡服务加固回归测试（无需硬件，不在板上执行任何命令）。
 
 任务: T10 板卡服务加固与永久停机根因（防复发）
-报告: docs/review/20261030_round3/board_service_hardening.md
+报告: docs/audit/board_service_hardening.md（入库；本地全量过程报告在 docs/review/）
 实测证据: deploy/probe/probe_results.txt
 
 覆盖范围
@@ -26,7 +26,7 @@ REPO = Path(__file__).resolve().parents[1]
 UNIT_DIR = REPO / "deploy" / "systemd"
 SCRIPTS = REPO / "scripts"
 PROBE_DIR = REPO / "deploy" / "probe"
-REPORT = REPO / "docs" / "review" / "20261030_round3" / "board_service_hardening.md"
+REPORT = REPO / "docs" / "audit" / "board_service_hardening.md"  # 必须是被 git 跟踪的路径，否则 CI 上不存在
 PROBE_RESULTS = PROBE_DIR / "probe_results.txt"
 BREAKER_RESULTS = PROBE_DIR / "probe6_breaker_results.txt"
 
@@ -283,7 +283,7 @@ def test_recover_script_transport_and_overrides():
     body = read(RECOVER)
     assert "sshpass" in body, "必须支持构建机 sshpass 直连"
     assert "ssh_exec.py" in body, "必须支持 Windows 侧 paramiko helper"
-    assert "BOARD_PASS=${BOARD_PASS:-" in body, "凭据必须可用环境变量覆盖"
+    assert "BOARD_PASS=${BOARD_PASS:-}" in body, "凭据必须可由环境变量覆盖"
     assert "SSH_WAIT_SEC" in body, "必须等待板子 SSH 就绪（当前板子 TCP22 可连但无 banner）"
     assert "CHECK_ONLY" in body
 
