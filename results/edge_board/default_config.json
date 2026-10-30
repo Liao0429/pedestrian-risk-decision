@@ -1,0 +1,39 @@
+{
+  "edge_dist_m": 2.0,
+  "frame_dt": 0.1,
+  "fsm": {
+    "w1": 0.4,
+    "w2": 0.3,
+    "w3": 0.3,
+    "w4": 0.1,
+    "n_ref": 20,
+    "up_warning": 0.4,
+    "up_danger": 0.65,
+    "down_safe": 0.28,
+    "down_warning": 0.55,
+    "confirm_up": 3,
+    "confirm_down": 5,
+    "danger_hold_frames": 10,
+    "danger_hold_ms": 1000,
+    "trend_bias": 0.05,
+    "min_danger_n": 3
+  },
+  "enable_risk_engine_fallback": false,
+  "homography_file": "",
+  "target_classes": [
+    0
+  ],
+  "class_conf_thresholds": {},
+  "danger": {
+    "n": 10,
+    "rho": 0.55,
+    "gcc": 0.8
+  },
+  "warning": {
+    "n": 5,
+    "rho": 0.28,
+    "gcc": 0.55
+  },
+  "_comment": "规则阈值配置。target_classes=检测目标类别集合（COCO id，默认[0]=person；车辆[2,5,7,3]、狗[16]、猫[15]、动物[14,18,19,20,21]）。class_conf_thresholds=按类别差异化置信度阈值（COCO id -> 最低置信度0~1，可选；空对象=不区分，仅用全局检测阈值）。homography_file=外部IPM单应标定文件（文本3x3，与 ipm_calibrate.py --save xxx.txt 输出兼容；空串=用默认硬编码单应，相机位姿变化时配置此路径即可无需重编译）。danger/warning 的 n=人数阈值, rho=网络密度, gcc=最大连通分量占比。 conf_threshold=检测置信度阈值(0~1，默认0.60)，低于此值的检测框被丢弃。可通过硬件按键菜单调节。",
+  "conf_threshold": 0.6
+}

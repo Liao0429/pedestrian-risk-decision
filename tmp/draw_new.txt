@@ -1,0 +1,13 @@
+// blue box + label(green→blue for person)
+				cv::Scalar box_color(255, 0, 0);
+				cv::rectangle(frame, cv::Point(sX, sY), cv::Point(eX, eY), box_color, 2);
+				char label[32];
+				snprintf(label, sizeof label, "person %.2f", det_result->prop);
+				int baseline = 0;
+				cv::Size lbsz = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.45, 1, &baseline);
+				cv::rectangle(frame, cv::Point(sX, sY - lbsz.height - 6),
+				              cv::Point(sX + lbsz.width + 6, sY), box_color, -1);
+				cv::putText(frame, label, cv::Point(sX + 3, sY - 4),
+				            cv::FONT_HERSHEY_SIMPLEX, 0.45, cv::Scalar(255, 255, 255), 1, cv::LINE_AA);
+				int fx = (sX + eX) / 2, fy = eY;
+				cv::circle(frame, cv::Point(fx, fy), 3, cv::Scalar(0, 255, 0), -1);

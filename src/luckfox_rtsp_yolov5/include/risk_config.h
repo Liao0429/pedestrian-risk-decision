@@ -60,6 +60,16 @@ struct RiskConfig {
     std::map<int,float> class_conf_thresholds;  // 按类别差异化置信度阈值（COCO id -> 最低置信度 0~1）。空=不区分（仅用全局 BOX_THRESH）
     RiskFSMConfig fsm;                  // 增强决策 FSM 参数（默认与 Python 端 RiskFSMConfig 一致，可 JSON 配置）
     double frame_dt = 1.0 / 30.0;       // Kalman 平滑的帧间隔（秒）；默认 30FPS，板端实际帧率低时应按实测配置
+
+    // ROI 危险区域（YOLOv5 像素坐标系，720x480）
+    struct RoiZone {
+        bool enabled = false;
+        std::string name;
+        std::vector<std::pair<int,int>> polygon;  // 顶点像素坐标
+        int color_r = 0, color_g = 0, color_b = 255;  // BGR
+        int thickness = 2;
+    } roi;
+
     RiskRule danger;                // DANGER 阈值（默认 10 / 0.55 / 0.80）
     RiskRule warning{5.0, 0.28, 0.55};  // WARNING 阈值（默认 5 / 0.28 / 0.55）
 
@@ -283,6 +293,34 @@ inline RiskConfig loadRiskConfig(const std::string& path) {
     }
 
     // 语义校验：WARNING 阈值不得高于 DANGER（否则 DANGER 永远无法单独触发）
+    // ROI 危险区域
+    if (const minijson::Value* roiObj = root.find("roi_zone")) {
+        if (!roiObj->isObject()) throw std::runtime_error("roi_zone 必须是对象");
+        const minijson::Value* en = roiObj->find("enabled");
+        if (en && en->isBool()) cfg.roi.enabled = en->asBool();
+        const minijson::Value* nm = roiObj->find("name");
+        if (nm && nm->isString()) cfg.roi.name = nm->asString();
+        const minijson::Value* poly = roiObj->find("polygon");
+        if (poly && poly->isArray()) {
+            cfg.roi.polygon.clear();
+            for (size_t i = 0; i < poly->size(); ++i) {
+                const minijson::Value& pt = (*poly)[i];
+                if (!pt.isArray() || pt.size() < 2) throw std::runtime_error("roi_zone.polygon 元素必须是 [x,y] 数组");
+                int x = static_cast<int>((*poly)[i][0].asDouble());
+                int y = static_cast<int>((*poly)[i][1].asDouble());
+                cfg.roi.polygon.push_back(std::make_pair(x, y));
+            }
+        }
+        const minijson::Value* col = roiObj->find("color");
+        if (col && col->isArray() && col->size() >= 3) {
+            cfg.roi.color_b = static_cast<int>((*col)[0].asDouble());
+            cfg.roi.color_g = static_cast<int>((*col)[1].asDouble());
+            cfg.roi.color_r = static_cast<int>((*col)[2].asDouble());
+        }
+        const minijson::Value* th = roiObj->find("thickness");
+        if (th && th->isNumber()) cfg.roi.thickness = static_cast<int>(th->asDouble());
+    }
+
     if (cfg.warning.n > cfg.danger.n) {
         throw std::runtime_error("warning.n 不得大于 danger.n（等级语义颠倒）");
     }

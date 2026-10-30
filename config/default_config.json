@@ -34,6 +34,35 @@
     "rho": 0.28,
     "gcc": 0.55
   },
-  "_comment": "规则阈值配置。target_classes=检测目标类别集合（COCO id，默认[0]=person；车辆[2,5,7,3]、狗[16]、猫[15]、动物[14,18,19,20,21]）。class_conf_thresholds=按类别差异化置信度阈值（COCO id -> 最低置信度0~1，可选；空对象=不区分，仅用全局检测阈值）。homography_file=外部IPM单应标定文件（文本3x3，与 ipm_calibrate.py --save xxx.txt 输出兼容；空串=用默认硬编码单应，相机位姿变化时配置此路径即可无需重编译）。danger/warning 的 n=人数阈值, rho=网络密度, gcc=最大连通分量占比。 conf_threshold=检测置信度阈值(默认0.35)。灵敏度和误检之间的平衡点。",
-  "conf_threshold": 0.35
+  "_comment": "规则阈值配置。target_classes=检测目标类别集合（COCO id，默认[0]=person；车辆[2,5,7,3]、狗[16]、猫[15]、动物[14,18,19,20,21]）。class_conf_thresholds=按类别差异化置信度阈值（COCO id -> 最低置信度0~1，可选；空对象=不区分，仅用全局检测阈值）。homography_file=外部IPM单应标定文件（文本3x3，与 ipm_calibrate.py --save xxx.txt 输出兼容；空串=用默认硬编码单应，相机位姿变化时配置此路径即可无需重编译）。danger/warning 的 n=人数阈值, rho=网络密度, gcc=最大连通分量占比。 conf_threshold=检测置信度阈值(默认0.35)。灵敏度和误检之间的平衡点。 roi_zone=ROI危险区域(多边形顶点像素坐标,检测到行人进入时报警)",
+  "conf_threshold": 0.35,
+  "roi_zone": {
+    "enabled": true,
+    "name": "危险区域",
+    "polygon": [
+      [
+        580,
+        50
+      ],
+      [
+        700,
+        50
+      ],
+      [
+        700,
+        430
+      ],
+      [
+        580,
+        430
+      ]
+    ],
+    "color": [
+      0,
+      0,
+      255
+    ],
+    "thickness": 2,
+    "alert_on_entry": true
+  }
 }

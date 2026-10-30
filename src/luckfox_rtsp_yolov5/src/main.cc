@@ -465,38 +465,63 @@ int main(int argc, char *argv[]) {
 				printf("%s @ (%d %d %d %d) %.3f\n", coco_cls_to_name(det_result->cls_id),
 				       sX, sY, eX, eY, det_result->prop);
 
-				cv::rectangle(frame,cv::Point(sX ,sY),
-					      cv::Point(eX ,eY),
-					      cv::Scalar(0,255,0),3);
-				snprintf(text, sizeof text, "%s %.1f%%", coco_cls_to_name(det_result->cls_id), det_result->prop * 100);
-				cv::putText(frame,text,cv::Point(sX, sY - 8),
-					    cv::FONT_HERSHEY_SIMPLEX,1,
-					    cv::Scalar(0,255,0),2);
+// blue box + label(green→blue for person)
+				cv::Scalar box_color(255, 0, 0);
+				cv::rectangle(frame, cv::Point(sX, sY), cv::Point(eX, eY), box_color, 2);
+				char label[32];
+				snprintf(label, sizeof label, "person %.2f", det_result->prop);
+				int baseline = 0;
+				cv::Size lbsz = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.45, 1, &baseline);
+				cv::rectangle(frame, cv::Point(sX, sY - lbsz.height - 6),
+				              cv::Point(sX + lbsz.width + 6, sY), box_color, -1);
+				cv::putText(frame, label, cv::Point(sX + 3, sY - 4),
+				            cv::FONT_HERSHEY_SIMPLEX, 0.45, cv::Scalar(255, 255, 255), 1, cv::LINE_AA);
+				int fx = (sX + eX) / 2, fy = eY;
+				cv::circle(frame, cv::Point(fx, fy), 3, cv::Scalar(0, 255, 0), -1);
 				}
 			}
 
-			// ---- 叠加风险等级到画面 ----
-			{
-				cv::Scalar color(0,255,0);
-				const char* lvl = RiskEngine::levelName(crowd);
-				if (crowd == pedestrian::RISK_WARNING)      color = cv::Scalar(0,255,255);
-				else if (crowd == pedestrian::RISK_DANGER)  color = cv::Scalar(0,0,255);
-				char info[128];
-				snprintf(info, sizeof info, "CROWD:%s n=%d rho=%.2f r_gcc=%.2f lambda2=%.3f",
-				        lvl, featN, featRho, featGcc, featFiedler);
-				cv::rectangle(frame, cv::Point(0,0), cv::Point(width, 30), color, -1);
-				cv::putText(frame, info, cv::Point(6, 22),
-							cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0,0,0), 2);
+			// ---- ROI 危险区域绘制 ----
+			if (riskCfg.roi.enabled && !riskCfg.roi.polygon.empty()) {
+				int nv = (int)riskCfg.roi.polygon.size();
+				std::vector<cv::Point> pts;
+				for (int k = 0; k < nv; ++k)
+					pts.push_back(cv::Point(riskCfg.roi.polygon[k].first, riskCfg.roi.polygon[k].second));
+				cv::polylines(frame, pts, true,
+				              cv::Scalar(riskCfg.roi.color_b, riskCfg.roi.color_g, riskCfg.roi.color_r),
+				              riskCfg.roi.thickness, cv::LINE_AA);
 			}
-			// ---- 中文状态行（横幅下方，完整显示所有参数）----
+
+			// OSD: Num of Person / Danger Level / Assembly
 			{
-				const char *cn_lvl = "安全";
-				if (crowd == pedestrian::RISK_WARNING) cn_lvl = "警告";
-				else if (crowd == pedestrian::RISK_DANGER) cn_lvl = "危险";
+				cv::Scalar osd_green(0, 255, 0);
+				cv::Scalar osd_yellow(0, 255, 255);
+				cv::Scalar osd_red(0, 0, 255);
+				cv::Scalar lvl_color = osd_green;
+				const char* lvl = RiskEngine::levelName(crowd);
+				if (crowd == pedestrian::RISK_WARNING)      lvl_color = osd_yellow;
+				else if (crowd == pedestrian::RISK_DANGER)  lvl_color = osd_red;
+
+				char line1[64];
+				snprintf(line1, sizeof line1, "Num of Person: %d", featN);
+				cv::putText(frame, line1, cv::Point(8, 20), cv::FONT_HERSHEY_SIMPLEX, 0.5, osd_green, 1, cv::LINE_AA);
+
+				char line2[64];
+				snprintf(line2, sizeof line2, "Danger Level: %s", lvl);
+				cv::putText(frame, line2, cv::Point(8, 42), cv::FONT_HERSHEY_SIMPLEX, 0.5, lvl_color, 1, cv::LINE_AA);
+
+				char line3[64];
+				snprintf(line3, sizeof line3, "Assembly: %.0f%%", (featRho + featGcc) / 2.0 * 100.0);
+				cv::putText(frame, line3, cv::Point(8, 64), cv::FONT_HERSHEY_SIMPLEX, 0.5, osd_yellow, 1, cv::LINE_AA);
+			}
+			// chinese status line
+			{
+				const char *cn_lvl = "\xe5\xae\x89\xe5\x85\xa8";
+				if (crowd == pedestrian::RISK_WARNING) cn_lvl = "\xe8\xad\xa6\xe5\x91\x8a";
+				else if (crowd == pedestrian::RISK_DANGER) cn_lvl = "\xe5\x8d\xb1\xe9\x99\xa9";
 				char cn_line[128];
-				snprintf(cn_line, sizeof cn_line, "状态:%s 人数:%d 密度:%.2f 聚集:%.2f 连通:%.3f",
+				snprintf(cn_line, sizeof cn_line, "\xe7\x8a\xb6\xe6\x80\x81:%s \xe4\xba\xba\xe6\x95\xb0:%d \xe5\xaf\x86\xe5\xba\xa6:%.2f \xe8\x81\x9a\xe9\x9b\x86:%.2f \xe8\xbf\x9e\xe9\x80\x9a:%.3f",
 				         cn_lvl, featN, featRho, featGcc, featFiedler);
-				// 深灰半透明底色：取原像素的 50% 亮度的暗底
 				int cn_w = ((int)strlen(cn_line) / 3) * (24 + 2) + 12;
 				for (int ry = 30; ry < 54; ++ry) {
 					for (int rx = 0; rx < cn_w; ++rx) {
