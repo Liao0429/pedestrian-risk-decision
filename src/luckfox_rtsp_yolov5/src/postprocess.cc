@@ -123,7 +123,7 @@ static int nms(int validCount, std::vector<float> &outputLocations, std::vector<
         for (int j = i + 1; j < validCount; ++j)
         {
             int m = order[j];
-            if (m == -1 || classIds[j] != filterId)
+            if (m == -1 || classIds[m] != filterId)
             {
                 continue;
             }
