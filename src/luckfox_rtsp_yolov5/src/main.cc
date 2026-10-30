@@ -366,11 +366,13 @@ int main(int argc, char *argv[]) {
 			}
 
 			for(int i = 0; i < od_results.count; i++)
-			{					
-				if(od_results.count >= 1)
+			{
+				object_detect_result *det_result = &(od_results.results[i]);
+				// 仅绘制 target_classes 中的类别（默认只画 person），贴合毕设人群分析主题
+				if (std::find(riskCfg.target_classes.begin(), riskCfg.target_classes.end(),
+				              det_result->cls_id) == riskCfg.target_classes.end())
+					continue;
 				{
-					object_detect_result *det_result = &(od_results.results[i]);
-	
 					sX = (int)(det_result->box.left   );	
 					sY = (int)(det_result->box.top 	  );	
 					eX = (int)(det_result->box.right  );	
@@ -378,16 +380,16 @@ int main(int argc, char *argv[]) {
 					mapCoordinates(&sX,&sY);
 					mapCoordinates(&eX,&eY);
 					
-					printf("%s @ (%d %d %d %d) %.3f\n", coco_cls_to_name(det_result->cls_id),
-							 sX, sY, eX, eY, det_result->prop);
+				printf("%s @ (%d %d %d %d) %.3f\n", coco_cls_to_name(det_result->cls_id),
+				       sX, sY, eX, eY, det_result->prop);
 
-					cv::rectangle(frame,cv::Point(sX ,sY),
-								        cv::Point(eX ,eY),
-										cv::Scalar(0,255,0),3);
-					snprintf(text, sizeof text, "%s %.1f%%", coco_cls_to_name(det_result->cls_id), det_result->prop * 100);
-					cv::putText(frame,text,cv::Point(sX, sY - 8),
-										   cv::FONT_HERSHEY_SIMPLEX,1,
-										   cv::Scalar(0,255,0),2);
+				cv::rectangle(frame,cv::Point(sX ,sY),
+					      cv::Point(eX ,eY),
+					      cv::Scalar(0,255,0),3);
+				snprintf(text, sizeof text, "%s %.1f%%", coco_cls_to_name(det_result->cls_id), det_result->prop * 100);
+				cv::putText(frame,text,cv::Point(sX, sY - 8),
+					    cv::FONT_HERSHEY_SIMPLEX,1,
+					    cv::Scalar(0,255,0),2);
 				}
 			}
 
@@ -400,9 +402,9 @@ int main(int argc, char *argv[]) {
 				char info[128];
 				snprintf(info, sizeof info, "CROWD:%s n=%d rho=%.2f r_gcc=%.2f lambda2=%.3f",
 				        lvl, featN, featRho, featGcc, featFiedler);
-				cv::rectangle(frame, cv::Point(0,0), cv::Point(width, 60), color, -1);
-				cv::putText(frame, info, cv::Point(10, 42),
-							cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0,0,0), 2);
+				cv::rectangle(frame, cv::Point(0,0), cv::Point(width, 30), color, -1);
+				cv::putText(frame, info, cv::Point(6, 22),
+							cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar(0,0,0), 2);
 			}
 
 		}
