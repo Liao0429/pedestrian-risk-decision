@@ -299,6 +299,37 @@ ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_
 
 ---
 
+## 11. Round 3：CI 修复 与 凭据泄漏整改（2026-10-31 凌晨）
+
+### 11.1 CI 从红转绿（此前 2 次 push 都是 failure）
+
+| # | 根因 | 证据 | 修复 |
+|---|---|---|---|
+| 1 | 单元测试读取了 **被 gitignore 的报告** `docs/review/20261030_round3/board_service_hardening.md`，CI 检出后文件不存在 | CI 日志：`FileNotFoundError` in `test_report_contains_key_conclusions` 等 3 项 | 报告改放**被跟踪**的 `docs/audit/`，测试改读该路径 |
+| 2 | 新增的凭据守卫自己抓出报告里残留的口令示例行 | CI 日志：`[口令管道喂给 sudo -S] ... echo <password> | sudo -S` | 报告内口令示例全部改占位符 |
+| 3 | 部署脚本/unit 在导出时被 Windows 的 `core.autocrlf=true` 转成 CRLF（库里 blob 本来是 LF） | `test_artifacts_are_lf_only` 在纯净导出上 6 项失败 | 新增 `.gitattributes`（`* text=auto eol=lf` + 显式类型 + 二进制标记） |
+
+**验证方式（本次新增的纪律）**：不再只在本机跑 pytest，而是 `git archive HEAD` → 解到空目录 → 跑 pytest = **精确复刻 CI**。
+这一招第一次跑就抓出了上面第 3 条（本机工作区看不出，因为 Windows 工作区行为与 Linux 检出不同）。最终 428 passed / 6 skipped（纯净导出），GitHub CI **success**（run 41112671865）。
+
+### 11.2 凭据泄漏整改（安全，最高优先）
+
+本仓库是**公开仓库**，而此前两轮把真实口令写进了被跟踪文件并推到 GitHub：
+
+| 位置 | 内容 | 处置 |
+|---|---|---|
+| `scripts/board_recover.sh` | `BOARD_PASS` 默认值 | 去掉默认值；必须由 `BOARD_PASS` 或 `BOARD_PASS_FILE` 注入，缺失时明确报错退出 |
+| `scripts/board_health_snapshot.py` | `os.environ.get("BOARD_PASS", "<字面量>")` | 去掉默认值并报错提示 |
+| `docs/` 多处 | `用户/口令` 简写、`echo <口令> \| sudo -S` 示例 | 全部改占位符 |
+| `docs/review/**`（**41 个文件**） | 评审/裁决类文档（按 AGENTS.md 本应只存本地） | `git rm --cached` 取消跟踪，**文件保留在本地磁盘** |
+| `.claude/tasks/build-deploy.md` | Agent 工作区里的部署记录（含口令） | 取消跟踪 + `.gitignore` 增 ` .claude/` |
+
+新增 `tests/test_no_committed_credentials.py`：**上下文感知**的凭据守卫（裸 token 黑名单会误报，因为 `luckfox` 同时是产品名）：只在 `PASS=`、`sshpass -p`、`用户/口令` 简写、`sudo -S` 喂入、环境变量默认值这些"口令位置"比对 SHA-256（不存明文），并自带两条元测试 —— 一条证明它能抓出历史泄漏提交，一条证明产品名单独出现不算泄漏。
+
+> ⚠️ **仍需人工处置**：口令仍在 git 历史里。公开仓库下最有效的做法是**轮换板卡与构建机口令**；若要彻底清除历史需 `git filter-repo` 重写全部提交（会改变所有 SHA，影响既有 baseline tag/备份约定）。本仓库无法代劳这两件事。
+
+---
+
 ## 10. 声明
 
 - 本报告所有结论均可追到磁盘文件行号 / 真机命令输出 / 编译测试输出；标注为"推断/未验证"的条目未当作结论使用。
