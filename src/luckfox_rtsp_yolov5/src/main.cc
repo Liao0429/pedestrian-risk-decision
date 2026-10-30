@@ -513,8 +513,9 @@ int main(int argc, char *argv[]) {
 		// ---- 取帧成功后才编码/推流/释放（失败时跳过本帧，避免陈旧帧编码与错误释放）----
 		if (s32Ret == RK_SUCCESS)
 		{
-			// 自拷贝已移除：data 即 frame.data（同一 src_Blk 虚拟地址），memcpy 无实际作用
-			// 原 memcpy(data, frame.data, width * height * 3);
+			// ARM DMA 缓存一致性：CPU 通过 cv::Mat 写 frame 后必须 memcpy 刷缓存，
+			// 否则 VENC 硬件 DMA 读不到最新像素数据，导致画面扫描线/乱码。
+			memcpy(data, frame.data, width * height * 3);
 
 			// encode H264
 			RK_MPI_VENC_SendFrame(0, &h264_frame,-1);
