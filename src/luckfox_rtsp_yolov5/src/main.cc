@@ -41,7 +41,13 @@ float scale ;
 int leftPadding ;
 int topPadding  ;
 
-cv::Mat letterbox(cv::Mat input)
+// letterbox 结果写入调用方预分配的缓冲：稳态下零 malloc / 零 free。
+//   inputScaleOut : 缩放后暂存（720x480 -> 640x426，CV_8UC3）
+//   letterboxOut  : 模型输入（640x640，CV_8UC3）
+// 缓冲尺寸/类型不匹配时 create() 会自行分配一次（仅当分辨率或像素格式变化），
+// 之后每帧只做原地写入。几何参数（scale/leftPadding/topPadding）仍写回全局，
+// mapCoordinates() 的行为与原来完全一致。
+void letterbox(const cv::Mat &input, cv::Mat &inputScaleOut, cv::Mat &letterboxOut)
 {
 	float scaleX = (float)model_width  / (float)width; 
 	float scaleY = (float)model_height / (float)height; 
@@ -52,15 +58,35 @@ cv::Mat letterbox(cv::Mat input)
 
 	leftPadding = (model_width  - inputWidth) / 2;
 	topPadding  = (model_height - inputHeight) / 2;	
-	
 
-	cv::Mat inputScale;
-    cv::resize(input, inputScale, cv::Size(inputWidth,inputHeight), 0, 0, cv::INTER_LINEAR);	
-	cv::Mat letterboxImage(640, 640, CV_8UC3,cv::Scalar(0, 0, 0));
-    cv::Rect roi(leftPadding, topPadding, inputWidth, inputHeight);
-    inputScale.copyTo(letterboxImage(roi));
+	if (inputScaleOut.cols != inputWidth || inputScaleOut.rows != inputHeight ||
+	    inputScaleOut.type() != input.type()) {
+		inputScaleOut.create(inputHeight, inputWidth, input.type());
+	}
+	if (letterboxOut.cols != model_width || letterboxOut.rows != model_height ||
+	    letterboxOut.type() != CV_8UC3) {
+		letterboxOut.create(model_height, model_width, CV_8UC3);
+	}
 
-	return letterboxImage; 	
+	cv::resize(input, inputScaleOut, inputScaleOut.size(), 0, 0, cv::INTER_LINEAR);
+
+	// 清黑边：只重写 ROI 之外的填充带（ROI 会被 copyTo 完整覆盖），
+	// 结果与整幅 setTo(0) 等价，但每帧少写约 800KB 内存。
+	const cv::Rect roi(leftPadding, topPadding, inputWidth, inputHeight);
+	const cv::Rect pads[4] = {
+		cv::Rect(0, 0, model_width, roi.y),                                   // 上黑边
+		cv::Rect(0, roi.y + roi.height, model_width,
+		         model_height - (roi.y + roi.height)),                       // 下黑边
+		cv::Rect(0, roi.y, roi.x, roi.height),                               // 左黑边
+		cv::Rect(roi.x + roi.width, roi.y,
+		         model_width - (roi.x + roi.width), roi.height),             // 右黑边
+	};
+	for (int i = 0; i < 4; ++i) {
+		if (pads[i].width > 0 && pads[i].height > 0)
+			letterboxOut(pads[i]).setTo(cv::Scalar(0, 0, 0));
+	}
+
+	inputScaleOut.copyTo(letterboxOut(roi));
 }
 
 void mapCoordinates(int *x, int *y) {	
@@ -331,6 +357,22 @@ int main(int argc, char *argv[]) {
   }
   venc_ready = true;
   printf("venc init success\n");
+
+  // ---- letterbox 常驻缓冲：循环外分配一次，循环内零 malloc / 零 free ----
+  // 原实现每帧 new 817KB(inputScale) + 1.23MB(letterboxImage)，在 64MB DDR 上
+  // 反复 mmap/munmap 会触发缺页与内存碎片，故改为预分配 + 引用回填。
+  cv::Mat inputScalePre;
+  cv::Mat letterboxPre;
+  {
+    const float s = std::min((float)model_width  / (float)width,
+                             (float)model_height / (float)height);
+    inputScalePre.create((int)((float)height * s), (int)((float)width * s), CV_8UC3);
+    letterboxPre.create(model_height, model_width, CV_8UC3);
+    letterboxPre.setTo(cv::Scalar(0, 0, 0));  // 只在这里整幅清零一次
+    printf("letterbox buffers preallocated: %dx%d + %dx%d\n",
+           inputScalePre.cols, inputScalePre.rows, letterboxPre.cols, letterboxPre.rows);
+  }
+
   	while (!g_stop)
 	{	
 		// get vi frame
@@ -348,9 +390,9 @@ int main(int argc, char *argv[]) {
 			// 恒等 resize 已移除：bgr 与 frame 同尺寸、同缓冲，resize 无实际作用
 			// 原 cv::resize(bgr, frame, Size(width,height), 0,0, INTER_LINEAR);
 			
-			//letterbox
-			cv::Mat letterboxImage = letterbox(frame);	
-			memcpy(rknn_app_ctx.input_mems[0]->virt_addr, letterboxImage.data, model_width*model_height*3);		
+			//letterbox：写入常驻缓冲，零分配
+			letterbox(frame, inputScalePre, letterboxPre);	
+			memcpy(rknn_app_ctx.input_mems[0]->virt_addr, letterboxPre.data, model_width*model_height*3);		
 			inference_yolov5_model(&rknn_app_ctx, &od_results);
 
 			// ---- 行人空间网络：只取 person 类，提取脚点 ----
