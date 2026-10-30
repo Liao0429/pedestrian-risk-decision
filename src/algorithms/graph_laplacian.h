@@ -57,10 +57,14 @@ public:
 
 private:
     double m_edgeDist;
-    std::vector<std::pair<float,float>> m_pts;
+    // D2：内部统一 double（旧实现 float 存点、double 比较，会引入二次舍入）。
+    // 注意：公共 API 仍是 float 输入（板端脚点来自整数像素，天然 float），
+    // 恰好等于 0.02f 的构造输入仍可能判重 —— 见 tests/test_cpp_python_parity.py
+    // 的 KNOWN_DIVERGENCES["lap_dedup_exact_2cm"]。
+    std::vector<std::pair<double,double>> m_pts;
 
     // 由点集构建邻接矩阵 adj 与拉普拉斯矩阵 L，并输出边数 m
-    static void buildLaplacian(const std::vector<std::pair<float,float>>& pts,
+    static void buildLaplacian(const std::vector<std::pair<double,double>>& pts,
                                double edgeDist,
                                std::vector<std::vector<char>>& adj,
                                std::vector<std::vector<double>>& L,
@@ -89,7 +93,7 @@ inline void GraphLaplacian::clear() { m_pts.clear(); }
 
 inline void GraphLaplacian::addPoint(float x, float y) {
     if (std::isfinite(x) && std::isfinite(y)) {
-        m_pts.push_back(std::make_pair(x, y));
+        m_pts.push_back(std::make_pair((double)x, (double)y));
     }
     // 非法坐标（NaN/Inf）：忽略该点，避免污染距离矩阵
 }
@@ -99,7 +103,7 @@ inline void GraphLaplacian::setPoints(const std::vector<std::pair<float,float>>&
     m_pts.reserve(pts.size());
     for (std::size_t i = 0; i < pts.size(); ++i) {
         if (std::isfinite(pts[i].first) && std::isfinite(pts[i].second))
-            m_pts.push_back(pts[i]);
+            m_pts.push_back(std::make_pair((double)pts[i].first, (double)pts[i].second));
     }
 }
 
@@ -112,7 +116,7 @@ inline std::vector<std::vector<char>> GraphLaplacian::adjacencyMatrix() const {
 }
 
 inline void GraphLaplacian::buildLaplacian(
-        const std::vector<std::pair<float,float>>& pts,
+        const std::vector<std::pair<double,double>>& pts,
         double edgeDist,
         std::vector<std::vector<char>>& adj,
         std::vector<std::vector<double>>& L,
@@ -227,13 +231,16 @@ inline SpectralFeatures GraphLaplacian::computeFeatures() const {
     // 解决"伸一只手判出两个人"——NMS可能漏掉几乎重叠的检测框，
     // 导致同一行人在地面产生两个几乎重合的脚点。
     const double DEDUP_TOL_M = 0.02;  // 2cm 去重容差
-    std::vector<std::pair<float,float>> dedupPts;
+    std::vector<std::pair<double,double>> dedupPts;
     dedupPts.reserve(m_pts.size());
     for (size_t i = 0; i < m_pts.size(); ++i) {
         bool dup = false;
-        for (size_t j = 0; j < i; ++j) {
-            double dx = (double)m_pts[i].first - (double)m_pts[j].first;
-            double dy = (double)m_pts[i].second - (double)m_pts[j].second;
+        // D1：只与"已保留(未判重)的点"比较，而不是与全部历史点比较。
+        // 旧实现的距离传递效应会把 0/1.5/3.0cm 三个不同行人合并成 1 人（低估人数），
+        // 与 Python 端（只与保留点比较）语义不一致。
+        for (size_t j = 0; j < dedupPts.size(); ++j) {
+            const double dx = m_pts[i].first - dedupPts[j].first;
+            const double dy = m_pts[i].second - dedupPts[j].second;
             if (std::sqrt(dx*dx + dy*dy) < DEDUP_TOL_M) {
                 dup = true;
                 break;

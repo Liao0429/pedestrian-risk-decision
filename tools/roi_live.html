@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>ROI 实时画框 | PedestrianRisk</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#0f0;font:14px monospace;overflow:hidden}
+#hud{position:fixed;top:8px;left:8px;z-index:10;pointer-events:none}
+#tools{position:fixed;bottom:8px;left:8px;z-index:10;display:flex;gap:6px}
+button{padding:8px 16px;background:#1a3a1a;color:#0f0;border:1px solid #0f0;cursor:pointer;font:14px monospace}
+button:hover{background:#2a5a2a}
+button.active{background:#3a1a1a;border-color:#f00;color:#f00}
+#status{position:fixed;top:8px;right:8px;z-index:10;font-size:12px;padding:4px 8px;background:rgba(0,0,0,0.7);border-radius:4px}
+#container{position:relative;width:100vw;height:100vh;overflow:hidden}
+#video-bg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:100%;height:100%;object-fit:contain}
+canvas{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);cursor:crosshair}
+.info{color:#888;font-size:11px;margin-top:2px}
+</style>
+</head>
+<body>
+<div id="hud">🖱️ <b>点击</b>添加顶点 | <b>拖拽</b>移动 | <b>双击</b>删除 | 右键完成</div>
+<div id="status">未连接</div>
+<div id="container">
+  <img id="video-bg" src="/snapshot" crossorigin="anonymous" />
+  <canvas id="c"></canvas>
+</div>
+<div id="tools">
+  <button onclick="undo()">↩ 撤销</button>
+  <button onclick="clearAll()">✕ 清除</button>
+  <button onclick="sendROI()" style="background:#3a1a1a;border-color:#f00">🚀 发送到开发板</button>
+  <span class="info" style="color:#888">端点: http://192.168.0.136:8088/roi</span>
+</div>
+
+<script>
+const HOST='192.168.0.136';
+const W=720, H=480;
+const c=document.getElementById('c');
+c.width=W; c.height=H;
+const ctx=c.getContext('2d');
+const status=document.getElementById('status');
+const video=document.getElementById('video-bg');
+
+let pts=[], dragIdx=-1;
+let streamReady=false;
+
+// Resize canvas to window
+function resize(){
+  const vw=window.innerWidth, vh=window.innerHeight;
+  const scale=Math.min(vw/W, vh/H);
+  c.style.width=(W*scale)+'px';
+  c.style.height=(H*scale)+'px';
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Refresh video snapshot every 2 seconds
+function refreshFrame(){
+  const ts=Date.now();
+  video.src='/snapshot?ts='+ts;
+}
+setInterval(refreshFrame, 2000);
+video.onload=()=>{ streamReady=true; status.textContent='✅ 已连接'; };
+video.onerror=()=>{ status.textContent='❌ go2rtc 不可用'; };
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  if(pts.length>=3){
+    ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
+    for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x,pts[i].y);
+    ctx.closePath();
+    ctx.fillStyle='rgba(255,0,0,0.2)'; ctx.fill();
+    ctx.strokeStyle='#ff0000'; ctx.lineWidth=2.5; ctx.stroke();
+  }
+  if(pts.length>=2){
+    ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
+    for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x,pts[i].y);
+    ctx.strokeStyle='#ff4444'; ctx.lineWidth=1; ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([]);
+  }
+  pts.forEach((p,i)=>{
+    ctx.beginPath(); ctx.arc(p.x,p.y,7,0,Math.PI*2);
+    ctx.fillStyle=i===dragIdx?'#ff0':'#f00'; ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.font='bold 11px monospace'; ctx.fillText(i+1,p.x+10,p.y-8);
+  });
+}
+
+c.addEventListener('mousedown',e=>{
+  const rect=c.getBoundingClientRect();
+  const scaleX=W/rect.width, scaleY=H/rect.height;
+  const mx=(e.clientX-rect.left)*scaleX, my=(e.clientY-rect.top)*scaleY;
+  if(e.button===2){ sendROI(); return; } // right click = send
+  dragIdx=pts.findIndex(p=>Math.hypot(p.x-mx,p.y-my)<12);
+  if(dragIdx>=0){ draw(); return; }
+  pts.push({x:Math.round(mx),y:Math.round(my)});
+  dragIdx=pts.length-1;
+  draw();
+});
+c.addEventListener('contextmenu',e=>e.preventDefault());
+
+c.addEventListener('mousemove',e=>{
+  if(dragIdx<0) return;
+  const rect=c.getBoundingClientRect();
+  const scaleX=W/rect.width, scaleY=H/rect.height;
+  pts[dragIdx]={x:Math.round(Math.max(0,Math.min(W,(e.clientX-rect.left)*scaleX))),
+                y:Math.round(Math.max(0,Math.min(H,(e.clientY-rect.top)*scaleY)))};
+  draw();
+});
+c.addEventListener('mouseup',()=>{ dragIdx=-1; });
+
+c.addEventListener('dblclick',e=>{
+  const rect=c.getBoundingClientRect();
+  const scaleX=W/rect.width, scaleY=H/rect.height;
+  const mx=(e.clientX-rect.left)*scaleX, my=(e.clientY-rect.top)*scaleY;
+  const idx=pts.findIndex(p=>Math.hypot(p.x-mx,p.y-my)<12);
+  if(idx>=0){ pts.splice(idx,1); draw(); }
+});
+
+function undo(){ pts.pop(); draw(); }
+function clearAll(){ pts=[]; draw(); status.textContent='已清除'; }
+
+async function sendROI(){
+  if(pts.length<3){ status.textContent='❌ 至少需要3个顶点'; return; }
+  const poly=pts.map(p=>[p.x,p.y]);
+  const body=JSON.stringify({enabled:true,name:"危险区域",polygon:poly,color:[0,0,255],thickness:2});
+  status.textContent='⏳ 发送中...';
+  try{
+    const res=await fetch('http://'+HOST+':8088/roi',{method:'POST',headers:{'Content-Type':'application/json'},body});
+    if(res.ok){ status.textContent='✅ 已发送！3秒后RTSP画面显示新红框'; }
+    else{ status.textContent='❌ 服务器返回错误: '+res.status; }
+  }catch(e){ status.textContent='❌ 连接失败 — 开发板 HTTP 服务未启动: python3 /home/pico/roi_server.py &'; }
+}
+</script>
+</body>
+</html>

@@ -1,5 +1,13 @@
 # 行人感知与风险决策系统 —— 硬件系统集成方案
 
+> ⚠ **2026-10-30 实测校准（hardware-hw / task-3）**：本文档部分引脚/方案与真机实测冲突。
+> **引脚与总线请以 [`pin_map_verified.md`](./pin_map_verified.md) 为唯一事实源**；
+> 交叉验证结论见 [`docs/review/20261030_round3/hardware_pcb_consistency.md`](../review/20261030_round3/hardware_pcb_consistency.md)。
+>
+> 具体冲突：§3.1 引脚总表（Pin54/55=PWM、Pin72/73=I2C2、Pin77/78=UART4、Pin92=按键）**与实测不符**——
+> 实测 PWM 只有 pwmchip8/9、I2C 只有 i2c-3/i2c-4、无 /dev/ttyS*、按键应为 GPIO2_A3(67)；
+> 且 USB 当前是 gadget 模式，USB 喇叭/WiFi 方案需先开 host 模式。
+
 - 项目：基于 C++ 的边缘端轻量化行人感知与风险决策软件系统（成品）
 - 平台：Luckfox Pico Max（RV1106G3，Cortex-A7 1.2GHz 单核，NPU 1 TOPS，256MB DDR3L）
 - 摄像头：SC3336 300 万像素 MIPI CSI 模组（F2.0，98.3° FOV）

@@ -22,6 +22,22 @@ import shutil
 import subprocess
 import sys
 
+def _run(*args, **kwargs):
+    """subprocess.run 的编码安全封装。
+
+    子进程 stdout 编码由 PYTHONIOENCODING 或系统 locale 决定，而 subprocess 默认
+    按 locale 解码。两者不一致时（典型：调用方导出 PYTHONIOENCODING=utf-8，而
+    Windows 控制台是 GBK）会在子进程输出读取线程抛 UnicodeDecodeError，表现为
+    "与本次改动无关的随机红"。这里把两侧都显式固定为 UTF-8。
+    """
+    kwargs.setdefault("capture_output", True)
+    kwargs["text"] = True
+    kwargs["encoding"] = "utf-8"
+    kwargs["errors"] = "replace"
+    child_env = dict(kwargs.get("env") or os.environ)
+    child_env["PYTHONIOENCODING"] = "utf-8"
+    kwargs["env"] = child_env
+    return subprocess.run(*args, **kwargs)
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCRIPTS = os.path.join(PROJECT_ROOT, "scripts")
 if SCRIPTS not in sys.path:
@@ -199,23 +215,23 @@ class TestFileIO:
         cfg = tmp_path / "go2rtc.yaml"
         write(str(cfg), CAM_CFG)
         py = os.path.join(SCRIPTS, "go2rtc_demo_stream.py")
-        r1 = subprocess.run(
+        r1 = _run(
             [sys.executable, py, "--config", str(cfg),
              "--video", "/userdata/demo/mixkit_13192_enhanced.mp4"],
-            capture_output=True, text=True)
+            )
         assert r1.returncode == 0
         assert "done:" in r1.stdout
         assert "  demo:\n" in read(str(cfg))
-        r2 = subprocess.run(
+        r2 = _run(
             [sys.executable, py, "--config", str(cfg),
              "--video", "/userdata/demo/mixkit_13192_enhanced.mp4"],
-            capture_output=True, text=True)
+            )
         assert r2.returncode == 0
         assert "unchanged:" in r2.stdout
 
     def test_cli_missing_args(self):
         py = os.path.join(SCRIPTS, "go2rtc_demo_stream.py")
-        r = subprocess.run([sys.executable, py], capture_output=True, text=True)
+        r = _run([sys.executable, py], )
         assert r.returncode == 2  # argparse 缺参报错
 
 
@@ -246,10 +262,10 @@ class TestShellScript:
         video.write_text("fake", encoding="utf-8")
         bash = self._bash()
         env = dict(os.environ, GO2RTC_CFG=str(cfg), GO2RTC_BIN="/bin/true")
-        r = subprocess.run(
+        r = _run(
             [bash, self.BASH_SCRIPT,
              "--video", str(video), "--dry-run"],
-            capture_output=True, text=True, env=env)
+            env=env)
         assert r.returncode == 0, r.stderr
         out = r.stdout
         assert "  demo:\n" in out
@@ -264,10 +280,10 @@ class TestShellScript:
         video.write_text("fake", encoding="utf-8")
         bash = self._bash()
         env = dict(os.environ, GO2RTC_CFG=str(cfg), GO2RTC_BIN="/bin/true")
-        r = subprocess.run(
+        r = _run(
             [bash, self.BASH_SCRIPT,
              "--video", str(video), "--dry-run"],
-            capture_output=True, text=True, env=env)
+            env=env)
         assert r.returncode == 0, r.stderr
         # 幂等：输出仍是同一指向，不出现第二个 demo
         assert r.stdout.count("  demo:\n") == 1
@@ -279,10 +295,10 @@ class TestShellScript:
         video.write_text("fake", encoding="utf-8")
         bash = self._bash()
         env = dict(os.environ, GO2RTC_CFG=str(cfg), GO2RTC_BIN="/bin/true")
-        r = subprocess.run(
+        r = _run(
             [bash, self.BASH_SCRIPT,
              "--video", str(video), "--dry-run"],
-            capture_output=True, text=True, env=env)
+            env=env)
         assert r.returncode == 0, r.stderr
         assert "file:///old.mp4" not in r.stdout
         assert "file://%s" % video in r.stdout
@@ -292,10 +308,10 @@ class TestShellScript:
         write(str(cfg), CAM_CFG)
         bash = self._bash()
         env = dict(os.environ, GO2RTC_CFG=str(cfg), GO2RTC_BIN="/bin/true")
-        r = subprocess.run(
+        r = _run(
             [bash, self.BASH_SCRIPT,
              "--video", str(tmp_path / "nope.mp4"), "--dry-run"],
-            capture_output=True, text=True, env=env)
+            env=env)
         assert r.returncode == 1
         assert "视频文件不存在" in r.stdout
 

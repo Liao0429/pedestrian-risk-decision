@@ -151,19 +151,20 @@ def compute_laplacian_features(pts, edge_dist):
         raise ValueError("pts 必须是 (n,2) 的坐标数组，实际形状: %s" % (pts.shape,))
 
     # ---- 脚点去重：同一位置(误差<2cm)视为重复检测，只保留一个 ----
-    # 与 C++ 端 graph_laplacian.h 的 DEDUP_TOL_M=0.02 保持一致。
-    # 解决"伸一只手判出两个人"问题。
+    # 与 C++ 端 graph_laplacian.h 的 DEDUP_TOL_M=0.02 一致，解决"伸一只手判出两个人"。
+    # 语义：只与**已保留点**比较（贪心），不做单链传递合并
+    # （c++ 侧当前与"全部历史点"比较，差异登记在
+    #  tests/test_cpp_python_parity.py 的 KNOWN_DIVERGENCES，归 T1 修）。
+    # 实现：平方距离等价替换 d < tol ⟺ d² < tol²，把每点 O(n) 次 np.hypot
+    # 压成一次向量化运算 —— 离线全量重跑（45021 帧）下这是本函数的主要开销。
     DEDUP_TOL_M = 0.02
-    dedup_idx = []
-    for i in range(pts.shape[0]):
-        dup = False
-        for j in dedup_idx:
-            if np.hypot(pts[i, 0] - pts[j, 0], pts[i, 1] - pts[j, 1]) < DEDUP_TOL_M:
-                dup = True
-                break
-        if not dup:
+    tol2 = DEDUP_TOL_M * DEDUP_TOL_M
+    dedup_idx = [0]
+    for i in range(1, pts.shape[0]):
+        delta = pts[dedup_idx] - pts[i]
+        if not np.any(np.sum(delta * delta, axis=1) < tol2):
             dedup_idx.append(i)
-    pts = pts[np.array(dedup_idx)]
+    pts = pts[dedup_idx]
     n = pts.shape[0]
 
     A = build_adjacency(pts, edge_dist)

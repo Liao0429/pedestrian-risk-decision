@@ -32,6 +32,12 @@ public:
         : m_device(device), m_audioDir(audioDir), m_ok(false) {}
 
     // 检查 aplay 与音频文件是否就绪。失败仅禁用语音，不致命。
+    //
+    // 2026-10-30 板上实测：Luckfox Pico Max 镜像里**只有 card0 = rv-acodec**
+    // （/proc/asound/cards），且没有任何 USB 设备（/sys/bus/usb/devices 为空、
+    // USB 控制器是 gadget 模式 /sys/class/udc=ffb00000.usb）。因此旧的默认
+    // plughw:1,0 必然打不开；这里在 init() 里自动回退到 ALSA "default"，
+    // 并把实际使用的设备打印出来（用 USB 喇叭前必须先让板子进 USB host 模式）。
     bool init() {
         // 1. aplay 是否可用（git-bash/交叉环境可能没有，容错）
         if (system("command -v aplay >/dev/null 2>&1") != 0) {
@@ -39,6 +45,14 @@ public:
             m_ok = false;
             return false;
         }
+        // 1.5 配置的 ALSA 设备若不存在（如 plughw:1,0 而板上只有 card0），回退 default
+        if (!cardPresent()) {
+            std::fprintf(stderr,
+                         "voice: device %s not present, falling back to 'default'\n",
+                         m_device.c_str());
+            m_device = "default";
+        }
+        std::fprintf(stderr, "voice: aplay device = %s\n", m_device.c_str());
         // 2. 音频文件是否存在
         if (access(warningPath().c_str(), F_OK) != 0 ||
             access(dangerPath().c_str(), F_OK) != 0) {
@@ -76,6 +90,17 @@ public:
     }
 
 private:
+    // 设备串形如 plughw:C,D → 用 aplay -l 检查 "card C:" 是否存在。
+    // 其它形式（default/sysdefault/...）一律认为可用，交由 aplay 自己报错。
+    bool cardPresent() const {
+        int c = -1, d = -1;
+        if (std::sscanf(m_device.c_str(), "plughw:%d,%d", &c, &d) != 2) return true;
+        char cmd[160];
+        std::snprintf(cmd, sizeof(cmd),
+                      "aplay -l 2>/dev/null | grep -q -e '^card %d:'", c);
+        return system(cmd) == 0;
+    }
+
     std::string warningPath() const { return m_audioDir + "/warning.wav"; }
     std::string dangerPath() const  { return m_audioDir + "/danger.wav"; }
 

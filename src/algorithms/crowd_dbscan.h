@@ -191,8 +191,13 @@ inline CrowdClusterFeatures CrowdDBSCAN::compute() const {
     // 按簇大小降序排序(簇中心同步排序)
     std::vector<int> order(nClusters);
     for (int c = 0; c < nClusters; ++c) order[c] = c;
+    // D3：并列簇必须有确定顺序，否则同一输入在不同 STL/不同运行间顺序漂移
+    // （std::sort 不稳定）。补簇下标 tie-break，保证可复现。
     std::sort(order.begin(), order.end(),
-              [&sizes](int a, int b) { return sizes[a] > sizes[b]; });
+              [&sizes](int a, int b) {
+                  if (sizes[a] != sizes[b]) return sizes[a] > sizes[b];
+                  return a < b;
+              });
     feat.cluster_sizes.resize(nClusters);
     feat.cluster_centers.resize(nClusters);
     for (int c = 0; c < nClusters; ++c) {

@@ -203,7 +203,10 @@ inline void associate(
 // 状态：x = [cx, cy, a, h, vcx, vcy, va, vh]
 // 运动模型：F = [[I4, dt*I4], [0, I4]]，观测 H = [I4 | 0]
 // ----------------------------------------------------------------------
-inline Box xyahToBox(const std::array<double, 4>& x) {
+// D4：形参必须是 8 维（kf.mean() 是 [cx,cy,a,h,vcx,vcy,va,vh]）；
+// 旧签名写 4 维导致 Track::box() 调用点编译不过（该头文件从未被任何 .cc include，
+// 所以 make test 一直发现不了）。函数体只使用 x[0..3]。
+inline Box xyahToBox(const std::array<double, 8>& x) {
     const double cx = x[0], cy = x[1], a = x[2], h = x[3];
     Box b;
     if (a <= 0.0 || h <= 0.0) {

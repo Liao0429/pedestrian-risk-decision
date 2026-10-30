@@ -76,9 +76,9 @@ spi@ff500000 {
         fps = <0x1e>;
         buswidth = <0x08>;
         debug = <0x07>;
-        led-gpios    = <0x47 0x08 0x00>;   /* GPIO2_C0 背光 */
-        dc-gpios     = <0x47 0x09 0x00>;  /* GPIO2_C1 DC */
-        reset-gpios    = <0x35 0x13 0x01>;  /* GPIO1_C3 复位，低有效 */
+        led-gpios    = <0x47 0x08 0x00>;   /* 实测原值：GPIO2_B0 = sysfs 72 背光 */
+        dc-gpios     = <0x47 0x09 0x00>;  /* 实测原值：GPIO2_B1 = sysfs 73 DC */
+        reset-gpios    = <0x35 0x13 0x01>;  /* GPIO1_C3 = sysfs 51 —— 实测是 SPI0_MISO，冲突！ */
     };
 };
 ```
@@ -215,12 +215,20 @@ udevadm control --reload-rules && udevadm trigger
 
 现有 fbtft 节点给出了板载 LCD FPC 的 GPIO 定义，ILI9341 通用：
 
-| 信号 | GPIO | 说明 |
-|---|---|---|
-| DC | GPIO2_C1 | 数据/命令选择 |
-| RESET | GPIO1_C3 | 复位，**低有效**（`GPIO_ACTIVE_LOW`） |
-| 背光 BL | GPIO2_C0 | 高电平点亮 |
-| SCLK/MOSI/MISO/CS | SPI0 四线 | 复用引脚已由 pinctrl-0 配置 |
+| 信号 | GPIO（**2026-10-30 读 /proc/device-tree 实测原值**） | sysfs | 说明 |
+|---|---|---|---|
+| DC | GPIO2_B1（`<&gpio2 9 0>`） | **73** | 数据/命令选择（旧注释误写 GPIO2_C1） |
+| RESET | GPIO1_C3（`<&gpio1 19 1>`） | **51** | ❌ **实测 pin51 = spi0m0-miso**，与 ILI9341 读 ID 冲突，**不可照抄** |
+| 背光 BL | GPIO2_B0（`<&gpio2 8 0>`） | **72** | 高电平点亮（旧注释误写 GPIO2_C0） |
+| SCLK | SPI0（spi0m0-clk） | 49 | GPIO1_C1 |
+| MOSI | SPI0（spi0m0-mosi） | 50 | GPIO1_C2 |
+| MISO | SPI0（spi0m0-miso） | 51 | GPIO1_C3 ← 与上面 RESET 同脚，说明该参考节点不能复用 |
+| CS | SPI0（spi0m0-cs0） | 48 | GPIO1_C0 |
+
+> 实测另见：板上**只有 `/dev/spidev0.0`**（无 spidev0.1、SPI1 disabled）、
+> **没有 `/dev/i2c-2`**（只有 i2c-3/i2c-4）、**没有 `/dev/ttyS*`**。
+> 外部 ILI9341 的 DC/RST 请另选空闲 GPIO；触摸 T_CS/PENIRQ 也必须用 GPIO（J11 没有这两脚）。
+> 完整对照见 [`pin_map_verified.md`](./pin_map_verified.md)。
 
 > ⚠️ 若 2.8 寸屏通过排针外接而非板载 FPC，请以《答辩硬件展示方案 v2》的 PCB 原理图
 > 为准核对实际引脚，避免与扩展板冲突。

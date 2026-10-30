@@ -19,10 +19,10 @@
 //   - HardwareSelfTest 聚合执行 6 项检测，生成 SelftestResult 数组并统计
 //     PASS/FAIL；任何一项失败都不影响其余项继续检测。
 //
-// 集成示例（板端 CLI 见 selftest_main.cc）：
-//   hw::SysfsGpio  loopGpio(56);            // LED 红（写读回）
-//   hw::SysfsGpio  btnGpio(92);             // 按键
-//   hw::SysfsPwm   pwm(0, 0);               // 云台 PAN
+// 集成示例（板端 CLI 见 selftest_main.cc；引脚为 2026-10-30 实机校准值）：
+//   hw::SysfsGpio  loopGpio(56);            // GPIO1_D0；空闲脚请按 pinmux 实测替换
+//   hw::SysfsGpio  btnGpio(67);             // 按键 GPIO2_A3_d（排针 Pin27；旧值 92 是 GPIO2_D4）
+//   hw::SysfsPwm   pwm(8, 0);               // 云台 PAN = PWM8_M1（板上仅 pwmchip8/9，npwm=1）
 //   hw::ShellSelftestProbe probe;
 //   hw::HardwareSelfTest st(&loopGpio, &pwm, &probe);
 //   st.setButtonGpio(&btnGpio);
@@ -39,6 +39,7 @@
 #include <string>
 
 #include "gpio.h"
+#include "ili9341.h"   // 真实读 0xD3 版本 ID（SPI_LCD_ID 项）
 #include "servo.h"
 
 namespace hw {
@@ -177,6 +178,11 @@ public:
     // 按键 GPIO 与写读回 GPIO 不同时，单独设置
     void setButtonGpio(Gpio* gpio) { m_btnGpio = gpio; }
 
+    // 注入已初始化的 ILI9341 驱动：SPI_LCD_ID 项将优先用真实 SPI 读 0xD3
+    // （实测 spidev@0 的 compatible 是 "rockchip,spidev"，shell 探测命令永远
+    //  读不到 0x9341，只有真读寄存器才能作为判据）。未注入时回退 shell 探测。
+    void setLcd(Ili9341* lcd) { m_lcd = lcd; }
+
     // SPI 设备节点（默认 /dev/spidev0.0）
     void setSpiDevice(const char* dev) {
         m_spiDev = dev ? dev : "/dev/spidev0.0";
@@ -301,6 +307,28 @@ private:
 
     // 3. SPI 屏幕 ID：设备节点存在 + 探测命令输出含 "9341"
     void checkSpiLcdId() {
+        // 1) 首选真实驱动读版本 ID（0xD3 → 00 93 41 00）
+        if (m_lcd) {
+            if (!m_lcd->isOpen()) {
+                failItem(SelftestItem::SPI_LCD_ID, "ILI9341 驱动未 open()");
+                return;
+            }
+            uint8_t id[4] = { 0, 0, 0, 0 };
+            if (!m_lcd->readId(id)) {
+                failItem(SelftestItem::SPI_LCD_ID, "ILI9341 readId(0xD3) 传输失败");
+                return;
+            }
+            char buf[128];
+            std::snprintf(buf, sizeof(buf), "SPI 屏幕 ID = %02X %02X %02X %02X",
+                          id[0], id[1], id[2], id[3]);
+            if (id[1] == 0x93 && id[2] == 0x41) {
+                passItem(SelftestItem::SPI_LCD_ID, buf);
+            } else {
+                failItem(SelftestItem::SPI_LCD_ID, buf);
+            }
+            return;
+        }
+        // 2) 回退：设备节点存在 + shell 探测命令（仅证明总线可用，见 setLcd 注释）
         if (!m_probe) {
             failItem(SelftestItem::SPI_LCD_ID, "SelftestProbe 为空");
             return;
@@ -332,7 +360,7 @@ private:
         char out[256];
         if (!m_probe->runCmd(m_audioCmd.c_str(), out, sizeof(out))) {
             failItem(SelftestItem::USB_AUDIO,
-                     "aplay 无输出（aplay 缺失或无声卡）");
+                     "无输出（无声卡，或探测命令不可用）");
             return;
         }
         if (!strstr(out, "USB")) {
@@ -385,10 +413,15 @@ private:
     Gpio*           m_btnGpio;
     Pwm*            m_pwm;
     SelftestProbe*  m_probe;
+    Ili9341*        m_lcd = NULL;   // 可选：注入后 SPI_LCD_ID 走真实 0xD3 读
 
     std::string m_spiDev    = "/dev/spidev0.0";
     std::string m_spiCmd    = "cat /sys/bus/spi/devices/spi0.0/of_node/compatible 2>/dev/null";
-    std::string m_audioCmd  = "aplay -l 2>/dev/null";
+    // ⚠ 2026-10-31 真机实跑修正：默认探测命令原为 `aplay -l`，但 /dev/snd/* 属
+    // root:audio 0660，非 root 用户（board 的 pico 不在 audio 组）执行 aplay 会
+    // 得到 "no soundcards found" → 即使有声卡也误报 FAIL。/proc/asound/cards
+    // world-readable，且接上 USB 声卡时会显示 "USB-Audio"，故改用后者。
+    std::string m_audioCmd  = "cat /proc/asound/cards 2>/dev/null";
     std::string m_wifiCmd   = "ip -o -4 addr show wlan0 2>/dev/null";
 
     SelftestResult m_results[(int)SelftestItem::COUNT];

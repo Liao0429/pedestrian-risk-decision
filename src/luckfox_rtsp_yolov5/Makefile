@@ -4,10 +4,13 @@
 # 两个用途：
 #   1) `make test`   在主机（x86）编译并运行算法单元测试，无需 OpenCV/RKNN/RTSP。
 #   2) `make luckfox` 交叉编译开发板完整工程（需 Luckfox SDK 环境变量，见下方）。
+#   3) `make bench`  帧率微基准（主机 x86）：量化谱特征降频与预处理合并的收益。
 #
 # 依赖：
 #   - 主机测试仅需 g++（C++11）。
-#   - 交叉编译需要 Luckfox 官方工具链 + RKNN/RTSP/OpenCV 库（见 docs/ARCHITECTURE.md）。
+#   - 交叉编译需要 Luckfox SDK（board_sdk / luckfox_sdk，含 arm 工具链 + rknn 头
+#     + 库）。注意：yolov5.h / postprocess.h 由 SDK 的 include/rknn 提供，仓库内
+#     没有这两个文件，所以 -I 必须包含 $(LUCKFOX_SDK_ROOT)/include/rknn。
 # =============================================================================
 
 CXX      ?= g++
@@ -22,9 +25,9 @@ ALGO_HEADERS = include/enhanced_decision.h include/risk_config.h \
                ../algorithms/graph_laplacian.h ../algorithms/kalman_filter.h \
                ../algorithms/risk_fsm.h ../algorithms/minijson.h
 
-.PHONY: all test test-enhanced test-minijson test-risk-config test-golden \
+.PHONY: all test bench test-enhanced test-minijson test-risk-config test-golden \
         test-preprocess test-selftest test-lcd-menu test-ili9341 test-xpt2046 \
-        test-sysfs-spi clean help luckfox hardware-selftest
+        test-sysfs-spi clean help luckfox
 
 all: test
 
@@ -145,38 +148,77 @@ hardware-selftest: ../hardware/selftest_main.cc ../hardware/selftest.h \
 	    -o hardware_selftest
 
 # ---------------------------------------------------------------------------
+# 帧率微基准（主机 x86；不参与 make test，见 make bench）
+# 量化：① 谱特征 Jacobi 降频（每 N 帧 1 次）② 预处理单遍零拷贝 vs 旧多遍链路
+# ③ 每帧 memcpy 成本。数值是 host 标量口径，板端 NEON 路径见报告。
+# ---------------------------------------------------------------------------
+BENCH_BIN := $(TEST_DIR)/bench_pipeline
+
+bench: $(BENCH_BIN)
+
+$(BENCH_BIN): $(TEST_DIR)/bench_pipeline.cc $(SRC_DIR)/preprocess.cc \
+              include/preprocess.h include/enhanced_decision.h \
+              $(SRC_DIR)/enhanced_decision.cc ../algorithms/graph_laplacian.h
+	$(CXX) $(CXXFLAGS) $(INC) $(TEST_DIR)/bench_pipeline.cc \
+	    $(SRC_DIR)/preprocess.cc $(SRC_DIR)/enhanced_decision.cc -o $(BENCH_BIN)
+	./$(BENCH_BIN)
+
+# ---------------------------------------------------------------------------
 # 开发板交叉编译（需 Luckfox SDK）
 #
 # 环境变量：
-#   CROSS_COMPILE 交叉编译器前缀，如 arm-none-linux-gnueabihf-
-#   LUCKFOX_SDK_ROOT Luckfox SDK 根目录（含 librknnmrt.so / rtsp / rkaiq）
-#   OPENCV_ROOT    板端 OpenCV 安装前缀（可选，默认 SDK 自带）
+#   CROSS_COMPILE    交叉编译器前缀（默认 arm-none-linux-gnueabihf-）
+#   LUCKFOX_SDK_ROOT Luckfox SDK 根目录（含 include/rknn 头、lib/*.so）
+#   OPENCV_ROOT      SDK 自带 OpenCV 前缀（可选）
 #
-# 说明：完整工程依赖 RKNN 动态库/头文件、RTSP(librtsp_demo) 与 OpenCV。
-# 在 Luckfox SDK 内通常用 SDK 顶层 CMake 以 example 方式构建（见 skill
-# luckfox-pico-rv1106）。本目标提供等价命令的可追踪模板。
+# 实测复核（2026-10-30，Ubuntu 构建机 board_sdk 的 CMake flags.make/link.txt）：
+#   -D RV1106_1103 必须定义，否则 rknn_app_context_t 没有 input_mems/output_mems、
+#   postprocess.cc 会编到 rknn_output 分支（把 rknn_tensor_mem* 当 rknn_output* 用）。
+#   链接需 sample_comm / rockit / rockchip_mpp / rkaiq / rtsp / rga（旧目标只写了
+#   -lrknnmrt -lrtsp_demo，无法链接）。
 # ---------------------------------------------------------------------------
 CROSS_COMPILE    ?= arm-none-linux-gnueabihf-
 LUCKFOX_SDK_ROOT ?=
 OPENCV_ROOT      ?=
+
 CROSS_CXX         = $(CROSS_COMPILE)g++
+
+CROSS_CXXFLAGS = -std=c++11 -O2 -mfpu=neon-vfpv4 -mfloat-abi=hard -DNDEBUG \
+                 -DRV1106_1103 -DISP_HW_V30 -DRKPLATFORM=ON -DARCH64=OFF \
+                 -DROCKIVA -DUAPI2 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE \
+                 -D_FILE_OFFSET_BITS=64
+
+ifneq ($(strip $(OPENCV_ROOT)),)
+OPENCV_INC = -I$(OPENCV_ROOT)/include/opencv4
+OPENCV_LIB = -L$(OPENCV_ROOT)/lib
+else
+OPENCV_INC =
+OPENCV_LIB =
+endif
+
+SDK_INC = -I$(LUCKFOX_SDK_ROOT) -I$(LUCKFOX_SDK_ROOT)/include \
+          -I$(LUCKFOX_SDK_ROOT)/include/rknn -I$(LUCKFOX_SDK_ROOT)/include/rkaiq \
+          -I$(LUCKFOX_SDK_ROOT)/include/rkaiq/uAPI2 \
+          -I$(LUCKFOX_SDK_ROOT)/include/rkaiq/common \
+          -I$(LUCKFOX_SDK_ROOT)/include/rkaiq/xcore \
+          -I$(LUCKFOX_SDK_ROOT)/include/rkaiq/algos \
+          -I$(LUCKFOX_SDK_ROOT)/include/rkaiq/iq_parser \
+          -I$(LUCKFOX_SDK_ROOT)/include/rkaiq/iq_parser_v2 \
+          -I$(LUCKFOX_SDK_ROOT)/include/librga -I$(LUCKFOX_SDK_ROOT)/common \
+          -I$(LUCKFOX_SDK_ROOT)/common/isp3.x -I$(LUCKFOX_SDK_ROOT)/utils \
+          -Iinclude -I../algorithms $(OPENCV_INC)
 
 # main.cc 已默认启用增强决策路径（无需额外编译宏开关）
 luckfox:
 	@test -n "$(LUCKFOX_SDK_ROOT)" || { echo "错误: 请设置 LUCKFOX_SDK_ROOT"; exit 1; }
-	$(CROSS_CXX) -std=c++11 -O2 \
-	    -I$(LUCKFOX_SDK_ROOT)/include \
-	    -I$(LUCKFOX_SDK_ROOT)/3rdparty \
-	    -I$(OPENCV_ROOT)/include/opencv4 \
-	    $(SRC_DIR)/main.cc \
-	    $(SRC_DIR)/enhanced_decision.cc \
-	    $(SRC_DIR)/risk_engine.cc \
-	    $(SRC_DIR)/yolov5.cc \
-	    $(SRC_DIR)/postprocess.cc \
-	    $(SRC_DIR)/luckfox_mpi.cc \
+	$(CROSS_CXX) $(CROSS_CXXFLAGS) $(SDK_INC) \
+	    $(SRC_DIR)/main.cc $(SRC_DIR)/enhanced_decision.cc $(SRC_DIR)/risk_engine.cc \
+	    $(SRC_DIR)/yolov5.cc $(SRC_DIR)/postprocess.cc $(SRC_DIR)/luckfox_mpi.cc \
 	    $(SRC_DIR)/preprocess.cc \
-	    -L$(LUCKFOX_SDK_ROOT)/lib -lrknnmrt -lrtsp_demo -lopencv_core -lopencv_imgproc \
-	    -lpthread -o luckfox_pico_rtsp_yolov5
+	    -L$(LUCKFOX_SDK_ROOT)/lib $(OPENCV_LIB) -Wl,-rpath-link,$(LUCKFOX_SDK_ROOT)/lib \
+	    -lrknnmrt -lsample_comm -lrockit -lrockchip_mpp -lrkaiq -lrtsp -lrga \
+	    -lopencv_core -lopencv_imgproc -lpthread -lrt -ldl -lm \
+	    -o luckfox_pico_rtsp_yolov5
 	@echo "产物: ./luckfox_pico_rtsp_yolov5（用 CROSS_COMPILE 前缀调用 $(CXX) 即交叉编译）"
 
 clean:
@@ -191,11 +233,13 @@ clean:
 	      $(TEST_DIR)/test_ili9341 \
 	      $(TEST_DIR)/test_xpt2046 \
 	      $(TEST_DIR)/test_sysfs_spi \
+	      $(BENCH_BIN) \
 	      hardware_selftest \
 	      luckfox_pico_rtsp_yolov5
 
 help:
 	@echo "目标:"
 	@echo "  make test        编译并运行主机算法单元测试（推荐先跑这个）"
+	@echo "  make bench       帧率微基准：谱特征降频 + 预处理合并的前后对比"
 	@echo "  make luckfox     交叉编译开发板完整工程（需 LUCKFOX_SDK_ROOT）"
 	@echo "  make clean       清理产物"

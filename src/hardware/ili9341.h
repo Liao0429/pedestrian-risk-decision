@@ -14,13 +14,23 @@
 //   - readId() 支持自检项：读 0xD3 返回 00 93 41 00（ILI9341 版本 ID）。
 //
 // 集成方式（真机阶段，见 docs/hardware/lvgl_board_port.md 路线图步骤 4）：
+//   hw::SysfsGpio dc(dcPin), rst(rstPin), bl(blPin);  // 编号须按 pinmux 实测重选
 //   SysfsSpiBus spi("/dev/spidev0.0");
-//   SysfsLcdPins pins(dcGpio, resetGpio, blGpio);
+//   SysfsLcdPins pins(&dc, &rst, &bl);
 //   hw::Ili9341 lcd(&spi, &pins);
 //   lcd.setDelayFn(板端延时回调);   // 例如 [](uint32_t ms){ usleep(ms*1000); }
+//   lcd.setRotation(0);             // ★ 必调：默认 MADCTL=0x08 只能竖屏（见下方说明）
 //   lcd.begin();
 //   lcd.fillScreen(hw::rgb565(0, 0, 0));
 //   ... 主循环：lcd.flush() 或直接 fillRect 局部刷新
+//
+// 2026-10-30 板上实测（Luckfox Pico Max，证据见 docs/hardware/pin_map_verified.md）：
+//   - SPI0 复用实测在 GPIO1_C0..C3 = sysfs 48/49/50/51（cs0/clk/mosi/miso）；
+//     设备节点只有 /dev/spidev0.0（SPI1 disabled、无 spidev0.1）；
+//   - PCB 排针 J11 只有 8 脚（5V/GND/SCLK/MOSI/MISO/CS/DC/RST），**没有背光脚**：
+//     背光通常直接并到 3.3V/5V 常亮，此时 LcdPins::backlight 用哑实现返回 true 即可；
+//   - 厂商 fbtft 参考节点把 LCD RESET 定义成 GPIO1_C3 = sysfs 51，与 SPI0_MISO 冲突，
+//     不要照抄；DC/RST 请另选未被复用占用的空闲 GPIO。
 // =============================================================================
 #pragma once
 
@@ -51,6 +61,21 @@ enum : uint8_t {
 };
 
 // -----------------------------------------------------------------------------
+// MADCTL（0x36）常用值：旋转位 + BGR 位
+//   ⚠ ILI9341 面板原生寻址是 240(列)×320(行)。本驱动按 320×240 横向使用，
+//     MADCTL 必须带 MV（行/列交换，0x20），否则 CASET 写 0..319 会溢出/回绕，
+//     表现为花屏或每行末 80 像素折到下一行。
+//     0x08 只有 BGR 位、没有 MV → 仅适用 240×320 竖屏，**不能**用于本驱动。
+//   BGR 位（0x08）是绝大多数 2.8 寸 ILI9341 模组的正确取值；若整屏红蓝互换，
+//   把 0x08 清掉即可。
+// -----------------------------------------------------------------------------
+enum : uint8_t {
+    ILI9341_MADCTL_LANDSCAPE   = 0x28,  // MV|BGR：320×240（推荐真机值）
+    ILI9341_MADCTL_LANDSCAPE_R = 0xE8,  // MX|MY|MV|BGR：320×240（旋转 180°）
+    ILI9341_MADCTL_PORTRAIT    = 0x48,  // MX|BGR：240×320（竖屏；本驱动不可用）
+};
+
+// -----------------------------------------------------------------------------
 // SPI 总线抽象
 // -----------------------------------------------------------------------------
 class SpiBus {
@@ -62,6 +87,14 @@ public:
     // 全双工 transfer：tx 发送 len 字节（可 NULL=纯读），rx 接收 len 字节（可
     // NULL=纯写）。返回 false 表示传输失败。
     virtual bool transfer(const uint8_t* tx, uint8_t* rx, size_t len) = 0;
+
+    // 片选会话（可选）：默认空实现，主机 FakeSpi 无需理会。
+    // 真机 SysfsSpiBus 若配置了手工片选 GPIO（见 sysfs_spi.h setCsGpio），
+    // beginCs() 会拉低片选、endCs() 释放，使「命令 + 读取」跨多次 transfer()
+    // 时片选保持有效（XPT2046/ILI9341 读寄存器必须如此；spidev 默认每条
+    // ioctl 消息结束就释放硬件片选）。
+    virtual bool beginCs() { return true; }
+    virtual bool endCs() { return true; }
 };
 
 // -----------------------------------------------------------------------------
@@ -105,6 +138,17 @@ public:
     // 注入延时回调（板端用 usleep；测试注入计数回调）。不设置则跳过延时。
     void setDelayFn(DelayFn fn) { delayFn_ = fn; }
 
+    // 设置 MADCTL 原始值（默认 0x08，仅竖屏）。真机请用 setRotation 或命名常量。
+    void setMadctl(uint8_t v) { madctl_ = v; }
+    uint8_t madctl() const { return madctl_; }
+
+    // 320×240 横向的两种方向：0=MV|BGR(0x28) 推荐；1=MX|MY|MV|BGR(0xE8) 转 180°。
+    // 本驱动固定 320×240，竖屏值（0x08/0x48）会因 CASET 溢出而花屏。
+    void setRotation(int r) {
+        if (r == 0)      madctl_ = ILI9341_MADCTL_LANDSCAPE;
+        else if (r == 1) madctl_ = ILI9341_MADCTL_LANDSCAPE_R;
+    }
+
     // 打开 SPI 并分配帧缓冲。可重复调用（已打开则直接返回 true）。
     bool open() {
         if (!spi_ || !pins_) return false;
@@ -134,28 +178,36 @@ public:
         if (!pins_->resetHigh()) return false;
         delay(120);
 
-        // 标准初始化序列（最小可用集：16bit 像素格式 + RGB 顺序 + 显示开）：
-        //   SWRESET -> SLPOUT -> COLMOD=0x55(16bit) -> MADCTL=0x08(RGB) -> DISPON
-        static const uint8_t colmod_data[] = { 0x55 };
-        static const uint8_t madctl_data[] = { 0x08 };
+        // 标准初始化序列（最小可用集：16bit 像素格式 + 屏幕方向 + 显示开）：
+        //   SWRESET -> SLPOUT -> COLMOD=0x55(16bit) -> MADCTL -> DISPON
+        // madctl_ 默认 0x08（保持与既有主机测试的字节流一致），真机务必先
+        // setRotation(0)/setMadctl(ILI9341_MADCTL_LANDSCAPE=0x28) 再 begin()。
+        uint8_t colmod_data[1] = { 0x55 };
+        uint8_t madctl_data[1] = { madctl_ };
         struct InitStep {
             uint8_t cmd;
             const uint8_t* data;
             uint8_t len;
         };
-        static const InitStep init[] = {
-            { ILI9341_SWRESET, nullptr,       0 },
-            { ILI9341_SLPOUT,  nullptr,       0 },
-            { ILI9341_COLMOD,  colmod_data,   sizeof(colmod_data) },
-            { ILI9341_MADCTL,  madctl_data,   sizeof(madctl_data) },
-            { ILI9341_DISPON,  nullptr,       0 },
+        const InitStep init[] = {
+            { ILI9341_SWRESET, nullptr,      0 },
+            { ILI9341_SLPOUT,  nullptr,      0 },
+            { ILI9341_COLMOD,  colmod_data,  1 },
+            { ILI9341_MADCTL,  madctl_data,  1 },
+            { ILI9341_DISPON,  nullptr,      0 },
         };
         for (size_t i = 0; i < sizeof(init) / sizeof(init[0]); ++i) {
             if (!writeCommand(init[i].cmd)) return false;
             if (init[i].len > 0 && !writeData(init[i].data, init[i].len)) {
                 return false;
             }
+            // 数据手册时序：SWRESET 后 ≥120ms、SLPOUT 后 ≥120ms 才能发下一条命令。
+            // delayFn_ 未注入时 delay() 为空操作（主机测试不受影响）。
+            if (init[i].cmd == ILI9341_SWRESET || init[i].cmd == ILI9341_SLPOUT) {
+                delay(120);
+            }
         }
+        delay(10);   // DISPON 后留出上屏时间
         if (!pins_->backlight(true)) return false;
         return true;
     }
@@ -287,14 +339,18 @@ public:
 
     // 读 ILI9341 版本 ID（自检用）：发送 0xD3 后读 4 字节，
     // 正常返回 {0x00, 0x93, 0x41, 0x00}，即 ID 0x9341。
+    // 两段传输之间片选必须保持有效（spidev 每条消息结束会释放硬件片选，
+    // 分两次裸 transfer 在真机上常读不到 ID）→ 用 beginCs/endCs 包住。
     bool readId(uint8_t out[4]) {
         if (!open_ || !out) return false;
         static const uint8_t cmd = ILI9341_RDID4;
-        if (!pins_->dcCommand()) return false;
-        if (!spi_->transfer(&cmd, nullptr, 1)) return false;
-        if (!pins_->dcData()) return false;
+        if (!spi_->beginCs()) return false;
+        bool ok = pins_->dcCommand() && spi_->transfer(&cmd, nullptr, 1) &&
+                  pins_->dcData();
         uint8_t rx[4] = { 0, 0, 0, 0 };
-        if (!spi_->transfer(nullptr, rx, 4)) return false;
+        if (ok) ok = spi_->transfer(nullptr, rx, 4);
+        spi_->endCs();
+        if (!ok) return false;
         out[0] = rx[0];
         out[1] = rx[1];
         out[2] = rx[2];
@@ -311,6 +367,9 @@ private:
     LcdPins* pins_;
     bool open_ = false;
     DelayFn delayFn_ = nullptr;
+    // 0x08 = 仅 BGR（竖屏），保留为默认值以兼容既有主机测试的字节流断言；
+    // 真机必须 setRotation(0)->0x28 或 setMadctl(ILI9341_MADCTL_LANDSCAPE)。
+    uint8_t madctl_ = 0x08;
     std::vector<uint16_t> fb_;
 };
 

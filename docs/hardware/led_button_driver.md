@@ -21,12 +21,19 @@
 
 ## 2. 引脚映射（Luckfox Pico Max，以实测为准）
 
-| 信号 | 排针 | GPIO 名 | sysfs 编号参考 | 说明 |
+| 信号 | 排针 | GPIO 名 | sysfs 编号（实测） | 说明 |
 |---|---|---|---|---|
-| 按键（告警使能/功能键） | Pin 92 | GPIO1_C3_d | `51`（GPIO1=32 起 + C 组 16 + pin3） | 10kΩ 下拉到 GND，按下为高 |
-| LED 红 | 待定版 | 待定 | 构造参数传入 | 高电平点亮 |
+| 按键（告警使能/功能键） | **Pin 27** | **GPIO2_A3_d** | **`67`** | PCB J8(SW_ALARM)+R1 10kΩ 下拉到 GND，按下为高 |
+| LED 红 | 待定版 | 待定 | 构造参数传入 | 高电平点亮；**56/57/58 不可用**（见下） |
 | LED 绿 | 待定 | 待定 | 构造参数传入 | 高电平点亮 |
 | LED 蓝 | 待定 | 待定 | 构造参数传入 | 高电平点亮 |
+
+> ❌ 旧版本表写「按键 Pin 92 / GPIO1_C3_d / sysfs 51」是错的（2026-10-30 板上实测）：
+> - sysfs **92 = GPIO2_D4**（`/sys/class/gpio` 里 gpiochip2 base=64 可算），与按键无关；
+> - **GPIO1_C3 = sysfs 51 实测是 SPI0_MISO**（`pinmux-pins`: pin51 = spi0m0-miso），
+>   用作按键会与 ILI9341 读版本 ID 冲突；
+> - **56/57/58 也不是空闲脚**：GPIO1_D0/D1(56/57) 属 UART3_TX/RX，GPIO1_D2(58) 实测是 I2C3_SCL。
+> LED 三路请先用 `cat /sys/kernel/debug/pinctrl/*/pinmux-pins` 挑未复用脚再定版。
 
 > ⚠️ sysfs GPIO 编号算法：`bank*32 + group*8 + pin`（GPIO0=0~31，GPIO1=32~63）。
 > 实际以板面丝印与 `/sys/class/gpio` 实测为准；若节点缺失需先在设备树使能。
@@ -39,8 +46,9 @@
 #include "hardware/button.h"
 
 // 板端实例化（引脚按打样定版后填写）
-hw::SysfsGpio ledR(56), ledG(57), ledB(58);
-hw::SysfsGpio btnGpio(51);
+// ⚠ 引脚待实测定版：56/57/58 已被 UART3/I2C3 复用，这里只是占位
+hw::SysfsGpio ledR(0), ledG(0), ledB(0);
+hw::SysfsGpio btnGpio(67);      // GPIO2_A3_d（排针 Pin27）
 hw::RgbLed    statusLed(&ledR, &ledG, &ledB);
 hw::Button    alarmSwitch(&btnGpio, /*按下为高*/ true, /*防抖*/ 5);
 

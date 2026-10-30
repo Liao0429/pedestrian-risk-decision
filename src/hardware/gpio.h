@@ -7,11 +7,17 @@
 //   2. Gpio 抽象接口 + FakeGpio：让 LED/按键的“逻辑”（颜色映射、防抖、
 //      边沿检测）可以在无硬件的 PC/CI 上做单元测试。
 //
-// 引脚编号说明（Luckfox Pico Max，以板面丝印与 /sys/class/gpio 实测为准）：
-//   - 按键（告警使能/功能键）GPIO1_C3_d（排针 Pin 92），10kΩ 下拉，按下为高
-//   - 三色 LED 的 R/G/B 引脚尚未打样定版，由构造参数传入，默认值见
-//     docs/hardware/led_button_driver.md
-// 若 /sys/class/gpio 中找不到目标节点，需先在设备树中使能对应 GPIO。
+// 引脚编号说明（2026-10-30 Luckfox Pico Max 实机实测；sysfs 编号 = bank*32+group*8+pin）：
+//   - 按键（告警使能/功能键）：PCB Gerber 的 J8(SW_ALARM)+R1 设计为跳线到排针
+//     Pin27 = GPIO2_A3_d = sysfs 67，10kΩ 下拉到 GND，按下为高。
+//     ⚠ 不要再写「Pin 92」/「GPIO1_C3」：
+//       * sysfs 92 = GPIO2_D4（gpiochip2 base=64 实测），既不是 GPIO1_C3，也不对应排针 Pin；
+//       * GPIO1_C3 = sysfs 51 实测被 SPI0 复用为 MISO（pin 51 = spi0m0-miso），
+//         拿它做按键会与 ILI9341 读版本 ID 冲突。
+//   - 三色 LED 的 R/G/B 引脚尚未定版；注意 56/57/58 不是空闲脚：
+//     GPIO1_D0/D1（56/57）是 UART3_TX/RX（串口屏 J6 预留），GPIO1_D2（58）实测是 I2C3_SCL。
+//     选脚前先 cat /sys/kernel/debug/gpio 与 /sys/kernel/debug/pinctrl/*/pinmux-pins。
+// 若 /sys/class/gpio 中找不到目标节点，需先在设备树中使能对应 GPIO（并确认未被复用占用）。
 // =============================================================================
 #pragma once
 
@@ -96,6 +102,20 @@ public:
     }
 
     int gpio() const { return m_gpio; }
+
+    // 取消导出（自检/工具跑完清理现场用；幂等）。
+    // 2026-10-30 真机实跑：hardware_selftest 会把 -g/-b 的 GPIO 一直留在
+    // /sys/class/gpio 里占用（实测残留 gpio56/gpio67），CLI 退出前应调用本方法。
+    bool unexportPin() {
+        if (!m_exported) return true;
+        FILE* f = fopen("/sys/class/gpio/unexport", "w");
+        if (!f) return false;
+        fprintf(f, "%d", m_gpio);
+        fclose(f);
+        usleep(20000);
+        m_exported = false;
+        return true;
+    }
 
 private:
     int  m_gpio;

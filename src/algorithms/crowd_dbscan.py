@@ -31,8 +31,12 @@ import numpy as np
 
 __all__ = ["dbscan_labels", "dbscan_crowd_features", "UNCLASSIFIED", "NOISE"]
 
-UNCLASSIFIED = -1   # 尚未处理
-NOISE = -2          # 噪声点(不属任何簇)
+# 标签约定（必须与板端 crowd_dbscan.h 一致；下游按 -1 判噪声，取值不一致会漏判）：
+#   >0 : 簇编号（1..n_clusters）
+#   -1 : 噪声点（不属任何簇）
+#   -2 : 算法内部哨兵"尚未处理"，对外不会出现
+NOISE = -1          # 噪声点(不属任何簇)
+UNCLASSIFIED = -2   # 内部哨兵：尚未处理（勿与 NOISE 混淆）
 
 
 def _region_query(dist, i, eps):
@@ -55,7 +59,7 @@ def dbscan_labels(pts, eps, min_samples=2):
     返回
     ----
     labels : numpy.ndarray, shape (n,), dtype=int64
-        labels[i] = 簇编号(1..n_clusters) 或 NOISE(-2)。
+        labels[i] = 簇编号(1..n_clusters) 或 NOISE(-1)；-2 仅为内部哨兵，不会出现。
     n_clusters : int
         聚类簇数(噪声不计入)。
 
@@ -158,8 +162,10 @@ def dbscan_crowd_features(pts, eps, min_samples=2):
         sizes.append(int(mask.sum()))
         centers.append(pts[mask].mean(axis=0))
 
-    # 按簇大小降序排序(簇中心同步排序)
-    order = np.argsort(sizes)[::-1]
+    # 按簇大小降序排序(簇中心同步排序)。
+    # 并列时按簇编号升序：np.argsort 默认非稳定排序，叠加 [::-1] 后并列簇的
+    # 先后顺序不可复现，会让 cluster_centers 随实现/数据顺序漂移。
+    order = sorted(range(n_clusters), key=lambda c: (-sizes[c], c))
     sizes = [sizes[o] for o in order]
     centers = [tuple(float(v) for v in centers[o]) for o in order]
 

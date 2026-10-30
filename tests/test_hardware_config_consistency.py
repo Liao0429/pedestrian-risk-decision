@@ -4,7 +4,9 @@
 
 覆盖 ``config/default_config.json`` 在板端硬件链路中使用到的字段：
 
-1. ``conf_threshold``：默认 0.60；边界 0/1 合法；越界、非数值、布尔值抛异常。
+1. ``conf_threshold``：JSON 声明值 0.35（板端运行时消费，2026-10-30 起接入
+   ``risk_config.h``；离线原型脚本默认 0.25）；边界 0/1 合法；越界、非数值、
+   布尔值抛异常。
 2. ``target_classes``：默认 ``[0]``（person）；可切换 ``[2, 5]``（车辆）；空数组/越界 id 抛异常。
 3. ``class_conf_thresholds``：按 COCO 类别差异化阈值，键必须是 0~79，值必须在 [0, 1]。
 4. ``fsm.min_danger_n``：默认 3；小于 2 抛异常；并验证 Python 端 RiskFSM 的人数门控行为。
@@ -41,7 +43,12 @@ from algorithms.risk_fsm import RiskFSM, RiskFSMConfig  # noqa: E402
 
 CONFIG_PATH = os.path.join(PROJECT_ROOT, "config", "default_config.json")
 
-DEFAULT_CONF_THRESHOLD = 0.60
+# conf_threshold 的"声明默认值"。语义（2026-10-30 裁决）：
+#   - 板端运行时消费该键（risk_config.h 接入后生效），真源是 config/default_config.json；
+#   - 离线原型脚本 scripts/crowd_test.py 的 --conf 默认值保持 0.25（原型阈值语义不同）；
+#   - 历史沿革：0.60 -> (e1feef8 按键可调特性) -> a920704 revert -> fdece0d 定为 0.35。
+#     本文件旧的 0.60 断言是上述 revert 后的过期断言（algo-py round3 修正）。
+DEFAULT_CONF_THRESHOLD = 0.35
 DEFAULT_TARGET_CLASSES = [0]
 DEFAULT_MIN_DANGER_N = 3
 
@@ -166,16 +173,17 @@ def write_json(path, obj):
 # 1. conf_threshold
 # ---------------------------------------------------------------------------
 class TestConfThreshold:
-    def test_default_config_declares_060(self):
-        """默认配置未显式声明时，运行时取 0.60。"""
+    def test_default_config_declares_035(self):
+        """配置未显式声明 conf_threshold 时，取声明默认 0.35（与 JSON 真源一致）。"""
         cfg = load_risk_config({"edge_dist_m": 2.0})
-        assert cfg["conf_threshold"] == pytest.approx(0.60)
+        assert cfg["conf_threshold"] == pytest.approx(0.35)
 
     def test_default_config_file_loads(self):
+        """磁盘配置的 conf_threshold 必须等于声明默认值 0.35（板端真源不得漂移）。"""
         with open(CONFIG_PATH, "r", encoding="utf-8") as f:
             raw = json.load(f)
         cfg = load_risk_config(raw)
-        assert cfg["conf_threshold"] == pytest.approx(0.60)
+        assert cfg["conf_threshold"] == pytest.approx(0.35)
 
     @pytest.mark.parametrize("value", [0, 0.0, 1, 1.0, 0.60, 0.25])
     def test_boundaries_and_common_values_accepted(self, value):

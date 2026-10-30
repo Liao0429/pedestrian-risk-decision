@@ -30,6 +30,24 @@ import numpy as np
 __all__ = ["KalmanFilter", "KalmanTracker"]
 
 
+def _inverse_2x2(m):
+    """2x2 矩阵求逆，行为与板端 kalman_filter.h 的 mat22Inverse 一致。
+
+    S = H P H^T + R 为对称正定矩阵，正常不会奇异；若行列式退化到 0（数值极端情况），
+    返回零矩阵 —— 等价于本帧不做修正、直接保留预测值，而不是让 np.linalg.inv 抛
+    LinAlgError 打断整帧流水线。板端 C++ 采用的是同一策略，此处保持两端一致。
+    """
+    det = m[0, 0] * m[1, 1] - m[0, 1] * m[1, 0]
+    if abs(det) < 1e-12:
+        return np.zeros((2, 2), dtype=np.float64)
+    inv_det = 1.0 / det
+    return np.array(
+        [[m[1, 1] * inv_det, -m[0, 1] * inv_det],
+         [-m[1, 0] * inv_det, m[0, 0] * inv_det]],
+        dtype=np.float64,
+    )
+
+
 class KalmanFilter:
     """单目标常速度(CV)离散 Kalman 滤波器。
 
@@ -96,6 +114,9 @@ class KalmanFilter:
         # 观测噪声 R（两个方向独立同分布）
         r = self._sig_z * self._sig_z
         self._R = np.diag([r, r])
+        # 预缓存常量矩阵：correct() 每帧调用，避免重复分配 np.eye(4) / 重复转置
+        self._I4 = np.eye(4)
+        self._Ht = self._H.T.copy()
 
     # ------------------------------------------------------------------
     # 初始化
@@ -128,16 +149,15 @@ class KalmanFilter:
         if not self._initialized:
             raise RuntimeError("滤波器尚未初始化，请先调用 init()")
         z = np.asarray(z, dtype=np.float64).reshape(2)
-        # 新息协方差 S = H P H^T + R
-        S = self._H @ self._P @ self._H.T + self._R
+        # 新息协方差 S = H P H^T + R（2x2 对称正定，正常不会奇异）
+        S = self._H @ self._P @ self._Ht + self._R
         # 卡尔曼增益 K = P H^T S^-1
-        K = self._P @ self._H.T @ np.linalg.inv(S)
+        K = self._P @ self._Ht @ _inverse_2x2(S)
         # 新息
         y = z - self._H @ self._x
         # 状态与协方差更新
         self._x = self._x + K @ y
-        I = np.eye(4)
-        self._P = (I - K @ self._H) @ self._P
+        self._P = (self._I4 - K @ self._H) @ self._P
         return self.state
 
     def update(self, z):

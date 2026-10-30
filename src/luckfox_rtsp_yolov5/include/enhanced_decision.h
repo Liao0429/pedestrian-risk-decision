@@ -78,6 +78,12 @@ struct EnhancedConfig {
     double kalman_gate_m;              // 多目标最近邻关联门限（米）
     int    kalman_max_miss;            // 轨迹连续未匹配帧数上限，超过则删除
     bool   enable_smoothing;           // false 时直接透传脚点，不做 Kalman 平滑
+    // 谱特征(图拉普拉斯特征分解 Jacobi)降频：每 spectral_interval 帧重算 1 次，
+    // 中间帧复用上次结果。1=每帧都算（旧行为），<=0 视为 1。
+    // 取值依据：Jacobi 为 O(n^3*sweeps)，是热路径里唯一的超线性开销；n<=30 时
+    // 单次耗时在 A7 上约 1~3ms。取 3 是"帧率收益 / 特征滞后"的折中：30FPS 下
+    // 特征仍 10Hz 刷新，FSM confirm_up=3 的升级时延最坏 +2 帧。
+    int    spectral_interval;
 
     EnhancedConfig()
         : edge_dist_m(2.0),
@@ -87,7 +93,8 @@ struct EnhancedConfig {
           kalman_measurement_noise(0.5),
           kalman_gate_m(2.0),
           kalman_max_miss(5),
-          enable_smoothing(true) {}
+          enable_smoothing(true),
+          spectral_interval(3) {}
 };
 
 // 增强决策结果
@@ -122,8 +129,11 @@ public:
     // 内部：Kalman 平滑 -> GraphLaplacian 特征 -> RiskFSM 稳定等级。
     EnhancedResult processFrame(const std::vector<std::pair<float,float>>& groundPts);
 
-    // 重置内部状态（FSM 回到 SAFE、清空轨迹、清空历史）
+    // 重置内部状态（FSM 回到 SAFE、清空轨迹、清空历史、谱特征缓存）
     void reset();
+
+    // 自上次 reset() 以来实际执行图谱特征分解的次数（用于验证降频生效）
+    int spectralUpdates() const { return spectralUpdates_; }
 
     const EnhancedConfig& config() const { return cfg_; }
     const RiskFSM& fsm() const { return fsm_; }
@@ -159,6 +169,10 @@ private:
     uint32_t nextTrackId_;
     int      prevN_;       // 上一帧节点数，用于计算趋势
     double   lastScore_;
+    int      frameIdx_;           // 帧计数（降频用，从 1 开始）
+    bool     haveFeat_;           // 是否已有缓存的谱特征
+    int      spectralUpdates_;    // 特征分解实际执行次数（测试/统计用）
+    SpectralFeatures cachedFeat_; // 上一次谱特征（降频时复用）
 };
 
 } // namespace pedestrian

@@ -376,7 +376,8 @@ class TestCppAlgorithmLogic(unittest.TestCase):
     def cpp_style_dbscan(pts, eps, min_samples):
         """与 crowd_dbscan.h 中 CrowdDBSCAN::dbscan 相同的算法(逐行翻译)。"""
         n = len(pts)
-        UNCLASSIFIED, NOISE = -1, -2
+        # 与 crowd_dbscan.h 保持一致：噪声标签 -1，内部哨兵 -2
+        UNCLASSIFIED, NOISE = -2, -1
         labels = [UNCLASSIFIED] * n
         n_clusters = 0
         if n == 0:

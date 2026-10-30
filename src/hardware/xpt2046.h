@@ -8,8 +8,10 @@
 //
 // 设计：
 //   - 复用 hw::SpiBus 抽象（板端 SysfsSpiBus，测试 FakeSpi）。触摸芯片与
-//     屏幕共用同一 SPI 控制器但片选独立，板端为 XPT2046 建独立 spidev 节点
-//     （或 GPIO CS），对应独立的 SpiBus 实例；
+//     屏幕共用同一个 SPI 控制器；实测板上**只有 /dev/spidev0.0**（无 spidev0.1、
+//     SPI0 仅一组 cs0），因此 XPT2046 必须用 GPIO 手工片选：
+//     SysfsSpiBus("/dev/spidev0.0") + setCsGpio(&touchCs)，即与屏幕各用一个
+//     SysfsSpiBus 实例、各自一个片选 GPIO；
 //   - TouchPin 抽象：PENIRQ 引脚检测（低有效）。板端用 sysfs GPIO 输入，
 //     测试用 FakeTouchPin；不接 PENIRQ 时可配置用压力阈值判定触摸；
 //   - 命令字节兼容主流开源库（0xD0 读 X / 0x90 读 Y / 0xB0 读 Z1 / 0xC0 读
@@ -21,8 +23,10 @@
 //   - 抗噪：采样 N 次取中值（默认 3 次），抑制电阻屏尖峰。
 //
 // 集成方式（真机阶段，见 docs/hardware/lvgl_board_port.md 路线图步骤 6）：
-//   SysfsSpiBus tSpi("/dev/spidev0.1");       // XPT2046 独立片选
-//   SysfsTouchPin pen(penGpio);               // PENIRQ 输入
+//   hw::SysfsGpio touchCs(touchCsPin);        // T_CS 接空闲 GPIO（非 Pin12 硬件 CS0）
+//   SysfsSpiBus tSpi("/dev/spidev0.0", 2000000);   // 与 LCD 共用同一个 spidev
+//   tSpi.setCsGpio(&touchCs);                  // ★ 手工片选（板上无 spidev0.1）
+//   SysfsTouchPin pen(penGpio);               // PENIRQ 输入（低有效；J11 未引出）
 //   hw::Xpt2046 tp(&tSpi, &pen);
 //   tp.setCalibration({ .rawXMin=200, .rawXMax=3900, ... });  // 真机标定
 //   tp.open();
@@ -123,11 +127,17 @@ public:
 
     // ---- 原始数据读取 ----
     // 发送控制字节并连续读 2 字节，返回 16 位原始值（未提取 12 位）。
+    // 真机关键：命令字节与随后的 2 字节数据必须**同一个片选周期**内完成。
+    // spidev 每条 ioctl 消息结束都会释放硬件片选；若裸调两次 transfer()，
+    // XPT2046 会在片选抬高时中止转换，读回 0/噪声 → 用 beginCs/endCs 包住。
     bool readRaw(uint8_t cmd, uint16_t& raw) {
         if (!open_ || !spi_) return false;
-        if (!spi_->transfer(&cmd, nullptr, 1)) return false;
+        if (!spi_->beginCs()) return false;
+        bool ok = spi_->transfer(&cmd, nullptr, 1);
         uint8_t rx[2] = { 0, 0 };
-        if (!spi_->transfer(nullptr, rx, 2)) return false;
+        if (ok) ok = spi_->transfer(nullptr, rx, 2);
+        spi_->endCs();
+        if (!ok) return false;
         raw = static_cast<uint16_t>((static_cast<uint16_t>(rx[0]) << 8) | rx[1]);
         return true;
     }

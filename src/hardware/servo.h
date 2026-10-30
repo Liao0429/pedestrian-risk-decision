@@ -9,11 +9,14 @@
 //      对 PWM 不可用容错（init 失败仅禁用，不崩溃）；
 //   3. 所有逻辑可在 PC/CI 上用 FakePwm 做单元测试，无需真实舵机。
 //
-// 引脚/节点说明（Luckfox Pico Max，以板面丝印与 /sys/class/pwm 实测为准）：
-//   - 云台 PAN  舵机接 PWM 通道 0（pwmchip0/pwm0）
-//   - 云台 TILT 舵机接 PWM 通道 1（pwmchip0/pwm1）
-//   若节点不存在，需先在设备树中使能对应 PWM。详见
-//   docs/hardware/tracking_servo.md 与 docs/hardware/HARDWARE_BUILD_GUIDE.md。
+// 引脚/节点说明（2026-10-30 Luckfox Pico Max 实机实测，见 docs/hardware/pin_map_verified.md）：
+//   - 板上只有 pwmchip8（ff490000.pwm）与 pwmchip9（ff490010.pwm）两个 PWM 控制器，
+//     且 **每个 pwmchip 只有 1 个通道**（npwm=1）→ 通道号必须为 0；
+//     pwmchip0、pwmchip0/pwm1 在这块板上不存在（pwm0~7/10/11 全部 status=disabled）。
+//   - 云台 PAN（Yaw）  = PWM8_M1 = GPIO1_C4_d（sysfs 52，排针 Pin7）→ SysfsPwm(8, 0)
+//   - 云台 TILT（Pitch）= PWM9_M1 = GPIO1_C5_d（sysfs 53，排针 Pin6）→ SysfsPwm(9, 0)
+//   两个控制器设备树已默认使能，无需改 dtb；但写 /sys/class/pwm/.../export 需要 root。
+//   详见 docs/hardware/tracking_servo.md 与 docs/hardware/HARDWARE_BUILD_GUIDE.md。
 // =============================================================================
 #pragma once
 
@@ -86,6 +89,22 @@ public:
 
     int chip() const { return m_chip; }
     int channel() const { return m_chan; }
+
+    // 取消导出（自检/工具跑完清理现场用；幂等）。
+    // 2026-10-30 真机实跑：自检会一直占着 pwmchip8/pwm0，需显式 uexport。
+    bool unexportPin() {
+        if (!m_exported) return true;
+        char p[64];
+        snprintf(p, sizeof(p), "/sys/class/pwm/pwmchip%d/unexport", m_chip);
+        FILE* f = fopen(p, "w");
+        if (!f) return false;
+        fprintf(f, "%d", m_chan);
+        fclose(f);
+        usleep(20000);
+        m_exported = false;
+        m_enabled = false;
+        return true;
+    }
 
 private:
     bool writeFile(const char* attr, long val) {

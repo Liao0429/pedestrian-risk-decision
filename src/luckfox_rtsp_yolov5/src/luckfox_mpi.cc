@@ -55,6 +55,8 @@ int vi_dev_init() {
 		ret = RK_MPI_VI_SetDevBindPipe(devId, &stBindPipe);
 		if (ret != RK_SUCCESS) {
 			printf("RK_MPI_VI_SetDevBindPipe %x\n", ret);
+			// 错误路径回滚：Dev 已 Enable，不 Disable 会残留设备句柄
+			RK_MPI_VI_DisableDev(devId);
 			return -1;
 		}
 	} else {
@@ -78,14 +80,22 @@ int vi_chn_init(int channelId, int width, int height) {
 	vi_chn_attr.enPixelFormat = RK_FMT_YUV420SP;
 	vi_chn_attr.enCompressMode = COMPRESS_MODE_NONE; // COMPRESS_AFBC_16x16;
 	vi_chn_attr.u32Depth = 2; //0, get fail, 1 - u32BufCount, can get, if bind to other device, must be < u32BufCount
+	// 旧实现用 ret |= ... 合并两步返回值：SetChnAttr 失败但 EnableChn 成功时错误码
+	// 被掩盖、且已使能的通道无人 Disable（资源泄漏）；两个错误码位或还可能互相抵消。
+	// 改为逐步检查 + 失败回滚。
 	ret = RK_MPI_VI_SetChnAttr(0, channelId, &vi_chn_attr);
-	ret |= RK_MPI_VI_EnableChn(0, channelId);
-	if (ret) {
-		printf("ERROR: create VI error! ret=%d\n", ret);
-		return ret;
+	if (ret != RK_SUCCESS) {
+		printf("ERROR: RK_MPI_VI_SetChnAttr ret=%x\n", ret);
+		return -1;
+	}
+	ret = RK_MPI_VI_EnableChn(0, channelId);
+	if (ret != RK_SUCCESS) {
+		printf("ERROR: RK_MPI_VI_EnableChn ret=%x\n", ret);
+		RK_MPI_VI_DisableChn(0, channelId);
+		return -1;
 	}
 
-	return ret;
+	return 0;
 }
 
 int venc_init(int chnId, int width, int height, RK_CODEC_ID_E enType) {
@@ -108,7 +118,11 @@ int venc_init(int chnId, int width, int height, RK_CODEC_ID_E enType) {
 	}
 
 	stAttr.stVencAttr.enType = enType;
-	stAttr.stVencAttr.enPixelFormat = RK_FMT_RGB888;
+	// 帧缓冲是 OpenCV BGR 字节序（B,G,R）。旧值 RK_FMT_RGB888 按内存字节序 R,G,B
+	// 解释，导致整条 RTSP 流 R/B 互换（2026-10-30 抓帧实测：画黄显青、画红显蓝）。
+	// 历史上未暴露是因为旧链路的 cvtColor NV21 别名错误恰好与之抵消；该错误修复后
+	// 必须用 BGR888 才能让流内场景与叠加层颜色所见即所得。
+	stAttr.stVencAttr.enPixelFormat = RK_FMT_BGR888;
 	if (enType == RK_VIDEO_ID_AVC)
 		stAttr.stVencAttr.u32Profile = H264E_PROFILE_HIGH;
 	stAttr.stVencAttr.u32PicWidth = width;
@@ -130,6 +144,8 @@ int venc_init(int chnId, int width, int height, RK_CODEC_ID_E enType) {
 	venc_ret = RK_MPI_VENC_StartRecvFrame(chnId, &stRecvParam);
 	if (venc_ret != RK_SUCCESS) {
 		printf("RK_MPI_VENC_StartRecvFrame %x\n", venc_ret);
+		// 错误路径回滚：通道已 Create，不 Destroy 会残留（restart 后 CreateChn 失败）
+		RK_MPI_VENC_DestroyChn(chnId);
 		return -1;
 	}
 

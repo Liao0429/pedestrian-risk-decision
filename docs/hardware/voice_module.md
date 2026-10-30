@@ -1,5 +1,15 @@
 # 语音告警模块设计方案
 
+> ⚠ **2026-10-30 实测校准（hardware-hw / task-3）**：本文档部分引脚/方案与真机实测冲突。
+> **引脚与总线请以 [`pin_map_verified.md`](./pin_map_verified.md) 为唯一事实源**；
+> 交叉验证结论见 [`docs/review/20261030_round3/hardware_pcb_consistency.md`](../review/20261030_round3/hardware_pcb_consistency.md)。
+>
+> 具体冲突：最终选定的方案 E（USB 喇叭 + aplay）在实机上**当前不可用**：
+> `/proc/asound/cards` 只有 `card 0: rvacodec`，`/sys/class/udc = ffb00000.usb`（gadget 模式），
+> `/sys/bus/usb/devices` 为空 → 必须先开 USB host 模式才能接 USB 声卡。
+> `voice_alert.cc` 已改为 init() 检测 card 是否存在并回退 ALSA `default`。
+> 本文的 UART4 方案（DFPlayer/JQ8900）已被 v3 手册删除（UART4 与 PWM8/9 同脚，且无 /dev/ttyS*）。
+
 > 项目：基于 C++ 的边缘端轻量化行人感知与风险决策软件系统（Luckfox Pico Max / RV1106）
 > 需求：当风险决策引擎判定为 **WARNING / DANGER** 时，通过语音播报提醒。
 > 本文档对比可选硬件方案、给出推荐、接线、控制协议、C++ 集成方式与播报策略。

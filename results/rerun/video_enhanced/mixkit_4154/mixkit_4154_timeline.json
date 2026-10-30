@@ -1,0 +1,1202 @@
+[
+  {
+    "frame": 0,
+    "level": "SAFE",
+    "n": 15,
+    "density": 0.3047619047619048,
+    "r_gcc": 0.8666666666666667,
+    "fiedler": 4.72110123737666e-16
+  },
+  {
+    "frame": 1,
+    "level": "SAFE",
+    "n": 19,
+    "density": 0.25146198830409355,
+    "r_gcc": 0.8947368421052632,
+    "fiedler": 3.113513255849111e-15
+  },
+  {
+    "frame": 2,
+    "level": "WARNING",
+    "n": 24,
+    "density": 0.3079710144927536,
+    "r_gcc": 0.9166666666666666,
+    "fiedler": 1.9107531511748264e-15
+  },
+  {
+    "frame": 3,
+    "level": "WARNING",
+    "n": 25,
+    "density": 0.31333333333333335,
+    "r_gcc": 0.88,
+    "fiedler": 2.314481031825069e-15
+  },
+  {
+    "frame": 4,
+    "level": "WARNING",
+    "n": 25,
+    "density": 0.32,
+    "r_gcc": 0.88,
+    "fiedler": 1.8840642370868173e-16
+  },
+  {
+    "frame": 5,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.31384615384615383,
+    "r_gcc": 1.0,
+    "fiedler": 0.262848585640778
+  },
+  {
+    "frame": 6,
+    "level": "DANGER",
+    "n": 28,
+    "density": 0.29365079365079366,
+    "r_gcc": 1.0,
+    "fiedler": 0.5314191362519923
+  },
+  {
+    "frame": 7,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.301994301994302,
+    "r_gcc": 1.0,
+    "fiedler": 0.6232463604316221
+  },
+  {
+    "frame": 8,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.2792022792022792,
+    "r_gcc": 1.0,
+    "fiedler": 0.5365492931289264
+  },
+  {
+    "frame": 9,
+    "level": "DANGER",
+    "n": 28,
+    "density": 0.2830687830687831,
+    "r_gcc": 1.0,
+    "fiedler": 0.5567524180479102
+  },
+  {
+    "frame": 10,
+    "level": "DANGER",
+    "n": 28,
+    "density": 0.2804232804232804,
+    "r_gcc": 1.0,
+    "fiedler": 0.5547886305413626
+  },
+  {
+    "frame": 11,
+    "level": "DANGER",
+    "n": 29,
+    "density": 0.27832512315270935,
+    "r_gcc": 1.0,
+    "fiedler": 0.5531583008136431
+  },
+  {
+    "frame": 12,
+    "level": "DANGER",
+    "n": 29,
+    "density": 0.27586206896551724,
+    "r_gcc": 1.0,
+    "fiedler": 0.38861075834855674
+  },
+  {
+    "frame": 13,
+    "level": "DANGER",
+    "n": 29,
+    "density": 0.28078817733990147,
+    "r_gcc": 1.0,
+    "fiedler": 0.389713669806492
+  },
+  {
+    "frame": 14,
+    "level": "DANGER",
+    "n": 28,
+    "density": 0.291005291005291,
+    "r_gcc": 1.0,
+    "fiedler": 0.397260573401474
+  },
+  {
+    "frame": 15,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.31384615384615383,
+    "r_gcc": 1.0,
+    "fiedler": 0.7239445826768486
+  },
+  {
+    "frame": 16,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.32,
+    "r_gcc": 1.0,
+    "fiedler": 0.7561002850960387
+  },
+  {
+    "frame": 17,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.3169230769230769,
+    "r_gcc": 1.0,
+    "fiedler": 0.7522935528504733
+  },
+  {
+    "frame": 18,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.3169230769230769,
+    "r_gcc": 1.0,
+    "fiedler": 0.7522935528504733
+  },
+  {
+    "frame": 19,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.3076923076923077,
+    "r_gcc": 1.0,
+    "fiedler": 0.738473232711341
+  },
+  {
+    "frame": 20,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.31384615384615383,
+    "r_gcc": 1.0,
+    "fiedler": 0.7558286371446394
+  },
+  {
+    "frame": 21,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.31076923076923074,
+    "r_gcc": 1.0,
+    "fiedler": 0.7692346305725353
+  },
+  {
+    "frame": 22,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.30153846153846153,
+    "r_gcc": 1.0,
+    "fiedler": 0.5864679670242678
+  },
+  {
+    "frame": 23,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.3076923076923077,
+    "r_gcc": 1.0,
+    "fiedler": 0.6210406654114975
+  },
+  {
+    "frame": 24,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.3076923076923077,
+    "r_gcc": 1.0,
+    "fiedler": 0.5928383116415963
+  },
+  {
+    "frame": 25,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.3162393162393162,
+    "r_gcc": 1.0,
+    "fiedler": 0.5768845556782767
+  },
+  {
+    "frame": 26,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.3190883190883191,
+    "r_gcc": 1.0,
+    "fiedler": 0.5345497632156718
+  },
+  {
+    "frame": 27,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.3247863247863248,
+    "r_gcc": 1.0,
+    "fiedler": 0.6024735356111178
+  },
+  {
+    "frame": 28,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.33048433048433046,
+    "r_gcc": 1.0,
+    "fiedler": 0.8349795994578456
+  },
+  {
+    "frame": 29,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.3476923076923077,
+    "r_gcc": 1.0,
+    "fiedler": 0.7510833771690694
+  },
+  {
+    "frame": 30,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.3333333333333333,
+    "r_gcc": 1.0,
+    "fiedler": 0.7014398778204366
+  },
+  {
+    "frame": 31,
+    "level": "DANGER",
+    "n": 25,
+    "density": 0.30333333333333334,
+    "r_gcc": 1.0,
+    "fiedler": 0.5543045366172156
+  },
+  {
+    "frame": 32,
+    "level": "DANGER",
+    "n": 25,
+    "density": 0.30666666666666664,
+    "r_gcc": 1.0,
+    "fiedler": 0.5548570835535147
+  },
+  {
+    "frame": 33,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.2923076923076923,
+    "r_gcc": 1.0,
+    "fiedler": 0.529542981022862
+  },
+  {
+    "frame": 34,
+    "level": "DANGER",
+    "n": 25,
+    "density": 0.2966666666666667,
+    "r_gcc": 1.0,
+    "fiedler": 0.4736503372099498
+  },
+  {
+    "frame": 35,
+    "level": "DANGER",
+    "n": 25,
+    "density": 0.2866666666666667,
+    "r_gcc": 1.0,
+    "fiedler": 0.46448440699155985
+  },
+  {
+    "frame": 36,
+    "level": "DANGER",
+    "n": 28,
+    "density": 0.2804232804232804,
+    "r_gcc": 1.0,
+    "fiedler": 0.5269694631978261
+  },
+  {
+    "frame": 37,
+    "level": "DANGER",
+    "n": 28,
+    "density": 0.291005291005291,
+    "r_gcc": 1.0,
+    "fiedler": 0.551632890850372
+  },
+  {
+    "frame": 38,
+    "level": "DANGER",
+    "n": 28,
+    "density": 0.291005291005291,
+    "r_gcc": 1.0,
+    "fiedler": 0.5247874359000402
+  },
+  {
+    "frame": 39,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.2962962962962963,
+    "r_gcc": 1.0,
+    "fiedler": 0.5738593284414804
+  },
+  {
+    "frame": 40,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.2934472934472934,
+    "r_gcc": 1.0,
+    "fiedler": 0.5402711903740438
+  },
+  {
+    "frame": 41,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.2905982905982906,
+    "r_gcc": 1.0,
+    "fiedler": 0.5284507745705245
+  },
+  {
+    "frame": 42,
+    "level": "DANGER",
+    "n": 25,
+    "density": 0.2833333333333333,
+    "r_gcc": 1.0,
+    "fiedler": 0.2924796305993956
+  },
+  {
+    "frame": 43,
+    "level": "DANGER",
+    "n": 24,
+    "density": 0.2971014492753623,
+    "r_gcc": 1.0,
+    "fiedler": 0.36514750471784163
+  },
+  {
+    "frame": 44,
+    "level": "DANGER",
+    "n": 24,
+    "density": 0.3007246376811594,
+    "r_gcc": 1.0,
+    "fiedler": 0.39537497434206065
+  },
+  {
+    "frame": 45,
+    "level": "DANGER",
+    "n": 24,
+    "density": 0.3079710144927536,
+    "r_gcc": 1.0,
+    "fiedler": 0.3720179575183134
+  },
+  {
+    "frame": 46,
+    "level": "DANGER",
+    "n": 25,
+    "density": 0.32,
+    "r_gcc": 1.0,
+    "fiedler": 0.640703510317965
+  },
+  {
+    "frame": 47,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.3046153846153846,
+    "r_gcc": 1.0,
+    "fiedler": 0.45321200776814646
+  },
+  {
+    "frame": 48,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.29846153846153844,
+    "r_gcc": 1.0,
+    "fiedler": 0.4308482145786187
+  },
+  {
+    "frame": 49,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.2849002849002849,
+    "r_gcc": 1.0,
+    "fiedler": 0.3964430684877319
+  },
+  {
+    "frame": 50,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.28774928774928776,
+    "r_gcc": 1.0,
+    "fiedler": 0.4121606981988485
+  },
+  {
+    "frame": 51,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.2905982905982906,
+    "r_gcc": 1.0,
+    "fiedler": 0.38829571569889004
+  },
+  {
+    "frame": 52,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.2962962962962963,
+    "r_gcc": 1.0,
+    "fiedler": 0.43205539521593167
+  },
+  {
+    "frame": 53,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.31384615384615383,
+    "r_gcc": 1.0,
+    "fiedler": 0.5063572818999926
+  },
+  {
+    "frame": 54,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.3169230769230769,
+    "r_gcc": 1.0,
+    "fiedler": 0.4681003072392248
+  },
+  {
+    "frame": 55,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.2962962962962963,
+    "r_gcc": 1.0,
+    "fiedler": 0.4503021796975918
+  },
+  {
+    "frame": 56,
+    "level": "DANGER",
+    "n": 25,
+    "density": 0.33666666666666667,
+    "r_gcc": 1.0,
+    "fiedler": 0.7377682686873372
+  },
+  {
+    "frame": 57,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.3384615384615385,
+    "r_gcc": 1.0,
+    "fiedler": 0.8239525489869466
+  },
+  {
+    "frame": 58,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.3292307692307692,
+    "r_gcc": 1.0,
+    "fiedler": 0.7911230605457158
+  },
+  {
+    "frame": 59,
+    "level": "DANGER",
+    "n": 25,
+    "density": 0.39,
+    "r_gcc": 1.0,
+    "fiedler": 0.8861420087783807
+  },
+  {
+    "frame": 60,
+    "level": "DANGER",
+    "n": 25,
+    "density": 0.3933333333333333,
+    "r_gcc": 1.0,
+    "fiedler": 1.1775585384775131
+  },
+  {
+    "frame": 61,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.3561253561253561,
+    "r_gcc": 1.0,
+    "fiedler": 0.6508462476543793
+  },
+  {
+    "frame": 62,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.3504273504273504,
+    "r_gcc": 1.0,
+    "fiedler": 0.6482329786373415
+  },
+  {
+    "frame": 63,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.3475783475783476,
+    "r_gcc": 1.0,
+    "fiedler": 0.6343875168049946
+  },
+  {
+    "frame": 64,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.3475783475783476,
+    "r_gcc": 1.0,
+    "fiedler": 0.6357096218692129
+  },
+  {
+    "frame": 65,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.34472934472934474,
+    "r_gcc": 1.0,
+    "fiedler": 0.6329242166223574
+  },
+  {
+    "frame": 66,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.33903133903133903,
+    "r_gcc": 1.0,
+    "fiedler": 0.6406551754057765
+  },
+  {
+    "frame": 67,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.34472934472934474,
+    "r_gcc": 1.0,
+    "fiedler": 0.6502231204947784
+  },
+  {
+    "frame": 68,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.33618233618233617,
+    "r_gcc": 1.0,
+    "fiedler": 0.6392503716968538
+  },
+  {
+    "frame": 69,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.3333333333333333,
+    "r_gcc": 1.0,
+    "fiedler": 0.6401839307052009
+  },
+  {
+    "frame": 70,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.33048433048433046,
+    "r_gcc": 1.0,
+    "fiedler": 0.6409059833100071
+  },
+  {
+    "frame": 71,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.3333333333333333,
+    "r_gcc": 1.0,
+    "fiedler": 0.6407603854107715
+  },
+  {
+    "frame": 72,
+    "level": "DANGER",
+    "n": 28,
+    "density": 0.31216931216931215,
+    "r_gcc": 1.0,
+    "fiedler": 0.5149961758059303
+  },
+  {
+    "frame": 73,
+    "level": "DANGER",
+    "n": 28,
+    "density": 0.31216931216931215,
+    "r_gcc": 1.0,
+    "fiedler": 0.5227659137270733
+  },
+  {
+    "frame": 74,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.32,
+    "r_gcc": 1.0,
+    "fiedler": 0.3112607106100221
+  },
+  {
+    "frame": 75,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.3261538461538461,
+    "r_gcc": 1.0,
+    "fiedler": 0.3128720386106477
+  },
+  {
+    "frame": 76,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.3230769230769231,
+    "r_gcc": 1.0,
+    "fiedler": 0.31236622279607984
+  },
+  {
+    "frame": 77,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.3323076923076923,
+    "r_gcc": 1.0,
+    "fiedler": 0.3141170772459112
+  },
+  {
+    "frame": 78,
+    "level": "DANGER",
+    "n": 24,
+    "density": 0.35144927536231885,
+    "r_gcc": 1.0,
+    "fiedler": 0.5532795851052466
+  },
+  {
+    "frame": 79,
+    "level": "DANGER",
+    "n": 24,
+    "density": 0.35507246376811596,
+    "r_gcc": 1.0,
+    "fiedler": 0.5560721472092707
+  },
+  {
+    "frame": 80,
+    "level": "DANGER",
+    "n": 24,
+    "density": 0.33695652173913043,
+    "r_gcc": 1.0,
+    "fiedler": 0.5444041213511381
+  },
+  {
+    "frame": 81,
+    "level": "DANGER",
+    "n": 24,
+    "density": 0.3442028985507246,
+    "r_gcc": 1.0,
+    "fiedler": 0.5535870841012555
+  },
+  {
+    "frame": 82,
+    "level": "DANGER",
+    "n": 24,
+    "density": 0.34782608695652173,
+    "r_gcc": 1.0,
+    "fiedler": 0.3553962891834097
+  },
+  {
+    "frame": 83,
+    "level": "DANGER",
+    "n": 24,
+    "density": 0.3442028985507246,
+    "r_gcc": 1.0,
+    "fiedler": 0.3548457602345062
+  },
+  {
+    "frame": 84,
+    "level": "DANGER",
+    "n": 24,
+    "density": 0.34057971014492755,
+    "r_gcc": 1.0,
+    "fiedler": 0.35460242865314306
+  },
+  {
+    "frame": 85,
+    "level": "DANGER",
+    "n": 24,
+    "density": 0.3442028985507246,
+    "r_gcc": 1.0,
+    "fiedler": 0.35501694033881936
+  },
+  {
+    "frame": 86,
+    "level": "DANGER",
+    "n": 24,
+    "density": 0.34057971014492755,
+    "r_gcc": 1.0,
+    "fiedler": 0.5622146789081055
+  },
+  {
+    "frame": 87,
+    "level": "DANGER",
+    "n": 22,
+    "density": 0.39826839826839827,
+    "r_gcc": 1.0,
+    "fiedler": 1.2442320501190578
+  },
+  {
+    "frame": 88,
+    "level": "DANGER",
+    "n": 23,
+    "density": 0.3715415019762846,
+    "r_gcc": 0.9565217391304348,
+    "fiedler": 6.8573077963068126e-15
+  },
+  {
+    "frame": 89,
+    "level": "DANGER",
+    "n": 28,
+    "density": 0.3492063492063492,
+    "r_gcc": 1.0,
+    "fiedler": 0.8944269819457037
+  },
+  {
+    "frame": 90,
+    "level": "DANGER",
+    "n": 28,
+    "density": 0.3386243386243386,
+    "r_gcc": 1.0,
+    "fiedler": 0.3676164013793206
+  },
+  {
+    "frame": 91,
+    "level": "DANGER",
+    "n": 28,
+    "density": 0.3412698412698413,
+    "r_gcc": 1.0,
+    "fiedler": 0.3669996645277552
+  },
+  {
+    "frame": 92,
+    "level": "DANGER",
+    "n": 28,
+    "density": 0.335978835978836,
+    "r_gcc": 1.0,
+    "fiedler": 0.3556833010811975
+  },
+  {
+    "frame": 93,
+    "level": "DANGER",
+    "n": 31,
+    "density": 0.32903225806451614,
+    "r_gcc": 1.0,
+    "fiedler": 0.35976076982142857
+  },
+  {
+    "frame": 94,
+    "level": "DANGER",
+    "n": 31,
+    "density": 0.3247311827956989,
+    "r_gcc": 1.0,
+    "fiedler": 0.34261435482874664
+  },
+  {
+    "frame": 95,
+    "level": "DANGER",
+    "n": 29,
+    "density": 0.3275862068965517,
+    "r_gcc": 1.0,
+    "fiedler": 0.7046630074481299
+  },
+  {
+    "frame": 96,
+    "level": "DANGER",
+    "n": 29,
+    "density": 0.3251231527093596,
+    "r_gcc": 1.0,
+    "fiedler": 0.7520120658640377
+  },
+  {
+    "frame": 97,
+    "level": "DANGER",
+    "n": 29,
+    "density": 0.33004926108374383,
+    "r_gcc": 1.0,
+    "fiedler": 0.8050769970318689
+  },
+  {
+    "frame": 98,
+    "level": "DANGER",
+    "n": 29,
+    "density": 0.3275862068965517,
+    "r_gcc": 1.0,
+    "fiedler": 0.6878233429688134
+  },
+  {
+    "frame": 99,
+    "level": "DANGER",
+    "n": 29,
+    "density": 0.33004926108374383,
+    "r_gcc": 1.0,
+    "fiedler": 0.6839494950563383
+  },
+  {
+    "frame": 100,
+    "level": "DANGER",
+    "n": 28,
+    "density": 0.34656084656084657,
+    "r_gcc": 1.0,
+    "fiedler": 0.695283138163466
+  },
+  {
+    "frame": 101,
+    "level": "DANGER",
+    "n": 28,
+    "density": 0.35185185185185186,
+    "r_gcc": 1.0,
+    "fiedler": 0.7009865941400466
+  },
+  {
+    "frame": 102,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.37606837606837606,
+    "r_gcc": 1.0,
+    "fiedler": 0.6502930930742487
+  },
+  {
+    "frame": 103,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.3732193732193732,
+    "r_gcc": 1.0,
+    "fiedler": 0.5246286968453813
+  },
+  {
+    "frame": 104,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.36752136752136755,
+    "r_gcc": 1.0,
+    "fiedler": 0.5190611156676281
+  },
+  {
+    "frame": 105,
+    "level": "DANGER",
+    "n": 27,
+    "density": 0.3789173789173789,
+    "r_gcc": 1.0,
+    "fiedler": 0.5707026146786476
+  },
+  {
+    "frame": 106,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.38769230769230767,
+    "r_gcc": 1.0,
+    "fiedler": 0.345782083372057
+  },
+  {
+    "frame": 107,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.39692307692307693,
+    "r_gcc": 1.0,
+    "fiedler": 0.6276204010269377
+  },
+  {
+    "frame": 108,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.4,
+    "r_gcc": 1.0,
+    "fiedler": 0.3471053961767268
+  },
+  {
+    "frame": 109,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.4,
+    "r_gcc": 1.0,
+    "fiedler": 0.35607048213427167
+  },
+  {
+    "frame": 110,
+    "level": "DANGER",
+    "n": 24,
+    "density": 0.40942028985507245,
+    "r_gcc": 1.0,
+    "fiedler": 0.7076491954196733
+  },
+  {
+    "frame": 111,
+    "level": "DANGER",
+    "n": 24,
+    "density": 0.40942028985507245,
+    "r_gcc": 1.0,
+    "fiedler": 0.7076491954196733
+  },
+  {
+    "frame": 112,
+    "level": "DANGER",
+    "n": 23,
+    "density": 0.43478260869565216,
+    "r_gcc": 1.0,
+    "fiedler": 0.7339256043092501
+  },
+  {
+    "frame": 113,
+    "level": "DANGER",
+    "n": 22,
+    "density": 0.4155844155844156,
+    "r_gcc": 1.0,
+    "fiedler": 0.6736546448331364
+  },
+  {
+    "frame": 114,
+    "level": "DANGER",
+    "n": 22,
+    "density": 0.41125541125541126,
+    "r_gcc": 1.0,
+    "fiedler": 0.6725912807639367
+  },
+  {
+    "frame": 115,
+    "level": "DANGER",
+    "n": 23,
+    "density": 0.3952569169960474,
+    "r_gcc": 1.0,
+    "fiedler": 0.8236037994617413
+  },
+  {
+    "frame": 116,
+    "level": "DANGER",
+    "n": 22,
+    "density": 0.3852813852813853,
+    "r_gcc": 1.0,
+    "fiedler": 0.8157696041321194
+  },
+  {
+    "frame": 117,
+    "level": "DANGER",
+    "n": 22,
+    "density": 0.3852813852813853,
+    "r_gcc": 1.0,
+    "fiedler": 0.8974599921114059
+  },
+  {
+    "frame": 118,
+    "level": "DANGER",
+    "n": 23,
+    "density": 0.36363636363636365,
+    "r_gcc": 0.9565217391304348,
+    "fiedler": 0.0
+  },
+  {
+    "frame": 119,
+    "level": "DANGER",
+    "n": 23,
+    "density": 0.383399209486166,
+    "r_gcc": 0.9565217391304348,
+    "fiedler": 3.982282520473138e-15
+  },
+  {
+    "frame": 120,
+    "level": "DANGER",
+    "n": 23,
+    "density": 0.38735177865612647,
+    "r_gcc": 1.0,
+    "fiedler": 1.1080815515045181
+  },
+  {
+    "frame": 121,
+    "level": "DANGER",
+    "n": 23,
+    "density": 0.391304347826087,
+    "r_gcc": 1.0,
+    "fiedler": 1.162217263973606
+  },
+  {
+    "frame": 122,
+    "level": "DANGER",
+    "n": 23,
+    "density": 0.38735177865612647,
+    "r_gcc": 1.0,
+    "fiedler": 0.9684747975039526
+  },
+  {
+    "frame": 123,
+    "level": "DANGER",
+    "n": 24,
+    "density": 0.36231884057971014,
+    "r_gcc": 0.9583333333333334,
+    "fiedler": 0.0
+  },
+  {
+    "frame": 124,
+    "level": "DANGER",
+    "n": 25,
+    "density": 0.33666666666666667,
+    "r_gcc": 0.92,
+    "fiedler": 0.0
+  },
+  {
+    "frame": 125,
+    "level": "DANGER",
+    "n": 25,
+    "density": 0.34,
+    "r_gcc": 1.0,
+    "fiedler": 0.3373411821355531
+  },
+  {
+    "frame": 126,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.3261538461538461,
+    "r_gcc": 1.0,
+    "fiedler": 0.33551557163937346
+  },
+  {
+    "frame": 127,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.3261538461538461,
+    "r_gcc": 1.0,
+    "fiedler": 0.33551557163937346
+  },
+  {
+    "frame": 128,
+    "level": "DANGER",
+    "n": 25,
+    "density": 0.31333333333333335,
+    "r_gcc": 1.0,
+    "fiedler": 0.3344284017989459
+  },
+  {
+    "frame": 129,
+    "level": "DANGER",
+    "n": 25,
+    "density": 0.31,
+    "r_gcc": 1.0,
+    "fiedler": 0.3341683921669217
+  },
+  {
+    "frame": 130,
+    "level": "DANGER",
+    "n": 25,
+    "density": 0.31,
+    "r_gcc": 1.0,
+    "fiedler": 0.3341112058171395
+  },
+  {
+    "frame": 131,
+    "level": "DANGER",
+    "n": 25,
+    "density": 0.31,
+    "r_gcc": 0.92,
+    "fiedler": 1.030324596423176e-14
+  },
+  {
+    "frame": 132,
+    "level": "DANGER",
+    "n": 25,
+    "density": 0.31,
+    "r_gcc": 0.88,
+    "fiedler": 3.8598147250155183e-16
+  },
+  {
+    "frame": 133,
+    "level": "DANGER",
+    "n": 26,
+    "density": 0.2923076923076923,
+    "r_gcc": 0.8846153846153846,
+    "fiedler": 4.440892098500585e-16
+  },
+  {
+    "frame": 134,
+    "level": "DANGER",
+    "n": 25,
+    "density": 0.3,
+    "r_gcc": 0.88,
+    "fiedler": 1.8496519683398178e-15
+  },
+  {
+    "frame": 135,
+    "level": "DANGER",
+    "n": 24,
+    "density": 0.31521739130434784,
+    "r_gcc": 0.875,
+    "fiedler": 0.0
+  },
+  {
+    "frame": 136,
+    "level": "DANGER",
+    "n": 24,
+    "density": 0.322463768115942,
+    "r_gcc": 0.875,
+    "fiedler": 8.818544717159246e-16
+  },
+  {
+    "frame": 137,
+    "level": "DANGER",
+    "n": 24,
+    "density": 0.3188405797101449,
+    "r_gcc": 0.875,
+    "fiedler": 1.1065223376786025e-15
+  },
+  {
+    "frame": 138,
+    "level": "DANGER",
+    "n": 22,
+    "density": 0.3203463203463203,
+    "r_gcc": 0.8636363636363636,
+    "fiedler": 0.0
+  },
+  {
+    "frame": 139,
+    "level": "DANGER",
+    "n": 21,
+    "density": 0.3476190476190476,
+    "r_gcc": 0.8571428571428571,
+    "fiedler": 9.479344765464567e-16
+  },
+  {
+    "frame": 140,
+    "level": "DANGER",
+    "n": 21,
+    "density": 0.3476190476190476,
+    "r_gcc": 0.8571428571428571,
+    "fiedler": 9.479344765464567e-16
+  },
+  {
+    "frame": 141,
+    "level": "DANGER",
+    "n": 21,
+    "density": 0.3333333333333333,
+    "r_gcc": 0.8571428571428571,
+    "fiedler": 4.6564314903907444e-15
+  },
+  {
+    "frame": 142,
+    "level": "DANGER",
+    "n": 21,
+    "density": 0.34285714285714286,
+    "r_gcc": 0.8571428571428571,
+    "fiedler": 2.0521778720805628e-15
+  },
+  {
+    "frame": 143,
+    "level": "DANGER",
+    "n": 21,
+    "density": 0.3380952380952381,
+    "r_gcc": 0.8571428571428571,
+    "fiedler": 8.365116333790995e-16
+  },
+  {
+    "frame": 144,
+    "level": "DANGER",
+    "n": 23,
+    "density": 0.2845849802371542,
+    "r_gcc": 0.8695652173913043,
+    "fiedler": 1.3964523981613297e-16
+  },
+  {
+    "frame": 145,
+    "level": "DANGER",
+    "n": 22,
+    "density": 0.30303030303030304,
+    "r_gcc": 0.9090909090909091,
+    "fiedler": 8.881784190666543e-16
+  },
+  {
+    "frame": 146,
+    "level": "DANGER",
+    "n": 22,
+    "density": 0.3246753246753247,
+    "r_gcc": 0.9090909090909091,
+    "fiedler": 0.0
+  },
+  {
+    "frame": 147,
+    "level": "DANGER",
+    "n": 22,
+    "density": 0.3203463203463203,
+    "r_gcc": 0.9090909090909091,
+    "fiedler": 0.0
+  },
+  {
+    "frame": 148,
+    "level": "DANGER",
+    "n": 23,
+    "density": 0.30434782608695654,
+    "r_gcc": 0.9130434782608695,
+    "fiedler": 0.0
+  },
+  {
+    "frame": 149,
+    "level": "DANGER",
+    "n": 23,
+    "density": 0.30039525691699603,
+    "r_gcc": 0.9130434782608695,
+    "fiedler": 0.0
+  }
+]

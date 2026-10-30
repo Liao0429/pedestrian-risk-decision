@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>ROI 画框工具 | PedestrianRisk</title>
+<style>
+  body { margin:0; background:#111; font-family:monospace; color:#0f0; }
+  #wrap { display:flex; flex-direction:column; align-items:center; padding:10px; }
+  #container { position:relative; display:inline-block; border:1px solid #333; }
+  canvas { display:block; cursor:crosshair; }
+  #panel { margin-top:10px; max-width:720px; }
+  textarea { width:100%; height:80px; background:#1a1a1a; color:#0f0; border:1px solid #0f0; font:12px monospace; }
+  button { margin:5px 3px; padding:6px 14px; background:#1a3a1a; color:#0f0; border:1px solid #0f0; cursor:pointer; }
+  button:hover { background:#2a5a2a; }
+  .info { font-size:12px; color:#888; margin:4px 0; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h2>✂️ ROI 危险区域画框工具 (720×480)</h2>
+  <div id="container">
+    <canvas id="c" width="720" height="480"></canvas>
+  </div>
+  <div id="panel">
+    <div class="info">🖱️ 在画面上点击添加顶点 | 拖拽顶点移动 | 双击删除顶点 | 3个点以上自动闭合</div>
+    <div>
+      <button onclick="undo()">↩ 撤销</button>
+      <button onclick="clearAll()">✕ 清除</button>
+      <button onclick="snapshot()">📷 用 RTSP 截图做底图</button>
+    </div>
+    <textarea id="out" readonly placeholder="点击画面添加顶点后，JSON 配置会显示在这里…"></textarea>
+    <div>
+      <button onclick="copyJSON()">📋 复制 JSON</button>
+      <button onclick="downloadJSON()">💾 下载配置文件</button>
+    </div>
+    <div class="info" id="status">就绪 — 在画面中点击鼠标添加 ROI 顶点</div>
+    <div class="info" style="margin-top:8px">
+      生成后替换 <code>config/default_config.json</code> 中的 <code>roi_zone</code> 字段，然后 <code>sudo systemctl restart pedestrian-risk</code>
+    </div>
+  </div>
+</div>
+
+<script>
+const W=720, H=480;
+const c=document.getElementById('c');
+const ctx=c.getContext('2d');
+const out=document.getElementById('out');
+const status=document.getElementById('status');
+
+let pts=[];
+let dragIdx=-1;
+let bgImg=null;
+
+// Load default frame
+const img=new Image();
+img.onload=()=>{ bgImg=img; draw(); };
+img.src='data:image/svg+xml,'+encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
+    <rect fill="#1a1a2e" width="${W}" height="${H}"/>
+    <text fill="#333" font-size="36" font-family="monospace" x="180" y="240">点击鼠标添加 ROI 顶点</text>
+    <line stroke="#333" x1="0" y1="240" x2="720" y2="240"/>
+    <line stroke="#333" x1="360" y1="0" x2="360" y2="480"/>
+  </svg>`);
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  if(bgImg) ctx.drawImage(bgImg,0,0,W,H);
+  // Draw polygon fill (red, translucent)
+  if(pts.length>=3){
+    ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
+    for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x,pts[i].y);
+    ctx.closePath();
+    ctx.fillStyle='rgba(255,0,0,0.15)'; ctx.fill();
+    ctx.strokeStyle='#ff0000'; ctx.lineWidth=2; ctx.stroke();
+  }
+  // Draw lines between points
+  if(pts.length>=2){
+    ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
+    for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x,pts[i].y);
+    ctx.strokeStyle='#ff4444'; ctx.lineWidth=1; ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([]);
+  }
+  // Draw vertices
+  pts.forEach((p,i)=>{
+    ctx.beginPath(); ctx.arc(p.x,p.y,6,0,Math.PI*2);
+    ctx.fillStyle=i===dragIdx?'#ffff00':'#ff0000'; ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.font='10px monospace'; ctx.fillText(i+1,p.x+8,p.y-8);
+  });
+  updateJSON();
+}
+
+function updateJSON(){
+  if(pts.length<3){ out.value=''; return; }
+  const poly=pts.map(p=>[Math.round(p.x),Math.round(p.y)]);
+  const json={enabled:true,name:"危险区域",polygon:poly,color:[0,0,255],thickness:2};
+  out.value=JSON.stringify(json,null,2);
+  status.textContent=`✅ ${pts.length} 个顶点 — 复制上方 JSON 替换 config/default_config.json`;
+}
+
+c.addEventListener('mousedown',e=>{
+  const rect=c.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  // Check if clicking on existing vertex
+  dragIdx=pts.findIndex(p=>Math.hypot(p.x-mx,p.y-my)<10);
+  if(dragIdx>=0){ draw(); return; }
+  // Add new point
+  pts.push({x:mx,y:my});
+  dragIdx=pts.length-1;
+  draw();
+});
+
+c.addEventListener('mousemove',e=>{
+  if(dragIdx<0) return;
+  const rect=c.getBoundingClientRect();
+  pts[dragIdx]={x:Math.max(0,Math.min(W,e.clientX-rect.left)), y:Math.max(0,Math.min(H,e.clientY-rect.top))};
+  draw();
+});
+
+c.addEventListener('mouseup',()=>{ dragIdx=-1; });
+
+c.addEventListener('dblclick',e=>{
+  const rect=c.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  const idx=pts.findIndex(p=>Math.hypot(p.x-mx,p.y-my)<10);
+  if(idx>=0){ pts.splice(idx,1); draw(); }
+});
+
+function undo(){ pts.pop(); draw(); }
+function clearAll(){ pts=[]; dragIdx=-1; out.value=''; status.textContent='已清除 — 重新点击画面添加顶点'; draw(); }
+
+function snapshot(){
+  const url=prompt('输入 RTSP 截图 URL（或留空用默认）:','http://192.168.0.136:1984/api/frame.jpeg?src=live_0');
+  if(!url) return;
+  const snap=new Image();
+  snap.crossOrigin='anonymous';
+  snap.onload=()=>{ bgImg=snap; draw(); status.textContent='✅ 底图已加载 — 在上面画 ROI'; };
+  snap.onerror=()=>{ status.textContent='❌ 截图加载失败 — 检查 go2rtc 是否运行在 :1984'; };
+  snap.src=url;
+}
+
+function copyJSON(){
+  if(!out.value) return;
+  navigator.clipboard.writeText(out.value).then(()=>{ status.textContent='📋 已复制到剪贴板！'; });
+}
+
+function downloadJSON(){
+  if(!out.value) return;
+  const blob=new Blob([out.value],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='roi_zone.json';
+  a.click();
+}
+</script>
+</body>
+</html>

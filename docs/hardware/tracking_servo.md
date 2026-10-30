@@ -100,12 +100,18 @@ RV1106 内部有 PWM 控制器（32 位定时器/计数器），Linux 下通过 
 
 | PWM 通道 | SoC GPIO | GPIO sysfs 编号 | 排针标号(Pico 风格) | 排针物理脚 | 与其它功能复用 |
 |---|---|---|---|---|---|
-| **PWM8_M1** | GPIO1_C4_d | 52 | GP3 | **第 5 脚** | UART4_RX_M1 / VI_CIF_D6_M1 / VO_LCDC_D3 |
-| **PWM9_M1** | GPIO1_C5_d | 53 | GP2 | **第 4 脚** | UART4_TX_M1 / VI_CIF_D7_M1 / VO_LCDC_D2 |
+| **PWM8_M1** | GPIO1_C4_d | 52 | GP1 | **第 7 脚** | UART4_RX_M1 / VI_CIF_D6_M1 / VO_LCDC_D3 |
+| **PWM9_M1** | GPIO1_C5_d | 53 | GP0 | **第 6 脚** | UART4_TX_M1 / VI_CIF_D7_M1 / VO_LCDC_D2 |
+
+> ⚠ **2026-10-30 板上实测修正**：旧的「脚5/脚4」是错的（与 v3 手册 P0-1 一致）。实测
+> `/sys/class/pwm/` 只有 **pwmchip8（ff490000）与 pwmchip9（ff490010），各自 npwm=1**，
+> 因此 PAN=**pwmchip8/pwm0**（PWM8_M1=GPIO1_C4=Pin7）、TILT=**pwmchip9/pwm0**
+> （PWM9_M1=GPIO1_C5=Pin6）；**不存在 pwmchip0，也不存在 pwm1 通道**。
 | PWM10_M1 | GPIO1_C6_d | 54 | GP1 | 第 2 脚 | UART4_RTS_M1 / VI_CIF_D8_M1 / VO_LCDC_D1 |
 | PWM11_IR_M1 | GPIO1_C7_d | 55 | GP0 | 第 1 脚 | UART4_CTS_M1 / VI_CIF_D9_M1 / VO_LCDC_D0 |
 
-> - **推荐默认用 PWM8_M1（脚5）和 PWM9_M1（脚4）**：两脚相邻，接线方便，且为普通 PWM 通道（非 IR 变体）。
+> - **推荐默认用 PWM8_M1（脚7）和 PWM9_M1（脚6）**：两脚相邻，接线方便，且为普通 PWM 通道（非 IR 变体）。
+>   （2026-10-30 实测：pwmchip8/pwmchip9 已 status=okay，可直接 export，无需改 dtb。）
 > - 若这两个通道在 `/sys/class/pwm` 下不存在（未使能），可改用 **PWM10_M1（脚2）+ PWM9_M1（脚4）** 或 **PWM10_M1 + PWM11_IR_M1**，以 `ls /sys/class/pwm` 实际存在为准。
 > - GPIO1_C4/C5/C6/C7 在 Max 板上默认未被 RGB/其它外设占用（这是 Pico Ultra 才有 RGB 冲突的问题），可放心用于 PWM。
 
@@ -145,12 +151,12 @@ sudo luckfox-config
 
 ```
 舵机1（Pan 水平）：
- 橙色 信号线 → GPIO1_C4_d（PWM8_M1）＝ 排针第 5 脚
+ 橙色 信号线 → GPIO1_C4_d（PWM8_M1）＝ 排针第 7 脚
  红色 电源线 → 外部 5V 电源正极
  棕色 地线 → 外部电源负极 ＋ 板子 GND（共地）
 
 舵机2（Tilt 垂直）：
- 橙色 信号线 → GPIO1_C5_d（PWM9_M1）＝ 排针第 4 脚
+ 橙色 信号线 → GPIO1_C5_d（PWM9_M1）＝ 排针第 6 脚
  红色 电源线 → 外部 5V 电源正极
  棕色 地线 → 外部电源负极 ＋ 板子 GND（共地）
 
@@ -439,8 +445,8 @@ struct Target { float x=0, y=0; bool valid=false; };
 std::atomic<Target> g_target;
 
 void servoThread {
- Servo pan(8, 0); // PWM8_M1 → 排针第5脚
- Servo tilt(9, 0); // PWM9_M1 → 排针第4脚
+ Servo pan(8, 0); // PWM8_M1 → 排针第7脚（pwmchip8/pwm0）
+ Servo tilt(9, 0); // PWM9_M1 → 排针第6脚（pwmchip9/pwm0）
  PanTilt pt(pan, tilt);
  pt.init;
 

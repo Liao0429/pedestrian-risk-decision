@@ -39,7 +39,11 @@ EnhancedDecision::EnhancedDecision(const EnhancedConfig& cfg)
       fsm_(cfg.fsm),
       nextTrackId_(0),
       prevN_(0),
-      lastScore_(0.0) {}
+      lastScore_(0.0),
+      frameIdx_(0),
+      haveFeat_(false),
+      spectralUpdates_(0),
+      cachedFeat_() {}
 
 void EnhancedDecision::reset() {
     fsm_.reset();
@@ -47,6 +51,10 @@ void EnhancedDecision::reset() {
     nextTrackId_ = 0;
     prevN_ = 0;
     lastScore_ = 0.0;
+    frameIdx_ = 0;
+    haveFeat_ = false;
+    spectralUpdates_ = 0;
+    cachedFeat_ = SpectralFeatures();
 }
 
 std::vector<std::pair<float,float>> EnhancedDecision::smoothPoints(
@@ -145,9 +153,20 @@ EnhancedResult EnhancedDecision::processFrame(
     res.smoothPts = smoothPoints(groundPts);
 
     // 2. 图拉普拉斯网络特征（含 Fiedler 值）
-    // setEdgeDist 已在构造函数中设置，每帧重设无实际作用
-    graph_.setPoints(res.smoothPts);
-    const SpectralFeatures feat = graph_.computeFeatures();
+    // setEdgeDist 已在构造函数中设置，每帧重设无实际作用。
+    // 降频：特征分解(Jacobi，O(n^3*sweeps)) 每 spectral_interval 帧才重算，中间帧
+    // 复用上次特征；节点数 n 每帧按当前点集刷新（不依赖特征分解）。
+    ++frameIdx_;
+    const int interval = cfg_.spectral_interval > 0 ? cfg_.spectral_interval : 1;
+    const bool refresh = (!haveFeat_) || (((frameIdx_ - 1) % interval) == 0);
+    if (refresh) {
+        graph_.setPoints(res.smoothPts);
+        cachedFeat_ = graph_.computeFeatures();
+        haveFeat_ = true;
+        ++spectralUpdates_;
+    }
+    SpectralFeatures feat = cachedFeat_;
+    feat.n = static_cast<int>(res.smoothPts.size());   // 人数逐帧刷新
     res.n                      = feat.n;
     res.density                = feat.density;
     res.r_gcc                  = feat.r_gcc;

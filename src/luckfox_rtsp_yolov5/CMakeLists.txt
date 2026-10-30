@@ -107,16 +107,37 @@ if(BUILD_LUCKFOX_DEMO)
     ${PROJ_SRC_DIR}/yolov5.cc
     ${PROJ_SRC_DIR}/postprocess.cc
     ${PROJ_SRC_DIR}/luckfox_mpi.cc
+    ${PROJ_SRC_DIR}/preprocess.cc
   )
+  # yolov5.h / postprocess.h 来自 SDK 的 include/rknn；RV1106_1103 决定
+  # rknn_app_context_t 是否带 input_mems/output_mems，以及 postprocess.cc 走哪条
+  # int8 解码分支，必须定义（与 Ubuntu 构建机实测成功的 board_sdk CMake 一致）。
   target_include_directories(luckfox_pico_rtsp_yolov5 PRIVATE
     ${PROJ_INC_DIR} ${ALGO_INC_DIR}
+    ${LUCKFOX_SDK_ROOT}
     ${LUCKFOX_SDK_ROOT}/include
-    ${LUCKFOX_SDK_ROOT}/3rdparty
+    ${LUCKFOX_SDK_ROOT}/include/rknn
+    ${LUCKFOX_SDK_ROOT}/include/rkaiq
+    ${LUCKFOX_SDK_ROOT}/include/rkaiq/uAPI2
+    ${LUCKFOX_SDK_ROOT}/include/rkaiq/common
+    ${LUCKFOX_SDK_ROOT}/include/rkaiq/xcore
+    ${LUCKFOX_SDK_ROOT}/include/rkaiq/algos
+    ${LUCKFOX_SDK_ROOT}/include/rkaiq/iq_parser
+    ${LUCKFOX_SDK_ROOT}/include/rkaiq/iq_parser_v2
+    ${LUCKFOX_SDK_ROOT}/include/librga
+    ${LUCKFOX_SDK_ROOT}/common
+    ${LUCKFOX_SDK_ROOT}/common/isp3.x
+    ${LUCKFOX_SDK_ROOT}/utils
   )
+  target_compile_definitions(luckfox_pico_rtsp_yolov5 PRIVATE
+    RV1106_1103 ISP_HW_V30 RKPLATFORM=ON ARCH64=OFF ROCKIVA UAPI2
+    _LARGEFILE_SOURCE _LARGEFILE64_SOURCE _FILE_OFFSET_BITS=64)
+  target_compile_options(luckfox_pico_rtsp_yolov5 PRIVATE
+    -O2 -mfpu=neon-vfpv4 -mfloat-abi=hard)
   # RKNN / RTSP / rkaiq / OpenCV 链接参数按实际 SDK 布局调整
   target_link_libraries(luckfox_pico_rtsp_yolov5 PRIVATE
-    rknnmrt rtsp_demo rkaiq opencv_core opencv_imgproc opencv_imgcodecs
-    pthread
+    rknnmrt sample_comm rockit rockchip_mpp rkaiq rtsp rga
+    opencv_core opencv_imgproc pthread rt dl m
   )
   message(STATUS "构建 Luckfox 完整工程（需 SDK 库文件位于 LUCKFOX_SDK_ROOT/lib）")
 endif()

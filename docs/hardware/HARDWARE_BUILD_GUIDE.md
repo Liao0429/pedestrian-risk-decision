@@ -1,5 +1,13 @@
 # 硬件落地组装指南（Buy & Build）
 
+> ⚠ **2026-10-30 实测校准（hardware-hw / task-3）**：本文档部分引脚/方案与真机实测冲突。
+> **引脚与总线请以 [`pin_map_verified.md`](./pin_map_verified.md) 为唯一事实源**；
+> 交叉验证结论见 [`docs/review/20261030_round3/hardware_pcb_consistency.md`](../review/20261030_round3/hardware_pcb_consistency.md)。
+>
+> 具体冲突：本文的采购/接线按 **DFPlayer + UART4 + 串口屏** 方案写，已被
+> `答辩硬件展示方案_v3_BOM与PCB手册.md` 取代（语音统一 USB 喇叭、串口屏 J6 预留不可用、
+> 舵机 PWM = Pin7/Pin6 = pwmchip8/pwmchip9）。当下以 v3 手册 + pin_map_verified.md 为准。
+
 > 本指南让方案真正变成可运行的成品。按清单采购 → 按接线图接线 → 按步骤组装 → 烧录驱动代码。
 
 ## 一、采购清单（性价比优先）

@@ -17,8 +17,9 @@ cache/
 *.pt
 *.engine
 
-# 视频抓取临时文件
+# 视频抓取临时文件（注意：tools/ 下的 ROI 画框网页是演示交付物，必须保留）
 *.html
+!tools/*.html
 mixkit_*.txt
 mixkit_ids.json
 
@@ -39,20 +40,30 @@ src/luckfox_rtsp_yolov5/tests/*.o
 
 docs/thesis/
 
-# 真实数据集重跑：忽略大体积视频/可视化图/每视频时间线，只保留汇总 JSON 与 README
+# 真实数据集重跑：忽略大体积视频与可视化图，但**保留**逐帧 timeline JSON
+# （2026-10-30：聚合数字改为由 timeline 重算，timeline 是唯一可复现证据，必须入库）
 results/rerun/**/*.mp4
 results/rerun/**/vis/
-results/rerun/video_enhanced/*/
-results/rerun/video_baseline/*/
 
 # 外部 RKNN 模型调研/部署用二进制（来源见 docs，不入库）
 *.rknn
 
-# === 答辩/评审/论文隐私文档：禁止上传 GitHub（2026-10-27）===
+# === 答辩/评审/论文隐私文档：禁止上传 GitHub（2026-10-27；2026-10-30 增补）===
 docs/review/
+docs/thesis_consistency/
 docs/DEVELOPMENT_LOG.md
 docs/KANBAN.md
 docs/AI_needle2_analysis.md
 
 # Windows 主机单元测试可执行文件（本地编译产物，不上传）
 src/luckfox_rtsp_yolov5/tests/*.exe
+src/luckfox_rtsp_yolov5/hardware_selftest
+src/luckfox_rtsp_yolov5/hardware_selftest.exe
+src/luckfox_rtsp_yolov5/tests/*.exe.bak
+
+# === 2026-10-30 Round3：临时取证产物（本地保留，不入库；含 172MB 抽帧与 18MB 抓帧）===
+tmp/net/
+tmp/board_snap/
+tmp/ref_video/
+tmp/hw_check/
+tests/cpp_parity/*.exe

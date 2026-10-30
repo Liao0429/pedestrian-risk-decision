@@ -120,11 +120,18 @@ def calibrate_from_points(
     # 确保非退化：4 个地面点不能共线（3 点共线也会导致奇异）
     if _is_collinear(gd):
         raise ValueError("ground_pts 中 4 个点近似共线，无法唯一求解单应。")
+    # 像素点同样不能共线：cv2.getPerspectiveTransform 对共线输入不抛异常，
+    # 而是返回近零退化矩阵 -> 所有脚点被映射到同一点 -> 人数/密度恒为最小值，
+    # 风险判定静默失效（现场表现为"标定后永远不报警"，极难排查）。
+    if _is_collinear(px):
+        raise ValueError("pixel_pts 中 4 个点近似共线，无法唯一求解单应。")
 
     H = cv2.getPerspectiveTransform(
         px.astype(np.float32), gd.astype(np.float32)
     )
-    return np.asarray(H, dtype=np.float64)
+    H = np.asarray(H, dtype=np.float64)
+    _check_nondegenerate_homography(H)
+    return H
 
 
 def calibrate_from_points_ransac(
@@ -164,7 +171,22 @@ def calibrate_from_points_ransac(
     )
     if H is None:
         raise ValueError("RANSAC 未能求到有效单应矩阵，请检查输入点。")
-    return np.asarray(H, dtype=np.float64)
+    H = np.asarray(H, dtype=np.float64)
+    _check_nondegenerate_homography(H)
+    return H
+
+
+def _check_nondegenerate_homography(H: np.ndarray) -> None:
+    """校验单应矩阵可用：非 NaN/Inf、非全零退化矩阵。
+
+    cv2 在标定点共线/重复时会"成功"返回近零矩阵而不报错，必须显式拦截。
+    """
+    if not np.all(np.isfinite(H)):
+        raise ValueError("单应矩阵包含 NaN/Inf，无法用于 IPM 映射。")
+    if float(np.max(np.abs(H))) < 1e-12:
+        raise ValueError(
+            "单应矩阵退化为全零，无法用于 IPM 映射（标定点可能重复或共线）。"
+        )
 
 
 def _is_collinear(pts: np.ndarray, tol: float = 1e-9) -> bool:

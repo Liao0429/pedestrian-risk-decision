@@ -1,8 +1,14 @@
 // =============================================================================
 // voice_alert.h — 语音告警模块（USB 喇叭 + aplay 方案，用户 2026-10-27 决策）
 // -----------------------------------------------------------------------------
-// 背景：Luckfox Pico Max 未引出板载音频引脚（官方 Wiki 确认），因此采用
-//   「USB 免驱喇叭 + 系统 TF 卡预录音频 + aplay 播放」方案（方案 E）：
+// 背景：采用「USB 免驱喇叭 + 系统 TF 卡预录音频 + aplay 播放」方案（方案 E）。
+//   ⚠ 2026-10-30 板上实测修正：
+//     - 镜像里只有 card0 = rv-acodec（/proc/asound/cards），**没有** USB 声卡；
+//     - USB 控制器当前是 gadget 模式（/sys/class/udc = ffb00000.usb），
+//       /sys/bus/usb/devices 为空 → 想让 USB 喇叭出声必须先切到 USB host 模式
+//       （dr_mode/overlay），否则 AplayVoiceBackend::init() 只能回退到 card0。
+//   因此 AplayVoiceBackend 默认设备仍写 plughw:1,0（USB 声卡接上后通常是 card1），
+//   但 init() 会检测 card 是否存在并自动回退 ALSA "default"。
 //     - 音频文件存放在系统 TF 卡 /userdata/voice/（warning.wav / danger.wav）
 //     - C++ 通过 system("aplay -q -D plughw:1,0 ... &") 后台播放，不阻塞主循环
 //     - 无需 DFPlayer 模块、无需额外 TF 卡、无 UART 协议（DFPlayer 仅作兜底）

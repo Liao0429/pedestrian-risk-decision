@@ -388,6 +388,10 @@ int post_process(rknn_app_context_t *app_ctx, void *outputs,  float conf_thresho
     std::vector<float> filterBoxes;
     std::vector<float> objProbs;
     std::vector<int> classId;
+    // 预留容量：避免每帧多次 realloc（validCount 受 conf 阈值限制，通常远小于此）
+    filterBoxes.reserve(OBJ_NUMB_MAX_SIZE * 4);
+    objProbs.reserve(OBJ_NUMB_MAX_SIZE);
+    classId.reserve(OBJ_NUMB_MAX_SIZE);
     int validCount = 0;
     int stride = 0;
     int grid_h = 0;
@@ -438,11 +442,18 @@ int post_process(rknn_app_context_t *app_ctx, void *outputs,  float conf_thresho
     }
     quick_sort_indice_inverse(objProbs, 0, validCount - 1, indexArray);
 
-    std::set<int> class_set(std::begin(classId), std::end(classId));
-
-    for (auto c : class_set)
+    // 类别集合：用 OBJ_CLASS_NUM(80) 项 bool 数组替代 std::set。
+    // 旧实现每帧构造红黑树（validCount 次堆分配 + 排序），语义等价但更慢。
+    bool class_seen[OBJ_CLASS_NUM];
+    memset(class_seen, 0, sizeof(class_seen));
+    for (int i = 0; i < validCount; ++i) {
+        const int c = classId[i];
+        if (c >= 0 && c < OBJ_CLASS_NUM) class_seen[c] = true;
+    }
+    for (int c = 0; c < OBJ_CLASS_NUM; ++c)
     {
-        nms(validCount, filterBoxes, classId, indexArray, c, nms_threshold);
+        if (class_seen[c])
+            nms(validCount, filterBoxes, classId, indexArray, c, nms_threshold);
     }
 
     int last_count = 0;
@@ -492,7 +503,8 @@ char *coco_cls_to_name(int cls_id)
 {
     static char null_str[] = "null";
 
-    if (cls_id >= OBJ_CLASS_NUM)
+    // 负下标防护：旧实现只判上界，cls_id<0 时 labels[cls_id] 越界读（野指针）
+    if (cls_id < 0 || cls_id >= OBJ_CLASS_NUM)
     {
         return null_str;
     }

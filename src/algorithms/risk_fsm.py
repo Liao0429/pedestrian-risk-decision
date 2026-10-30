@@ -254,8 +254,11 @@ class RiskFSM:
             if score <= cfg.down_safe:
                 return "SAFE"
             return "WARNING"
-        # state == DANGER: min_danger_n also gates hold path
-        # if n drops below min_danger_n, exit DANGER immediately
+        # state == DANGER：min_danger_n 同样约束"保持路径"——人数跌破门槛后
+        # 目标等级直接落到 WARNING。注意：这里只是把目标等级降下来，真正退出
+        # 仍由 _transition() 的 DANGER 保持期(danger_hold_frames/ms) +
+        # confirm_down 降级确认决定，**不是"立即退出"**
+        # （历史注释写"immediately / 不受 hold 保护"与代码不符，本轮已更正）。
         if n < cfg.min_danger_n:
             return "WARNING"
         if score <= cfg.down_warning:

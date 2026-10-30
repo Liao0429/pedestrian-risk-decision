@@ -14,7 +14,7 @@
 - **Risk grading**: real-time **SAFE / WARNING / DANGER** three-level output
 - **Configurable**: rule thresholds loaded from JSON (`config/default_config.json`)
 - **Browser-based monitoring**: go2rtc on the board converts RTSP to WebRTC/HLS — watch live from any phone/PC browser (`docs/WEB_VIEWER.md`); **local-video demo fallback** (P2-1): `scripts/setup_go2rtc_demo_stream.sh` injects a pre-recorded enhanced video as a `demo` stream in one command, so you can still demo DANGER transitions when nobody walks in front of the camera (config tool: 14 host tests + 4 shell tests run on Linux/CI)
-- **Edge performance**: NEON-optimized preprocessing (CPU preprocess 136ms→33ms), **7.46 FPS** measured, ~11MB RSS, **28h+ long-run sampling (10 points)**: zero watchdog interventions, zero log errors, auto-recovery on service interruption (watchdog + bounded timeouts)
+- **Edge performance**: NEON-optimized preprocessing (CPU preprocess 136ms→33ms), **7.63 FPS** measured (2026-10-30 re-test: 229 frames in a 30s RTSP capture; bottleneck is NPU inference at 91.5ms/frame = 71%), ~13.8MiB RSS, bounded timeouts + watchdog auto-recovery (profiling logs in `results/edge_board/`)
 - **Extensible hardware**: dual-servo gimbal, RGB risk LED, debounced push button, voice alert (USB speaker + aplay, level-triggered/preemption/debounce), **touchscreen menu state machine** (LVGL-agnostic: page navigation / 4-key handling / risk-color mapping / throttled parameter refresh, `docs/hardware/lvgl_menu.md`), **ILI9341 SPI display driver** (320x240 RGB565: reset/init command sequence/window/fill-rect/full-frame flush/read ID 0x9341, `src/hardware/ili9341.h`, 123 host tests), **XPT2046 resistive touch driver** (SPI 12-bit ADC coordinates/pressure: command protocol / data extraction / PENIRQ+pressure-threshold touch detect / calibrated coordinate mapping / median anti-noise, `src/hardware/xpt2046.h`, 98 host tests), **Linux board adapter layer** (`/dev/spidevX.Y` full-duplex SPI + sysfs GPIO for DC/RESET/backlight/PENIRQ, `src/hardware/sysfs_spi.{h,cc}`, 40 Linux unit tests compiled and run on the board armv7l), physical switch drivers ready (`docs/hardware/`); **boot-time hardware self-test** (6 PASS/FAIL checks: GPIO/PWM/SPI LCD/USB audio/WiFi/button — demo mode only starts when all pass, `docs/hardware/selftest.md`, **two on-board verification rounds**: fault-tolerance without peripherals + SPI transfer verified after SPI0 enabled); **SPI0 enabled on the real board** (`scripts/enable_spi0_overlay.sh`: Luckfox dynamic device-tree overlay — no kernel/boot.img rebuild; `/dev/spidev0.0` present, systemd boot auto-load, udev 0666 permissions, ioctl mode0/1MHz verified, see `docs/hardware/lvgl_board_port.md`)
 
 ## 🏗️ System Architecture
@@ -70,11 +70,11 @@ pedestrian-risk-decision/
 | Level distribution | SAFE 414 / WARNING 61 / DANGER 25 |
 
 ### Video enhancement (111 real videos, Kalman + FSM, full rerun)
-- **All 111 real videos (45021 frames)**: level distribution **SAFE 26885 / WARNING 6388 / DANGER 11748**, average **5.86 level switches per video** (median 4.0, FSM hysteresis stabilizes), 66 videos reached DANGER, **31 videos stayed SAFE throughout** (no alert; without ground truth we cannot judge whether these are correct no-alerts or missed alerts)
-- Spectral correction term (w4=0.1, score += w4·fiedler/(fiedler+1)·r_gcc) is integrated into the production FSM: mean Fiedler rises monotonically with level (SAFE 0.017 / WARNING 0.214 / DANGER 1.078), batch DANGER frames 7807 → 11748 across 111 videos (spectral features improve high-risk detection)
+- **All 111 real videos (45021 frames)**: level distribution **SAFE 28214 / WARNING 8355 / DANGER 8452** (sums to 45021; recomputed 2026-10-30 from per-frame timelines, see `results/rerun/_aggregate_recomputed.json`), average **5.12 level switches per video** (median 4.0, FSM hysteresis stabilizes), **45 videos reached DANGER**, **31 videos stayed SAFE throughout** (no alert; without ground truth we cannot judge whether these are correct no-alerts or missed alerts)
+- Spectral correction term (w4=0.1, score += w4·fiedler/(fiedler+1)·r_gcc) is integrated into the production FSM: mean Fiedler rises monotonically with level (SAFE **0.021** / WARNING **0.567** / DANGER **1.084**, recomputed 2026-10-30; medians 0 / 0 / 0.716)
 - Dense crowd (`mixkit_13192`): **DANGER 179 / WARNING 120 / SAFE 6** (305 frames), only 4 switches (fair baseline AND-rule: 48 switches)
 - Sparse/empty scene (`mixkit_50134`, normal lighting): SAFE throughout, no alert (no person present)
-- **Before/after (fair baseline, same rule as real engine)**: average switches **23.2 → 5.9 (↓74.8%)**; 24 baseline videos reached DANGER vs 66 enhanced; DANGER frames 2190 → 11748 (FSM score includes density weight, spectral features and hold mechanism — more sensitive and more stable than per-frame rule). Details: `results/rerun/_comparison_summary.json`
+- **Before/after (fair baseline, same rule as real engine)**: average switches **23.22 → 5.12 (↓78.0%)** (baseline 2578 switches / 111 videos); **24** baseline videos reached DANGER vs **45** enhanced; DANGER frames **2190 → 8452** (FSM score includes density weight, spectral features and hold mechanism — more sensitive and more stable than per-frame rule). Details: `results/rerun/_comparison_summary.json`
 
 ![111-video enhanced level distribution](docs/figures/fig5_111videos_level.png)
 ![Fiedler by risk level](docs/figures/fig6_fiedler_boxplot.png)
@@ -84,7 +84,7 @@ pedestrian-risk-decision/
 ![DANGER video/frame comparison](docs/figures/fig_danger_compare.png)
 ![Level share comparison](docs/figures/fig_level_share_compare.png)
 
-> Data-mining takeaway: Fiedler vs risk level **Spearman ρ = 0.688** (45021 frames), spectral connectivity strongly correlates with crowd risk.
+> Data-mining takeaway: Fiedler vs risk level **Spearman ρ = 0.692** (45021 frames, recomputed 2026-10-30 from per-frame timelines), spectral connectivity strongly correlates with crowd risk.
 
 ### Ablation study (component contributions, 6 representative videos)
 
@@ -101,12 +101,17 @@ Details: `results/rerun/_ablation.json` and `docs/figures/fig_ablation_pro.png`.
 
 | Metric | Result |
 |---|---|
-| Frame rate (after NEON) | **6.30 → 7.46 FPS (+18%)** |
-| CPU preprocessing (letterbox+RGB) | **136ms → 33ms (-76%, NEON)** |
-| Memory (RSS) | **~10.5-10.9MB** |
-| Long-run (systemd watchdog + bounded timeouts) | **28h+ sampling (10 points): zero watchdog interventions, zero log errors** (board restarted once externally, systemd auto-recovered; current process 6h+ continuous) |
+| Frame rate | **7.63 FPS** (229 frames in a 30s RTSP capture; board `[PERF]` log agrees: 7.52~7.74) |
+| Per-frame breakdown | **infer 91.5ms (71%, bottleneck)** / prep 31.0ms (24%) / enc 4.0ms / draw 2.4ms / decide 0.02ms / vi 0.06ms, total ≈129ms |
+| CPU preprocessing (letterbox+RGB) | 136ms → 33ms (-76%, NEON); **31.0ms** after the Round3 single-pass zero-copy rewrite |
+| Memory (RSS) | **13.8 MiB** (VmRSS 14152 kB) |
 | On-board golden tests | **174/174 passed** (NEON vs scalar) |
-| Main-loop protection | VI/VENC 1s bounded timeout; 30 consecutive failures → exit, watchdog restarts |
+| Stability (after Round3 fixes) | NRestarts=0, no new core dumps during observation, RTSP :554 serving |
+| Stability (before fixes) | **38 core dumps (546MB)**, rootfs 80% full, process stuck in D state, load average > 11 |
+| Main-loop protection | VI 200ms / VENC 100ms bounded timeouts; 50 consecutive failures → exit, systemd restarts; per-frame `fprintf` moved behind `BOARD_VERBOSE_DETECT` |
+
+**Why the frame rate is capped**: NPU inference is 71% of the frame; `decide` is only 0.02ms (0.03%), which **disproves the earlier assumption that the per-frame Jacobi spectral step was the bottleneck**.
+Next steps are *estimates, not implemented*: inference decimation (1 in 2 frames + Kalman extrapolation, ~11-13 FPS), CPU/NPU pipeline overlap (~10 FPS), 640→416 input (~13 FPS, needs recalibration).
 
 Performance profiling logs & long-run snapshots: `results/edge_board/`.
 
@@ -131,6 +136,7 @@ python scripts/crowd_test_enhanced.py --input <video.mp4> --output results/video
 
 | Doc | Content |
 |---|---|
+| `docs/AUDIT_20261030_ROUND3.md` | **2026-10-30 multi-agent cross-audit report** (on-board measurements + cross-validation + explicit unverified list) |
 | `docs/工作日志.md` | Development work log (time / change / commit / progress) |
 | `docs/SYSTEM_PRINCIPLE.md` | System principle & algorithm details |
 | `docs/ARCHITECTURE.md` | System architecture & module overview |

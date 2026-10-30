@@ -64,7 +64,8 @@ make test-selftest     # 80 项用例：全 PASS 场景 + 各单项 FAIL + NULL 
 cd src/luckfox_rtsp_yolov5
 make hardware-selftest          # 产物 ./hardware_selftest
 # 用法：./hardware_selftest [-g <loopback_gpio>] [-b <button_gpio>] [-c <pwm_chip>] [-p <pwm_chan>]
-# 默认：-g 56（LED 红） -b 92（按键 GPIO1_C3_d） -c 0 -p 0
+# 默认：-g 56（GPIO1_D0，实测空闲脚请替换） -b 67（GPIO2_A3_d，排针 Pin27） -c 8（pwmchip8=PWM8_M1） -p 0
+# 说明：旧文档写的 -b 92 / -c 0 是错的——实测 sysfs 92 = GPIO2_D4，且板上没有 pwmchip0（只有 pwmchip8/9，各 1 通道）
 ./hardware_selftest
 # 退出码：0=全部 PASS，1=存在 FAIL
 ```

@@ -13,7 +13,7 @@
 - **时序决策**：多目标 Kalman 跟踪（最近邻关联）+ FSM 有限状态机（滞回防抖/确认帧/DANGER 保持）；ByteTrack/EMA 模块独立实现并通过单测（可选扩展）
 - **风险分级**：实时输出 **SAFE / WARNING / DANGER** 三级风险
 - **多目标可切换**：通过 `target_classes` 配置检测目标类别（人[0]/车辆[2,5,7,3]/狗[16]/猫[15]/动物[14,18,19,20,21]），一键切换危险目标聚集报警
-- **真机性能**：NEON 优化预处理（CPU 预处理 136ms→33ms），实测 **7.46 FPS**、内存 ~11MB、**28 小时+ 长稳采样（10 点）**：看门狗 0 介入、日志 0 错误，服务中断自动恢复（看门狗 + 有限超时）
+- **真机性能**：NEON 优化预处理（CPU 预处理 136ms→33ms），实测 **7.63 FPS**（2026-10-30 独立复测：30s RTSP 抓包 229 帧；瓶颈为 NPU 推理 91.5ms/帧占 71%）、内存 ~13.8MiB、有限超时 + 看门狗自愈（`docs/` 与 `results/edge_board/` 有打点日志）
 - **网页免安装观看**：开发板 go2rtc 转 WebRTC/HLS，手机/电脑浏览器直接打开网页看监控（`docs/WEB_VIEWER.md`）；**本地视频流兜底演示**（P2-1）：`scripts/setup_go2rtc_demo_stream.sh` 一键向 go2rtc 注入预录增强视频 demo 流，现场镜头前无人时也能演示 DANGER 切换（配置工具 14 项主机测试 + 4 项 shell 测试由 CI 覆盖）
 - **可配置**：规则阈值、目标类别与**外部 IPM 标定文件**通过 JSON 配置文件加载（`config/default_config.json`；`homography_file` 指向文本 3x3 单应，相机位姿变化无需重编译）
 - **可扩展硬件**：双舵机云台、三色 LED 风险灯、防抖按键、语音告警（USB 喇叭 + aplay，等级触发/抢占/防重复）、**触摸屏菜单状态机**（LVGL 前端无关：页面导航/四键/风险等级颜色映射/参数节流刷新，`docs/hardware/lvgl_menu.md`）、**ILI9341 SPI 显示驱动**（320×240 RGB565：复位/初始化命令序列/窗口/矩形填充/整帧 flush/读 ID 0x9341，`src/hardware/ili9341.h`，123 项主机测试）、**XPT2046 电阻触摸驱动**（SPI 12 位 ADC 坐标/压力：命令协议/数据提取/PENIRQ+压力阈值触摸判定/校准坐标转换/中值抗噪，`src/hardware/xpt2046.h`，98 项主机测试）、**Linux 板端适配层**（`/dev/spidevX.Y` 全双工 SPI + DC/RESET/背光/PENIRQ 的 sysfs GPIO 实现，`src/hardware/sysfs_spi.{h,cc}`，40 项 Linux 单元测试，已在开发板 armv7l 真机编译运行通过）、物理开关驱动已就绪（`docs/hardware/`）；**开机硬件自检**（GPIO/PWM/SPI 屏幕/USB 声卡/WiFi/按键 6 项 PASS/FAIL，全部通过才进入演示模式，`docs/hardware/selftest.md`，**已在开发板两轮真机验证**：无外设容错运行 + SPI0 启用后 SPI 传输实测打通）；**SPI0 已真机落地**（`scripts/enable_spi0_overlay.sh`：Luckfox 动态设备树 overlay，无需重编内核/boot.img；`/dev/spidev0.0` 已生成、systemd 开机自动加载、udev 0666 权限、ioctl 实测 mode0/1MHz，见 `docs/hardware/lvgl_board_port.md`）
@@ -76,11 +76,11 @@ pedestrian-risk-decision/
 ![图片基线检出率](docs/figures/fig2_detect_rate.png)
 
 ### 视频增强（真实视频，Kalman+谱特征+FSM，111 条全量重跑）
-- **全量 111 条真实视频（45021 帧）**：等级分布 **SAFE 26885 / WARNING 6388 / DANGER 8452**，平均每条等级切换 **5.12 次**（中位数 4.0，FSM 滞回稳定），66 条出现 DANGER，**31 条全程输出 SAFE（系统未报警）**（无人工真值，无法判定未报警是正确不报还是漏报）
-- 谱特征修正项（w4=0.1，score += w4·fiedler/(fiedler+1)·r_gcc）已接入生产 FSM：Fiedler 均值随等级单调上升（SAFE 0.017 / WARNING 0.214 / DANGER 1.078），111 条批量 DANGER 帧 7807 → 8452（谱特征提升高风险识别）
+- **全量 111 条真实视频（45021 帧）**：等级分布 **SAFE 28214 / WARNING 8355 / DANGER 8452**（三数相加 = 45021，2026-10-30 由逐帧 timeline 重算，见 `results/rerun/_aggregate_recomputed.json`），平均每条等级切换 **5.12 次**（中位数 4.0，FSM 滞回稳定），**45 条出现 DANGER**，**31 条全程输出 SAFE（系统未报警）**（无人工真值，无法判定未报警是正确不报还是漏报）
+- 谱特征修正项（w4=0.1，score += w4·fiedler/(fiedler+1)·r_gcc）已接入生产 FSM：Fiedler 均值随等级单调上升（SAFE **0.021** / WARNING **0.567** / DANGER **1.084**，2026-10-30 重算；中位数 0 / 0 / 0.716）
 - 密集人群（`mixkit_13192`）：**DANGER 179 / WARNING 120 / SAFE 6**（305 帧），等级切换仅 4 次 → 稳定（公平基线 AND 规则为 48 次/视频）
 - 稀疏/无人场景（`mixkit_50134`，光照正常）：388 帧全程 SAFE（该场景无行人，未触发告警）
-- **前后对比（公平基线，规则与真实引擎一致）**：平均切换次数 **23.2 → 5.9（↓74.8%）**；基线 24 条出现 DANGER、增强 66 条；DANGER 帧 2190 → 8452（FSM 评分含密度权重+谱特征且带保持机制，比逐帧规则更敏感、更稳定）。明细见 `results/rerun/_comparison_summary.json`；全量见 `results/rerun/`
+- **前后对比（公平基线，规则与真实引擎一致）**：平均切换次数 **23.22 → 5.12（↓78.0%）**（基线 2578 次 / 111 条）；基线 **24 条**出现 DANGER、增强 **45 条**；DANGER 帧 **2190 → 8452**（FSM 评分含密度权重+谱特征且带保持机制，比逐帧规则更敏感、更稳定）。明细见 `results/rerun/_comparison_summary.json`；全量见 `results/rerun/`
 
 ![视频增强前后对比](docs/figures/fig3_before_after.png) 
 ![视频增强等级分布](docs/figures/fig4_video_level.png)
@@ -92,7 +92,7 @@ pedestrian-risk-decision/
 ![DANGER 视频数/帧数对比](docs/figures/fig_danger_compare.png)
 ![等级帧占比对比](docs/figures/fig_level_share_compare.png)
 
-> 数据挖掘结论：Fiedler 与风险等级的 **Spearman ρ = 0.688**（45021 帧全量），谱连通度与人群聚集风险显著正相关。
+> 数据挖掘结论：Fiedler 与风险等级的 **Spearman ρ = 0.692**（45021 帧全量，2026-10-30 由逐帧 timeline 重算），谱连通度与人群聚集风险显著正相关。
 
 ### 消融实验（各组件贡献，6 条代表性视频）
 
@@ -109,14 +109,21 @@ pedestrian-risk-decision/
 
 ### ⚡ 真机性能（Luckfox Pico Max / RV1106）
 
+2026-10-30（Round3 审计）真机复测：
+
 | 指标 | 结果 |
 |---|---|
-| 帧率（NEON 优化后） | **6.30 → 7.46 FPS（+18%）** |
-| CPU 预处理耗时（letterbox+RGB） | **136ms → 33ms（-76%，NEON）** |
-| 内存占用（RSS） | **~10.5-10.9MB** |
-| 长稳（systemd 看门狗 + 有限超时） | **28 小时+ 采样（10 点）：看门狗 0 介入、日志 0 错误**（板子曾外部重启 1 次，systemd 自动恢复；当前进程连续运行 6h+） |
+| 帧率 | **7.63 FPS**（30s RTSP 抓包 229 帧；板端 `[PERF]` 日志 7.52~7.74 一致） |
+| 单帧耗时分解 | **infer 91.5ms（71%，瓶颈）** / prep 31.0ms（24%）/ enc 4.0ms / draw 2.4ms / decide 0.02ms / vi 0.06ms，合计 ≈129ms |
+| CPU 预处理耗时（letterbox+RGB） | 136ms → 33ms（-76%，NEON）；Round3 单遍零拷贝后 **31.0ms** |
+| 内存占用（RSS） | **13.8 MiB**（VmRSS 14152 kB） |
 | 板端黄金测试 | **174/174 通过**（NEON vs 标量对照） |
-| 主链路保护 | VI/VENC 1s 有限超时、连续失败 30 次主动退出交由看门狗重启 |
+| 稳定性（Round3 修复后） | NRestarts=0、观察期无新 core、RTSP :554 正常 |
+| 稳定性（修复前现场） | **38 个 core dump（546MB）**、根分区 80%、进程长期 D 状态、load average > 11 |
+| 主链路保护 | VI 200ms / VENC 100ms 有限超时、连续失败 50 次主动退出交 systemd 重启；逐帧 `fprintf` 收进 `BOARD_VERBOSE_DETECT` 编译开关 |
+
+**帧率瓶颈的结论（推翻了"谱特征 Jacobi 每帧是瓶颈"的先验）**：`decide` 仅 0.02ms（0.03%），NPU 推理占 71%。
+下一步可做（均为**推断，未实现**）：推理降频（每 2 帧 1 次 + Kalman 外推，预估 11~13 FPS）、CPU/NPU 流水线重叠（预估 ~10 FPS）、输入 640→416（预估 ~13 FPS，需重标定）。
 
 性能打点日志与长稳快照见 `results/edge_board/`。
 
@@ -163,7 +170,30 @@ make test # 编译并运行增强决策/JSON 配置/阈值引擎单元测试（�
 - 阈值通过 `config/default_config.json` 运行时加载（`RiskEngine::setConfig`），失败自动回退默认值，“可配置”承诺在 C++ 端落地。
 
 
-## 🔧 2026-10-30 关键修复（Hub多Agent审计）
+## 🔧 关键修复（2026-10-30 Hub 审计 / Round3 多 Agent 交叉审计）
+
+完整技术报告（入库）：[`docs/AUDIT_20261030_ROUND3.md`](docs/AUDIT_20261030_ROUND3.md)
+
+### Round3（2026-10-30 夜，5 个专业 Agent + 真机闭环）
+
+| 问题 | 严重度 | 证据 | 修复 |
+|-----|--------|------|------|
+| VENC 只 malloc 1 个 pack 且只发 `pstPack[0]` | P0 | main.cc 旧 `stFrame` 单包槽；`u32PackCount>1` 时越界写 → core/画面撕裂 | `stPacks[8]` + 按 `u32PackCount` 全发 |
+| 每帧每框 `fprintf/printf` 无界输出 | P0 | 管道写满即阻塞 → **板子"卡死"直接诱因** | 收进 `BOARD_VERBOSE_DETECT` 编译开关 + 1Hz `[PERF]` 心跳 |
+| `RK_MPI_*` 无限阻塞 `timeout=-1`、SendFrame 返回值不检查 | P0 | 旧 main.cc 三处 -1 | VI 200ms / VENC 100ms + 连续失败 50 次退出交 systemd |
+| `config` 的 `conf_threshold` 无解析分支（调参空操作） | P0 | risk_config.h 全仓库无解析；推理用 SDK 头 `BOX_THRESH` | 新增 `include/detect_thresholds.h` + 运行时解析并传入 |
+| `BOX/NMS_THRESH` 随两套 SDK 漂移（0.35 vs 0.25） | P0 | 构建机 board_sdk / luckfox_sdk 头文件不同 | 阈值改为仓库内显式常量 |
+| 干净仓库在板端**编不过** | P0 | `yolov5.cc` 2 参签名 vs SDK 3 参；Makefile 缺 `-I SDK/include/rknn`、缺 `-DRV1106_1103`、链接库不全 | Makefile/CMake 按 board_sdk 实测 flags 重写 |
+| `bytetrack_tracker.h` 编译不过且从未被编译 | P0 | `xyahToBox(const std::array<double,4>&)` 收到 8 维 `kf.mean()` | 形参改 8 维 + parity 测试守门 |
+| NV21 别名当 NV12 + BGR 字节喂 RGB 模型 | P1 | `COLOR_YUV420sp2BGR` + 直写 RKNN 输入 | 单遍零拷贝 `yuv420sp_to_rgb_letterbox`，通道修正 |
+| 同地址自 `memcpy` 冒充"缓存同步" | P1 | `memcpy(data, frame.data)`，frame 就包在 data 上 | 删除 + 补 `RK_MPI_SYS_MmzFlushCache` |
+| 脚点去重与**全部历史点**比较（链式合并低估人数） | P1 | graph_laplacian.h 内层遍历含已丢弃点 | 只比已保留点；内部统一 double |
+| DBSCAN 噪声标签 Python `-2` vs 板端 `-1` | P1 | crowd_dbscan.py vs .h | 统一 `NOISE=-1 / UNCLASSIFIED=-2` |
+| IPM 标定点共线时静默返回退化单应 → **永远不报警** | P1 | `H~1e-31`，全部脚点映射到 (0,0) | 新增像素共线 + 非退化矩阵校验 |
+| 并列簇顺序不可复现（`std::sort` 非稳定） | P2 | n=20 并列簇 | 比较器补 tie-break |
+| `postprocess.cc` `std::set` 热路径 / `cls_id<0` 越界 | P2 | — | bool 数组 + 下标校验 |
+
+### Hub 审计（同日早些时候）
 
 | Bug | 严重度 | 修复 |
 |-----|--------|------|
@@ -173,12 +203,13 @@ make test # 编译并运行增强决策/JSON 配置/阈值引擎单元测试（�
 | Jacobi n≥10不收敛 | P0 | 单主元→循环收敛 |
 | letterbox每帧2MB malloc | P1 | 预分配常驻缓冲 |
 
-详见 `docs/review/20261030_hub/FIXES_APPLIED.md` 和 `docs/review/20261030_hub/perf_analysis_opencode.md`
+> 详细过程报告在本地 `docs/review/`（按仓库隐私规则不入库），结论已全部汇总进 `docs/AUDIT_20261030_ROUND3.md`。
 
 ## 📚 文档索引
 
 | 文档 | 内容 |
 |---|---|
+| `docs/AUDIT_20261030_ROUND3.md` | **2026-10-30 多 Agent 交叉审计报告**（真机实测 + 交叉验证 + 未验证项清单） |
 | `docs/工作日志.md` | 开发进度日志（时间/改动/commit/进度） |
 | `docs/SYSTEM_PRINCIPLE.md` | 系统实现原理与算法详解 |
 | `docs/ARCHITECTURE.md` | 系统架构与模块划分 |

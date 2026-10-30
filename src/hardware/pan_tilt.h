@@ -10,7 +10,7 @@
 //   - 无目标时保持不动；舵机不可用时 update 安全跳过。
 //
 // 集成示例（接入主循环，每帧调用一次）：
-//   hw::SysfsPwm panPwm(0, 0), tiltPwm(0, 1);
+//   hw::SysfsPwm panPwm(8, 0), tiltPwm(9, 0);  // 实测仅 pwmchip8/9，各 1 通道
 //   hw::Servo pan(&panPwm), tilt(&tiltPwm);
 //   hw::PanTilt gimbal(pan, tilt);
 //   gimbal.init();

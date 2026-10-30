@@ -10,8 +10,7 @@
 // 两侧读取同一批 JSON，从机制上防止 C++/Python 双实现漂移。
 //
 // 编译（主机 x86，无需 OpenCV/RKNN/RTSP）：
-//   g++ -std=c++11 -O2 -I../include -I../../algorithms test_golden_regression.cc \
-//       -o test_golden_regression
+//   g++ -std=c++11 -O2 -I../include -I../../algorithms test_golden_regression.cc -o test_golden_regression (单行，勿在注释行尾用反斜杠：会触发 -Wcomment)
 //   运行：./test_golden_regression [golden_dir]
 // 其中 golden_dir 缺省时依次尝试 ../../tests/golden/ 与 tests/golden/。
 //

@@ -8,7 +8,8 @@
 //   - 引脚可在构造时指定（打样定版前以实测 /sys/class/gpio 为准）。
 //
 // 集成示例（接入主循环，每帧设置一次）：
-//   hw::SysfsGpio red(56), green(57), blue(58);
+//   hw::SysfsGpio red(0), green(0), blue(0);   // 引脚待定：56/57/58 实测已被
+//   UART3_TX/RX（GPIO1_D0/D1）与 I2C3_SCL（GPIO1_D2）占用，切勿直接使用
 //   hw::RgbLed led(&red, &green, &blue);
 //   led.init();                                   // GPIO 不可用则禁用
 //   ...

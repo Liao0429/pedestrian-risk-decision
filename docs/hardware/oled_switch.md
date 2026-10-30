@@ -1,5 +1,14 @@
 # OLED 显示屏（SSD1306 I2C）+ 物理开关模块设计方案
 
+> ⚠ **2026-10-30 实测校准（hardware-hw / task-3）**：本文档部分引脚/方案与真机实测冲突。
+> **引脚与总线请以 [`pin_map_verified.md`](./pin_map_verified.md) 为唯一事实源**；
+> 交叉验证结论见 [`docs/review/20261030_round3/hardware_pcb_consistency.md`](../review/20261030_round3/hardware_pcb_consistency.md)。
+>
+> 具体冲突：本文按 **I2C2（/dev/i2c-2）** 设计，但板上**没有 /dev/i2c-2**，只有
+> `/dev/i2c-3`（i2c3m1-xfer = GPIO1_D2/D3 = sysfs 58/59）与 `/dev/i2c-4`。
+> 本文的引脚表（Pin29/34 = GPIO2_A6/A7 作 I2C3）与实测 pinmux 也不一致。
+> 另：`src/hardware/` 里**没有** OLED 驱动实现，PCB 上也没有 OLED 位号——该方案目前是纯设计文档。
+
 > 项目：《基于 C++ 的边缘端轻量化行人感知与风险决策软件系统设计》
 > 目标板：Luckfox Pico Max（RV1106G3，256MB DDR3L，NPU 1 TOPS，单核 Cortex-A7 1.2GHz）
 > 适用源码：`src/luckfox_rtsp_yolov5/`（RKNN YOLOv5 行人检测 + 复杂网络风险决策 + RTSP 推流）

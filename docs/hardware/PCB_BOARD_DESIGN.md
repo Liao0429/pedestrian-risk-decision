@@ -1,5 +1,14 @@
 # 嘉立创 PCB 底板设计规格书（v1.0）
 
+> ⚠ **2026-10-30 实测校准（hardware-hw / task-3）**：本文档部分引脚/方案与真机实测冲突。
+> **引脚与总线请以 [`pin_map_verified.md`](./pin_map_verified.md) 为唯一事实源**；
+> 交叉验证结论见 [`docs/review/20261030_round3/hardware_pcb_consistency.md`](../review/20261030_round3/hardware_pcb_consistency.md)。
+>
+> 具体冲突：本文 §四 网络表是 **v1.0 设计意图**，与**已打样 Gerber v1.7** 有差异：
+> Gerber 实际还有 J11（ILI9341 SPI 8P）、J5/J6/J7 为预留、J10A/J10B 跳线区；
+> 且 Gerber 上 **5V_SERVO 与 5V 不连通**（舵机轨无电源，必须飞线 J2a-1→J2b-1）、**无覆铜**、
+> 丝印 J10A 标注步进 5.08mm 而焊盘 2.54mm（错位）。详见评审报告。
+
 > 用途：为 Luckfox 行人感知与风险决策系统制作一块**底板转接板**，把开发板、双舵机、语音模块、串口屏、电源、开关统一接到一块 PCB 上，插上即可**完全自主运行**。用嘉立创EDA（免费）画图 → 嘉立创下单打样 → 焊接排母/排针/元件 → 插上模块 → 上电。
 
 ## 一、整体方案

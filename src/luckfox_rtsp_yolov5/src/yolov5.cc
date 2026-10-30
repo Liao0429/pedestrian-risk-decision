@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "yolov5.h"
+#include "detect_thresholds.h"
 
 static void dump_tensor_attr(rknn_tensor_attr *attr)
 {
@@ -35,6 +36,11 @@ int init_yolov5_model(const char *model_path, rknn_app_context_t *app_ctx)
     int model_len = 0;
     char *model;
     rknn_context ctx = 0;
+    // 两个 vector 提前声明（而不是在 goto 目标之前就地构造），
+    // 否则 goto fail 会跨过它们的初始化：C++ 报
+    // "jump to label 'fail' crosses initialization"。
+    std::vector<rknn_tensor_attr> input_attrs;
+    std::vector<rknn_tensor_attr> output_attrs;
 
     ret = rknn_init(&ctx, (char *)model_path, 0, 0, NULL);
     if (ret < 0)
@@ -49,20 +55,23 @@ int init_yolov5_model(const char *model_path, rknn_app_context_t *app_ctx)
     if (ret != RKNN_SUCC)
     {
         printf("rknn_query fail! ret=%d\n", ret);
-        return -1;
+        goto fail;
     }
     //printf("model input num: %d, output num: %d\n", io_num.n_input, io_num.n_output);
 
-    // VLA 改 std::vector：io_num 可能为 0，先校验再分配，避免 C99 VLA 越界
-    if (io_num.n_input == 0 || io_num.n_output == 0) {
-        printf("rknn_query invalid io num! n_input=%u, n_output=%u\n",
+    // VLA 改 std::vector：io_num 可能为 0，先校验再分配，避免 C99 VLA 越界。
+    // 同时校验上限：rknn_app_context_t 里 input_mems[1] / output_mems[3] 是定长数组
+    // （SDK include/rknn/yolov5.h），旧实现无上限检查，换多输出模型会写越界。
+    if (io_num.n_input == 0 || io_num.n_output == 0 ||
+        io_num.n_input > 1 || io_num.n_output > 3) {
+        printf("rknn_query invalid io num! n_input=%u (<=1), n_output=%u (<=3)\n",
                (unsigned)io_num.n_input, (unsigned)io_num.n_output);
-        return -1;
+        goto fail;
     }
 
     // Get Model Input Info
     //printf("input tensors:\n");
-    std::vector<rknn_tensor_attr> input_attrs(io_num.n_input);
+    input_attrs.resize(io_num.n_input);
     memset(input_attrs.data(), 0, sizeof(rknn_tensor_attr) * input_attrs.size());
     for (uint32_t i = 0; i < io_num.n_input; i++)
     {
@@ -71,14 +80,14 @@ int init_yolov5_model(const char *model_path, rknn_app_context_t *app_ctx)
         if (ret != RKNN_SUCC)
         {
             printf("rknn_query fail! ret=%d\n", ret);
-            return -1;
+            goto fail;
         }
         dump_tensor_attr(&(input_attrs[i]));
     }
 
     // Get Model Output Info
     //printf("output tensors:\n");
-    std::vector<rknn_tensor_attr> output_attrs(io_num.n_output);
+    output_attrs.resize(io_num.n_output);
     memset(output_attrs.data(), 0, sizeof(rknn_tensor_attr) * output_attrs.size());
     for (uint32_t i = 0; i < io_num.n_output; i++)
     {
@@ -88,7 +97,7 @@ int init_yolov5_model(const char *model_path, rknn_app_context_t *app_ctx)
         if (ret != RKNN_SUCC)
         {
             printf("rknn_query fail! ret=%d\n", ret);
-            return -1;
+            goto fail;
         }
         dump_tensor_attr(&(output_attrs[i]));
     }
@@ -100,21 +109,29 @@ int init_yolov5_model(const char *model_path, rknn_app_context_t *app_ctx)
     input_attrs[0].fmt = RKNN_TENSOR_NHWC;
     //printf("input_attrs[0].size_with_stride=%d\n", input_attrs[0].size_with_stride);
     app_ctx->input_mems[0] = rknn_create_mem(ctx, input_attrs[0].size_with_stride);
+    if (app_ctx->input_mems[0] == NULL) {
+        printf("input rknn_create_mem fail!\n");
+        goto fail;
+    }
 
     // Set input tensor memory
     ret = rknn_set_io_mem(ctx, app_ctx->input_mems[0], &input_attrs[0]);
     if (ret < 0) {
         printf("input_mems rknn_set_io_mem fail! ret=%d\n", ret);
-        return -1;
+        goto fail;
     }
 
     // Set output tensor memory
     for (uint32_t i = 0; i < io_num.n_output; ++i) {
         app_ctx->output_mems[i] = rknn_create_mem(ctx, output_attrs[i].size_with_stride);
+        if (app_ctx->output_mems[i] == NULL) {
+            printf("output[%u] rknn_create_mem fail!\n", (unsigned)i);
+            goto fail;
+        }
         ret = rknn_set_io_mem(ctx, app_ctx->output_mems[i], &output_attrs[i]);
         if (ret < 0) {
             printf("output_mems rknn_set_io_mem fail! ret=%d\n", ret);
-            return -1;
+            goto fail;
         }
     }
 
@@ -133,8 +150,12 @@ int init_yolov5_model(const char *model_path, rknn_app_context_t *app_ctx)
 
     app_ctx->io_num = io_num;
     app_ctx->input_attrs = (rknn_tensor_attr *)malloc(io_num.n_input * sizeof(rknn_tensor_attr));
-    memcpy(app_ctx->input_attrs, input_attrs.data(), io_num.n_input * sizeof(rknn_tensor_attr));
     app_ctx->output_attrs = (rknn_tensor_attr *)malloc(io_num.n_output * sizeof(rknn_tensor_attr));
+    if (app_ctx->input_attrs == NULL || app_ctx->output_attrs == NULL) {
+        printf("malloc tensor attrs fail!\n");
+        goto fail;
+    }
+    memcpy(app_ctx->input_attrs, input_attrs.data(), io_num.n_input * sizeof(rknn_tensor_attr));
     memcpy(app_ctx->output_attrs, output_attrs.data(), io_num.n_output * sizeof(rknn_tensor_attr));
 
     if (input_attrs[0].fmt == RKNN_TENSOR_NCHW) 
@@ -155,6 +176,27 @@ int init_yolov5_model(const char *model_path, rknn_app_context_t *app_ctx)
            app_ctx->model_height, app_ctx->model_width, app_ctx->model_channel);
 
     return 0;
+
+fail:
+    // 错误路径统一释放：旧实现在 query/set_io_mem/malloc 失败时直接 return -1，
+    // rknn_context 与 DMA 缓冲全部泄漏（反复 restart 会累积）。
+    if (ctx != 0) {
+        if (app_ctx->input_mems[0] != NULL) {
+            rknn_destroy_mem(ctx, app_ctx->input_mems[0]);
+            app_ctx->input_mems[0] = NULL;
+        }
+        for (int i = 0; i < 3; ++i) {
+            if (app_ctx->output_mems[i] != NULL) {
+                rknn_destroy_mem(ctx, app_ctx->output_mems[i]);
+                app_ctx->output_mems[i] = NULL;
+            }
+        }
+        rknn_destroy(ctx);
+        app_ctx->rknn_ctx = 0;
+    }
+    if (app_ctx->input_attrs != NULL) { free(app_ctx->input_attrs); app_ctx->input_attrs = NULL; }
+    if (app_ctx->output_attrs != NULL) { free(app_ctx->output_attrs); app_ctx->output_attrs = NULL; }
+    return -1;
 }
 
 int release_yolov5_model(rknn_app_context_t *app_ctx)
@@ -179,6 +221,10 @@ int release_yolov5_model(rknn_app_context_t *app_ctx)
             rknn_destroy_mem(app_ctx->rknn_ctx, app_ctx->output_mems[i]);
         }
     }
+    if (app_ctx->net_mem != NULL && app_ctx->rknn_ctx != 0) {
+        rknn_destroy_mem(app_ctx->rknn_ctx, app_ctx->net_mem);
+        app_ctx->net_mem = NULL;
+    }
     if (app_ctx->rknn_ctx != 0)
     {
         rknn_destroy(app_ctx->rknn_ctx);
@@ -190,20 +236,53 @@ int release_yolov5_model(rknn_app_context_t *app_ctx)
     return 0;
 }
 
-int inference_yolov5_model(rknn_app_context_t *app_ctx,  object_detect_result_list *od_results)
+// 置信度阈值由调用方传入（main.cc 用 riskCfg.conf_threshold，来自
+// config/default_config.json 的 conf_threshold；旧实现是编译期 pedestrian::kDefaultDetectConf，
+// 配置里的 conf_threshold 整条链路无人读取 —— 现场调参实际无效）。
+int inference_yolov5_model(rknn_app_context_t *app_ctx,
+                           object_detect_result_list *od_results,
+                           float conf_threshold)
 {
-    int ret;
-    const float nms_threshold = NMS_THRESH;      // 默认的NMS阈值
-    const float box_conf_threshold = BOX_THRESH; // 默认的置信度阈值
-   
-    ret = rknn_run(app_ctx->rknn_ctx, nullptr);
+    if (app_ctx == NULL || od_results == NULL) return -1;
+    const float nms_threshold = pedestrian::kDefaultDetectNms;   // 默认 NMS 阈值
+    float box_conf_threshold = conf_threshold;
+    if (!(box_conf_threshold > 0.0f && box_conf_threshold < 1.0f))
+        box_conf_threshold = pedestrian::kDefaultDetectConf;      // 非法值回退编译期默认
+
+    // ---- 零拷贝 DMA 缓存一致性 ----
+    // CPU 刚写完 letterbox 数据；NPU 通过 DMA 读同一块物理内存，提交前必须
+    // SYNC_TO_DEVICE 回写缓存（rknn 映射可能是 cacheable）。旧代码假设不可缓存、
+    // 未做任何 sync，属于潜在脏读/撕裂根因。
+    {
+        static bool in_sync_warned = false;
+        int sret = rknn_mem_sync(app_ctx->rknn_ctx, app_ctx->input_mems[0],
+                                 RKNN_MEMORY_SYNC_TO_DEVICE);
+        if (sret != 0 && !in_sync_warned) {
+            printf("rknn_mem_sync(input,TO_DEVICE) ret=%d (内存不可缓存时可忽略)\n", sret);
+            in_sync_warned = true;
+        }
+    }
+
+    int ret = rknn_run(app_ctx->rknn_ctx, nullptr);
     if (ret < 0) {
         printf("rknn_run fail! ret=%d\n", ret);
         return -1;
     }
 
-    // Post Process
-    post_process(app_ctx, app_ctx->output_mems,  box_conf_threshold, nms_threshold, od_results);
-out:
-    return ret;
+    // NPU 写完输出后，CPU 读之前需要 SYNC_FROM_DEVICE（零拷贝输出）
+    for (uint32_t mi = 0; mi < app_ctx->io_num.n_output; ++mi) {
+        if (app_ctx->output_mems[mi] != NULL)
+            rknn_mem_sync(app_ctx->rknn_ctx, app_ctx->output_mems[mi],
+                          RKNN_MEMORY_SYNC_FROM_DEVICE);
+    }
+
+    // Post Process：旧实现忽略返回值，解码失败时下游会拿到上一帧的陈旧框
+    ret = post_process(app_ctx, app_ctx->output_mems, box_conf_threshold,
+                       nms_threshold, od_results);
+    if (ret != 0) {
+        printf("post_process fail! ret=%d\n", ret);
+        od_results->count = 0;
+        return -1;
+    }
+    return 0;
 }

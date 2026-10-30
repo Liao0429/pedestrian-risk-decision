@@ -416,8 +416,11 @@ def main():
     parser.add_argument("--output", default="output",
                         help="输出目录(默认 output)，标注图存 output/vis/，"
                              "统计存 output/results.json")
+    # 离线原型默认 0.25（与板端刻意不同）：板端真源是 config/default_config.json
+    # 的 conf_threshold=0.35（risk_config.h 运行时消费，2026-10-30 裁决）；
+    # 离线评估为了让检出更完整、便于对比分析，保留更低的 0.25。
     parser.add_argument("--conf", type=float, default=0.25,
-                        help="检测置信度阈值(默认 0.25)")
+                        help="检测置信度阈值(离线原型默认 0.25；板端见 config conf_threshold=0.35)")
     parser.add_argument("--weights", default="yolov8n.pt",
                         help="YOLO 权重路径或 ultralytics 内置名(默认 yolov8n.pt)")
     parser.add_argument("--imgsz", type=int, default=640,

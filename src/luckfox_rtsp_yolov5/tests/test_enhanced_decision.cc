@@ -166,13 +166,57 @@ void test_smoothing_reduces_jitter() {
     CHECK(std::fabs(last[0].first - 1.0) < 0.25);
 }
 
+// 谱特征降频：每 spectral_interval 帧才重算特征分解，中间帧复用缓存
+void test_spectral_decimation() {
+    EnhancedConfig cfg;
+    cfg.spectral_interval = 4;
+    EnhancedDecision ed(cfg);
+    CHECK(ed.spectralUpdates() == 0);
+    for (int i = 0; i < 9; ++i) ed.processFrame(denseCluster());
+    CHECK(ed.spectralUpdates() == 3);   // 第 1/5/9 帧重算（旧行为：每帧 1 次共 9 次）
+}
+
+// 降频期间：网络/谱特征复用，但节点数 n 必须逐帧刷新
+void test_spectral_cache_reuses_but_n_is_fresh() {
+    EnhancedConfig cfg;
+    cfg.spectral_interval = 4;
+    EnhancedDecision ed(cfg);
+    EnhancedResult r1 = ed.processFrame(denseCluster());
+    CHECK_EQ(r1.n, 10);
+    CHECK_EQ(r1.density, 1.0);
+    std::vector<std::pair<float, float>> one;
+    one.push_back(std::make_pair(0.0f, 0.0f));
+    EnhancedResult r2 = ed.processFrame(one);
+    CHECK_EQ(r2.n, 1);
+    CHECK_EQ(r2.density, 1.0);   // 特征缓存复用（最多滞后 interval-1 帧）
+    EnhancedResult r3 = ed.processFrame(one);
+    CHECK_EQ(r3.n, 1);
+    CHECK_EQ(r3.density, 1.0);
+    ed.processFrame(one);
+    EnhancedResult r5 = ed.processFrame(one);
+    CHECK_EQ(r5.n, 1);
+    CHECK_EQ(r5.density, 0.0);   // 第 5 帧重算 -> 单人无邻居
+    CHECK(ed.spectralUpdates() == 2);
+}
+
+// interval=1 时行为与旧实现完全一致（每帧都重算）
+void test_spectral_interval_one_is_legacy() {
+    EnhancedConfig cfg;
+    cfg.spectral_interval = 1;
+    EnhancedDecision ed(cfg);
+    for (int i = 0; i < 6; ++i) ed.processFrame(denseCluster());
+    CHECK(ed.spectralUpdates() == 6);
+}
+
 void test_reset() {
     EnhancedDecision ed;
     for (int i = 0; i < 8; ++i) ed.processFrame(denseCluster());
     CHECK(ed.processFrame(denseCluster()).level == 2);  // DANGER
     ed.reset();
+    CHECK(ed.spectralUpdates() == 0);   // reset 同时清空谱特征缓存计数
     EnhancedResult r = ed.processFrame(denseCluster());
     CHECK(r.level == 0);  // reset 后从 SAFE 重新开始
+    CHECK(ed.spectralUpdates() == 1);   // reset 后第一帧必须重算特征
 }
 
 }  // namespace
@@ -183,6 +227,9 @@ int main() {
     test_deterministic();
     test_edge_distance();
     test_smoothing_reduces_jitter();
+    test_spectral_decimation();
+    test_spectral_cache_reuses_but_n_is_fresh();
+    test_spectral_interval_one_is_legacy();
     test_reset();
 
     std::printf("\n%d/%d tests passed\n", g_passed, g_passed + g_failed);

@@ -96,6 +96,23 @@ def test_m2_neutral_when_spectral_unavailable():
 @pytest.mark.skipif(len(TIMELINES) == 0,
                     reason="缺少本地 results/rerun/video_enhanced 的 111 条 timeline 数据（.gitignore 排除，CI 不收集）")
 def test_m0_replay_consistency():
+    """离线重算 vs 在线 timeline 的一致性契约。
+
+    数据前提（重要，2026-10-30 algo-py 复核）
+    -----------------------------------------
+    这 111 条 timeline 是**旧板端构建**的产物，早于 min_danger_n 门控（P0-7,
+    commit 66b4ef0）接入。旧数据里存在 "stored=DANGER 但 n < min_danger_n" 的帧
+    （实测 1203/45021 = 2.67%），当前配置下不可能再出现，因此"全程逐帧 ≥99%"
+    对这份陈旧数据并不成立（实测 98.3186%）—— 旧断言是过期的，不是算法回归。
+
+    现在锁定的三条契约（实测 111/111 视频全部满足）
+    -----------------------------------------------
+    1. 每条视频在"首个 stored DANGER 且 n < min_danger_n"的帧之前**逐帧完全一致**
+       （实测 0/38751 不一致）；
+    2. 上述前缀覆盖 ≥85% 的帧（实测 86.07%），保证契约不是空跑；
+    3. 剔除门控前历史帧后整体一致率 ≥99%（实测 99.4705%）；若数据已重算、
+       不再含这类帧，则该条退化为全程一致率 ≥99%。
+    """
     cfg = load_config(str(PROJECT_ROOT / "config" / "default_config.json"))
     timelines = TIMELINES
     assert len(timelines) >= 100, f"timeline 数量异常: {len(timelines)}"
@@ -103,18 +120,44 @@ def test_m0_replay_consistency():
         import cv2  # noqa: F401
     except ImportError:
         pytest.skip("缺少 cv2，无法读取视频帧率")
-    total_same = total_frames = 0
+
+    min_danger_n = cfg.get("fsm", {}).get("min_danger_n", 3)
+    total_frames = total_same = 0
+    prefix_frames = prefix_bad = 0          # 门控前历史帧之前的"纯净前缀"
+    gate_frames = gate_same = 0             # 剔除门控前历史帧后的比较集
     for name, tl in timelines:
         cap = cv2.VideoCapture(str(PROJECT_ROOT / "dataset" / "videos50" / f"{name}.mp4"))
         fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
         cap.release()
         # 用生产配置（w4=0.1）+ 真实帧率重算，验证离线重算与真实推理一致
         levels, _, _ = replay(tl, cfg, "M0", 0.0, now_ms_mode="fps", m0_spectral=True, fps=fps)
-        same = sum(1 for a, b in zip(levels, [x["level"] for x in tl]) if a == b)
-        total_same += same
+        stored = [x["level"] for x in tl]
+        same_flags = [a == b for a, b in zip(levels, stored)]
+        total_same += sum(same_flags)
         total_frames += len(tl)
-    rate = total_same / total_frames
-    assert rate >= 0.99, f"M0 重算一致性低于 99%: {rate:.4%}"
+
+        # 首个"与当前 min_danger_n 门控矛盾"的历史帧（旧构建未做该门控）
+        first_pregate = next(
+            (i for i, x in enumerate(tl)
+             if x["level"] == "DANGER" and int(x.get("n", 0) or 0) < min_danger_n),
+            len(tl),
+        )
+        prefix_frames += first_pregate
+        prefix_bad += sum(1 for i in range(first_pregate) if not same_flags[i])
+        for i, x in enumerate(tl):
+            if x["level"] == "DANGER" and int(x.get("n", 0) or 0) < min_danger_n:
+                continue
+            gate_frames += 1
+            gate_same += int(same_flags[i])
+
+    assert prefix_bad == 0, (
+        f"门控前纯净前缀出现不一致: {prefix_bad}/{prefix_frames} 帧；"
+        f"说明当前算法与在线推理确有差异（不只是旧数据缺 min_danger_n 门控）"
+    )
+    coverage = prefix_frames / total_frames
+    assert coverage >= 0.85, f"纯净前缀覆盖率过低: {coverage:.4%}（契约空跑风险）"
+    rate = gate_same / gate_frames if gate_frames else 1.0
+    assert rate >= 0.99, f"剔除门控前历史帧后 M0 重算一致性低于 99%: {rate:.4%}"
 
 
 # ---------- 3. 实验产物完整性 ----------

@@ -35,6 +35,7 @@
 #include <string>
 #include <vector>
 
+#include "detect_thresholds.h"
 #include "../../algorithms/minijson.h"
 #include "../../algorithms/risk_fsm.h"
 
@@ -60,6 +61,12 @@ struct RiskConfig {
     std::map<int,float> class_conf_thresholds;  // 按类别差异化置信度阈值（COCO id -> 最低置信度 0~1）。空=不区分（仅用全局 BOX_THRESH）
     RiskFSMConfig fsm;                  // 增强决策 FSM 参数（默认与 Python 端 RiskFSMConfig 一致，可 JSON 配置）
     double frame_dt = 1.0 / 30.0;       // Kalman 平滑的帧间隔（秒）；默认 30FPS，板端实际帧率低时应按实测配置
+    // 检测阈值（RKNN 后处理用）。旧实现是编译期常量 BOX_THRESH，JSON 里的
+    // conf_threshold 没有任何解析分支 -> 现场调参完全无效。
+    float  conf_threshold = kDefaultDetectConf;  // 检测置信度阈值 (0,1)，见 detect_thresholds.h
+    float  nms_threshold  = kDefaultDetectNms;   // NMS IoU 阈值 (0,1)
+    // 谱特征(Jacobi)降频间隔帧数：1=每帧都算；3=每 3 帧算 1 次（默认）
+    int    spectral_interval = 3;
 
     // ROI 危险区域（YOLOv5 像素坐标系，720x480）
     struct RoiZone {
@@ -206,6 +213,24 @@ inline RiskConfig loadRiskConfig(const std::string& path) {
                 throw std::runtime_error("warning.gcc 必须在 [0,1]");
             cfg.warning.gcc = gcc->asDouble();
         }
+    }
+
+    // 检测置信度阈值 / NMS 阈值（可选，0~1）。缺失时沿用编译期默认值。
+    if (const minijson::Value* v = root.find("conf_threshold")) {
+        if (!v->isNumber() || v->asDouble() <= 0.0 || v->asDouble() >= 1.0)
+            throw std::runtime_error("conf_threshold 必须在 (0,1) 之间");
+        cfg.conf_threshold = static_cast<float>(v->asDouble());
+    }
+    if (const minijson::Value* v = root.find("nms_threshold")) {
+        if (!v->isNumber() || v->asDouble() <= 0.0 || v->asDouble() >= 1.0)
+            throw std::runtime_error("nms_threshold 必须在 (0,1) 之间");
+        cfg.nms_threshold = static_cast<float>(v->asDouble());
+    }
+    // 谱特征降频间隔（可选，1~60 帧）。缺失用默认 3。
+    if (const minijson::Value* v = root.find("spectral_interval")) {
+        if (!v->isNumber() || v->asDouble() < 1.0 || v->asDouble() > 60.0)
+            throw std::runtime_error("spectral_interval 必须是 1~60 的整数（帧）");
+        cfg.spectral_interval = static_cast<int>(v->asDouble());
     }
 
     // 增强决策 Kalman 帧间隔（可选，秒）。缺失用默认 1/30（30FPS）。
