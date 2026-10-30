@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/poll.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
 #include <algorithm>
@@ -97,6 +98,37 @@ void mapCoordinates(int *x, int *y) {
     *y = (int)((float)my / scale);
 }
 
+// ---- ROI 射线法：点 (px,py) 是否在多边形 poly 内（double 全程 PNPOLY）----
+// 与旧内联实现的差异：
+//   1. 交点 x 全程 double 运算，去掉 `(yj-yi+0.0001)` 的 epsilon —— 该 epsilon
+//      会给每条边的交点都引入偏置（不只是防除零），属于隐患写法；
+//   2. (yi>py)!=(yj>py) 半开边规则：水平边（yi==yj）恒不进入分支，天然无除零；
+//      py 恰好落在顶点 y 上时该顶点只归一侧计数，不会重复翻转导致奇偶错乱；
+//   3. 保护条件：顶点数 <3 直接判 outside；包围盒快筛先剔除盒外点，同时挡住
+//      顶点越界/退化配置造成的"全员判内"式误判。
+static bool pointInPolygonRoi(int px, int py,
+                              const std::vector<std::pair<int,int>> &poly) {
+    const int nv = (int)poly.size();
+    if (nv < 3) return false;
+    int minX = poly[0].first, maxX = minX, minY = poly[0].second, maxY = minY;
+    for (int k = 1; k < nv; ++k) {
+        minX = std::min(minX, poly[k].first);  maxX = std::max(maxX, poly[k].first);
+        minY = std::min(minY, poly[k].second); maxY = std::max(maxY, poly[k].second);
+    }
+    if (px < minX || px > maxX || py < minY || py > maxY) return false;
+    bool inside = false;
+    const double dx = (double)px, dy = (double)py;
+    for (int k = 0, j = nv - 1; k < nv; j = k++) {
+        const double xi = (double)poly[k].first,  yi = (double)poly[k].second;
+        const double xj = (double)poly[j].first,  yj = (double)poly[j].second;
+        if ((yi > dy) != (yj > dy)) {          // 进入分支即保证 yi != yj，除法安全
+            const double xCross = xi + (dy - yi) * (xj - xi) / (yj - yi);
+            if (dx < xCross) inside = !inside;
+        }
+    }
+    return inside;
+}
+
 // ---- 24x24 点阵中文绘制（从 chinese_font.h 读取字模，逐像素画到 frame）----
 // pixel_scale=1 → 字高 24px；不带描边（横幅背景已有填充色，描边反而不清）
 static void draw_cn(cv::Mat &img, const char *chars, int x, int y,
@@ -179,6 +211,28 @@ int main(int argc, char *argv[]) {
   enhancedCfg.fsm = riskCfg.fsm;      // FSM 参数走 JSON 配置（与 Python 端一致）
   enhancedCfg.frame_dt = riskCfg.frame_dt;  // Kalman 时间基准走配置（按实际帧率调整）
   pedestrian::EnhancedDecision enhancedDecision(enhancedCfg);
+
+  // ROI 配置自检：启动即打印生效的多边形顶点；顶点越界说明配置坐标系不是
+  // 720x480 显示坐标（如误用了模型输入/抓图分辨率坐标），闯入判定必然失真。
+  if (riskCfg.roi.enabled) {
+    fprintf(stderr, "[ROI] enabled zone='%s' polygon(%d):",
+            riskCfg.roi.name.c_str(), (int)riskCfg.roi.polygon.size());
+    for (size_t v = 0; v < riskCfg.roi.polygon.size(); ++v)
+      fprintf(stderr, " (%d,%d)", riskCfg.roi.polygon[v].first, riskCfg.roi.polygon[v].second);
+    fprintf(stderr, "\n");
+    for (size_t v = 0; v < riskCfg.roi.polygon.size(); ++v) {
+      if (riskCfg.roi.polygon[v].first < 0 || riskCfg.roi.polygon[v].first >= width ||
+          riskCfg.roi.polygon[v].second < 0 || riskCfg.roi.polygon[v].second >= height) {
+        fprintf(stderr,
+                "[ROI] 警告: 顶点 (%d,%d) 超出画面 %dx%d —— 配置坐标系与显示坐标系不一致，"
+                "请用 tools/roi_live.html 重新框选并发送\n",
+                riskCfg.roi.polygon[v].first, riskCfg.roi.polygon[v].second, width, height);
+      }
+    }
+    if (riskCfg.roi.polygon.size() < 3)
+      fprintf(stderr, "[ROI] 警告: 多边形顶点数 %d < 3，闯入判定将恒为 outside\n",
+              (int)riskCfg.roi.polygon.size());
+  }
 
   // ---- 资源句柄与初始化状态（任一关键初始化失败时安全清理） ----
   RK_S32 s32Ret = 0;
@@ -374,8 +428,27 @@ int main(int argc, char *argv[]) {
   }
 
   	while (!g_stop)
-	{	
-		// get vi frame
+  		{	
+  			// 每 300 帧检查配置是否被 ROI 画框工具更新，更新则自动重载
+  			{
+  				static int cfgCheckFrame = 0;
+  				static time_t cfgMtime = 0;
+  				if (++cfgCheckFrame % 1 == 0) {
+  					struct stat st;
+  					if (stat("./config/default_config.json", &st) == 0 && st.st_mtime != cfgMtime) {
+  						cfgMtime = st.st_mtime;
+  						pedestrian::RiskConfig newCfg = pedestrian::loadRiskConfigOr("./config/default_config.json", riskCfg);
+  						if (newCfg.roi.enabled != riskCfg.roi.enabled ||
+  						    newCfg.roi.polygon != riskCfg.roi.polygon) {  // 逐点比较：顶点数相同但坐标变化的 ROI 也要生效
+  							riskCfg = newCfg;
+  							fprintf(stderr, "[ROI] Config reloaded: roi enabled=%d vertices=%zu\n",
+  							        (int)riskCfg.roi.enabled, riskCfg.roi.polygon.size());
+  						}
+  					}
+  				}
+  			}
+
+  			// get vi frame
 		h264_frame.stVFrame.u32TimeRef = H264_TimeRef++;
 		h264_frame.stVFrame.u64PTS = TEST_COMM_GetNowUs(); 
 		s32Ret = RK_MPI_VI_GetChnFrame(0, 0, &stViFrame, -1);
@@ -447,6 +520,8 @@ int main(int argc, char *argv[]) {
 				riskEngine.evaluate();
 			}
 
+			// debug：每帧只 dump 一次生效的 ROI 多边形顶点（配合下面 box# 行排查误判）
+			bool roiPolyLogged = false;
 			for(int i = 0; i < od_results.count; i++)
 			{
 				object_detect_result *det_result = &(od_results.results[i]);
@@ -478,17 +553,45 @@ int main(int argc, char *argv[]) {
 				            cv::FONT_HERSHEY_SIMPLEX, 0.45, cv::Scalar(255, 255, 255), 1, cv::LINE_AA);
 				int fx = (sX + eX) / 2, fy = eY;
 				cv::circle(frame, cv::Point(fx, fy), 3, cv::Scalar(0, 255, 0), -1);
+
+				// 闯入检测：检测框中心点 (cx,cy) 是否落在 ROI 多边形内。
+				// cx/cy 与多边形同为 720x480 显示坐标：postprocess 输出的是 640x640
+				// letterbox 空间的框（clamp 在 model_in_w/h），上面的 mapCoordinates
+				// 已把它映射回显示坐标系，两者可直接比较。
+				if (riskCfg.roi.enabled && !riskCfg.roi.polygon.empty()) {
+					int cx = (sX + eX) / 2, cy = (sY + eY) / 2;
+					// debug：每帧首个检测附带打印生效的多边形顶点，现场核对配置数值
+					if (!roiPolyLogged) {
+						fprintf(stderr, "[ROI] polygon(%d):", (int)riskCfg.roi.polygon.size());
+						for (size_t v = 0; v < riskCfg.roi.polygon.size(); ++v)
+							fprintf(stderr, " (%d,%d)", riskCfg.roi.polygon[v].first,
+							        riskCfg.roi.polygon[v].second);
+						fprintf(stderr, "\n");
+						roiPolyLogged = true;
+					}
+					const bool inside = pointInPolygonRoi(cx, cy, riskCfg.roi.polygon);
+					// debug：判断前的中心点 + 判断后的结果，与上一行顶点对照即可定位误判来源
+					fprintf(stderr, "[ROI] box#%d center=(%d,%d) inside=%d\n",
+					        i, cx, cy, (int)inside);
+					if (inside) {
+						// 红色粗框标记闯入者
+						cv::rectangle(frame, cv::Point(sX - 3, sY - 3), cv::Point(eX + 3, eY + 3),
+						              cv::Scalar(0, 0, 255), 3);
+						cv::putText(frame, "INTRUSION", cv::Point(sX, sY - lbsz.height - 20),
+						            cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 2, cv::LINE_AA);
+					}
+				}
 				}
 			}
 
-			// ---- ROI 危险区域绘制 ----
+							// ---- ROI 危险区域绘制 ----
 			if (riskCfg.roi.enabled && !riskCfg.roi.polygon.empty()) {
 				int nv = (int)riskCfg.roi.polygon.size();
 				std::vector<cv::Point> pts;
 				for (int k = 0; k < nv; ++k)
 					pts.push_back(cv::Point(riskCfg.roi.polygon[k].first, riskCfg.roi.polygon[k].second));
 				cv::polylines(frame, pts, true,
-				              cv::Scalar(riskCfg.roi.color_b, riskCfg.roi.color_g, riskCfg.roi.color_r),
+				              cv::Scalar(255, 255, 0),  // 亮青色 ROI 框（BGR），与闯入红框、正常蓝框都区分开
 				              riskCfg.roi.thickness, cv::LINE_AA);
 			}
 
