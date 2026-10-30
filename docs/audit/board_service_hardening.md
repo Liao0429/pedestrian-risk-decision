@@ -156,7 +156,7 @@ systemd.exec(5) LogRateLimitIntervalSec=：
 - **原始出处**：tmp/net/o_board_forensics2.txt 第 194~222 行（段标题 journal tail (watchdog) 40）。
 - **产生方式**：2026-10-30 23:07 在板上执行 /tmp/dsh_board_forensics2.sh（本地副本 C:\Windows\Temp\bp\board_forensics2.sh），其第 14 行为：
 
-      S journalctl -u pedestrian-watchdog -n 40 --no-pager      # S = echo luckfox | sudo -S -p ''
+      S journalctl -u pedestrian-watchdog -n 40 --no-pager      # S = echo '<板卡口令>' | sudo -S -p ''
 
   即板上 journalctl 的**原始输出**，不是本地拼接、转述或推断。
 - **为什么 23:07 能取到历史日志**：该时刻板子仍在线（同批快照显示 up 9 min，ps 中存在 watchdog/go2rtc/应用进程）；板上 /var/log/journal 为持久化日志（同文件 dmesg 段有 systemd-journald 对 /var/log/journal/... 的处理记录），因此查询会返回历史条目。
@@ -271,7 +271,7 @@ systemd.exec(5) LogRateLimitIntervalSec=：
 ### 4.5 scripts/board_recover.sh
 
 - 传输层自动探测：本机有 sshpass 则 sshpass -p PASS ssh/scp 直连（可在构建机 192.168.0.63 上跑）；否则用仓库的 paramiko helper（PED_PYTHON 默认 python、PED_HELPER 默认 tmp/net/ssh_exec.py），即用户描述的两种方式都覆盖。
-- **登录账号（2026-10-31 01:49 实测修正）**：板端 **root 的 SSH 直登已不可用**（root → paramiko AuthenticationException: Authentication failed，TCP22 本身正常）；可用的是 **pico 登录 + sudo**（pico；echo luckfox | sudo -S -p '' id -un → root）。因此脚本默认 BOARD_USER=pico，非 root 登录时把整条远程命令包成 sudo -S -p '' sh -c 'payload'；payload 含单引号会被守卫直接拦下，避免嵌套引号被破。
+- **登录账号（2026-10-31 01:49 实测修正）**：板端 **root 的 SSH 直登已不可用**（root → paramiko AuthenticationException: Authentication failed，TCP22 本身正常）；可用的是 **pico 登录 + sudo**（pico；echo '<板卡口令>' | sudo -S -p '' id -un → root）。因此脚本默认 BOARD_USER=pico，非 root 登录时把整条远程命令包成 sudo -S -p '' sh -c 'payload'；payload 含单引号会被守卫直接拦下，避免嵌套引号被破。
 - 流程：等待 SSH 就绪（上限 SSH_WAIT_SEC=180s；超时 **exit 3 明确失败，不做任何破坏性操作**）→ 预检 → 备份板上原 unit + 导出 journal 到 /tmp/ped-evidence-<时间戳>（并复制一份到 /root/ped-evidence-<时间戳>）→ 上传并 install -m 644/755 → 打印 md5sum 与 systemd-analyze verify（非致命）→ daemon-reload + **reset-failed** + 停旧看门狗 + enable + restart → enable --now 新 timer → 等 25s 后打印 is-active/NRestarts/MemoryMax/OOMPolicy/journal/端口/资源 → 判定 PASS/PARTIAL/FAIL。
 - CHECK_ONLY=1 只体检不安装，便于后续复盘。
 - 凭据通过 BOARD_USER/BOARD_PASS 覆盖（默认 **pico**；板上 root 直登已不可用，见上）。
