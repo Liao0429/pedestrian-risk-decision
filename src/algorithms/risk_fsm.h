@@ -172,7 +172,9 @@ private:
             if (score <= cfg_.down_safe) return RISK_SAFE;
             return RISK_WARNING;
         }
-        // RISK_DANGER
+        // RISK_DANGER: min_danger_n gate also applies to hold path
+        // if n drops below min_danger_n, exit DANGER immediately (no hold protection)
+        if (n < cfg_.min_danger_n) return RISK_WARNING;
         return (score <= cfg_.down_warning) ? RISK_WARNING : RISK_DANGER;
     }
 

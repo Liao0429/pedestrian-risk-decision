@@ -254,7 +254,10 @@ class RiskFSM:
             if score <= cfg.down_safe:
                 return "SAFE"
             return "WARNING"
-        # state == DANGER
+        # state == DANGER: min_danger_n also gates hold path
+        # if n drops below min_danger_n, exit DANGER immediately
+        if n < cfg.min_danger_n:
+            return "WARNING"
         if score <= cfg.down_warning:
             return "WARNING"
         return "DANGER"
