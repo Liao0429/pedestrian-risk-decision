@@ -65,6 +65,9 @@ struct RiskConfig {
     // conf_threshold 没有任何解析分支 -> 现场调参完全无效。
     float  conf_threshold = kDefaultDetectConf;  // 检测置信度阈值 (0,1)，见 detect_thresholds.h
     float  nms_threshold  = kDefaultDetectNms;   // NMS IoU 阈值 (0,1)
+    // 轨迹级计数去重开关（task-11）：true=用 ByteTrack+TrackCounter 的身份级人数
+    // 替换"当帧检测框数"；false=旧口径（A/B 对照用）。编译期 BOARD_TRACK_COUNT=0 可整体关掉。
+    bool   track_count_enabled = true;
     // 谱特征(Jacobi)降频间隔帧数：1=每帧都算；3=每 3 帧算 1 次（默认）
     int    spectral_interval = 3;
 
@@ -225,6 +228,12 @@ inline RiskConfig loadRiskConfig(const std::string& path) {
         if (!v->isNumber() || v->asDouble() <= 0.0 || v->asDouble() >= 1.0)
             throw std::runtime_error("nms_threshold 必须在 (0,1) 之间");
         cfg.nms_threshold = static_cast<float>(v->asDouble());
+    }
+    // 轨迹计数去重开关（可选）。缺失默认 true（新口径）。
+    if (const minijson::Value* v = root.find("track_count_enabled")) {
+        if (!v->isBool())
+            throw std::runtime_error("track_count_enabled 必须是布尔值");
+        cfg.track_count_enabled = v->asBool();
     }
     // 谱特征降频间隔（可选，1~60 帧）。缺失用默认 3。
     if (const minijson::Value* v = root.find("spectral_interval")) {

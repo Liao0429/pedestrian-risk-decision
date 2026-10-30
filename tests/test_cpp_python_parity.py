@@ -39,6 +39,12 @@ from algorithms.ema_smoother import EMASmoother  # noqa: E402
 from algorithms.graph_laplacian import compute_laplacian_features  # noqa: E402
 from algorithms.kalman_tracker import KalmanFilter  # noqa: E402
 from algorithms.risk_fsm import RiskFSM, RiskFSMConfig  # noqa: E402
+from algorithms.track_counter import (  # noqa: E402
+    FrameObs,
+    TrackCounter,
+    TrackCounterConfig,
+    TrackObs,
+)
 
 # 已定位、待 C++ 侧（T1 / board-perf scope）修复的分歧。
 # 2026-10-30 更新：D1(去重只比保留点) / D2(内部统一 double) / D3(簇并列 tie-break)
@@ -195,6 +201,35 @@ def parse_ema(line):
 def parse_fsm(line):
     d = _kv(line)
     return {"levels": d["levels"].split(","), "scores": _floats(d["scores"])}
+
+
+def parse_tc(line):
+    """解析 parity_harness 的 TC 单帧输出（字段顺序见 parity_harness.cc::printTcFrame）。"""
+    d = _kv(line)
+    out = {
+        "n": int(d["n"]), "det": int(d["det"]), "spat": int(d["spat"]),
+        "trk": int(d["trk"]), "supp": int(d["supp"]), "dang": int(d["dang"]),
+        "vis": int(d["vis"]), "gate": int(d["gate"]), "lgate": int(d["lgate"]),
+        "stats": _ints(d["stats"]), "persons": [], "events": [],
+    }
+    if d["persons"] != "-":
+        for item in d["persons"].split(";"):
+            f = item.split("|")
+            out["persons"].append({
+                "identity_id": int(f[0]), "track_ids": _ints(f[1]),
+                "box": _floats(f[2]), "score": float(f[3]),
+                "foot": _floats(f[4]), "roi": _floats(f[5]),
+                "in_roi": int(f[6]), "dwell": int(f[7]), "confirmed": int(f[8]),
+            })
+    if d["events"] != "-":
+        for item in d["events"].split(";"):
+            f = item.split("|")
+            out["events"].append({
+                "identity_id": int(f[0]), "track_id": int(f[1]),
+                "entering": int(f[2]), "since_frame": int(f[3]),
+                "signed_distance": float(f[4]),
+            })
+    return out
 
 
 def parse_bt(line):
@@ -414,16 +449,167 @@ def build_bytetrack_case():
     return ("bt_occlusion_crossing", block, parse_bt, {"frames": expected_frames})
 
 
+# ---------------------------------------------------------------------------
+# TRACK COUNTER（轨迹级计数去重 + ROI 进出事件）
+# ---------------------------------------------------------------------------
+TC_ROI = [(400.0, 50.0), (600.0, 50.0), (600.0, 450.0), (400.0, 450.0)]
+TC_SCALE = 0.01        # 测试比例：1 像素 = 1cm（脚点用米，ROI 用像素）
+
+
+def _tc_box(cx, w=40.0, h=200.0, foot_y=300.0):
+    return (cx - w / 2.0, foot_y - h, cx + w / 2.0, foot_y)
+
+
+def _tc_obs(tid, b, score=0.9, confirmed=True, misses=0):
+    cx = (b[0] + b[2]) * 0.5
+    foot = (cx * TC_SCALE, b[3] * TC_SCALE)
+    roi = (cx, (b[1] + b[3]) * 0.5)
+    return (tid, b[0], b[1], b[2], b[3], score, 1 if confirmed else 0, misses,
+            foot[0], foot[1], roi[0], roi[1])
+
+
+def _tc_cfg(**kw):
+    base = dict(roi_polygon=TC_ROI, roi_hysteresis=8.0, min_dwell_frames=3,
+                min_danger_n=3, dedup_tol=0.02, dup_foot_max=0.20,
+                dup_iou_min=0.75, dup_height_ratio=1.5, reid_radius=0.6,
+                reid_max_gap=15, identity_ttl=300, coast_frames=1)
+    base.update(kw)
+    return TrackCounterConfig(**base)
+
+
+def result_to_expected(r):
+    """把 Python CountResult 转成与 parse_tc 同构的 dict（逐值比较用）。"""
+    return {
+        "n": int(r.n), "det": int(r.n_detections), "spat": int(r.n_spatial_dedup),
+        "trk": int(r.n_tracks), "supp": int(r.n_suppressed),
+        "dang": int(r.dangerous_now), "vis": int(r.visitors_total),
+        "gate": 1 if r.gate_ok else 0, "lgate": 1 if r.legacy_gate_ok else 0,
+        "stats": [r.stats.frames, r.stats.duplicates_suppressed,
+                  r.stats.id_switch_merges, r.stats.total_legacy_count,
+                  r.stats.total_spatial_count, r.stats.total_dedup_count,
+                  r.stats.max_legacy_count, r.stats.max_dedup_count,
+                  r.stats.frames_legacy_gate_open, r.stats.frames_dedup_gate_open],
+        "persons": [{
+            "identity_id": int(p.identity_id), "track_ids": list(p.track_ids),
+            "box": [float(v) for v in p.box], "score": float(p.score),
+            "foot": [float(v) for v in p.foot],
+            "roi": [float(v) for v in p.roi_point],
+            "in_roi": 1 if p.in_roi else 0, "dwell": int(p.dwell),
+            "confirmed": 1 if p.confirmed else 0,
+        } for p in r.persons],
+        "events": [{
+            "identity_id": int(e.identity_id), "track_id": int(e.track_id),
+            "entering": 1 if e.entering else 0, "since_frame": int(e.since_frame),
+            "signed_distance": float(e.signed_distance),
+        } for e in r.events],
+    }
+
+
+def build_track_counter_cases():
+    """构造 TC 用例：逐帧把（轨迹观测 -> 计数结果）交给 C++ 与 Python 各跑一遍。
+
+    frames 中每帧为 (n_dets, [ _tc_obs(...) ])；n_dets<0 表示用轨迹条数。
+    """
+    cases = []
+
+    def add(cid, cfg_kwargs, frames):
+        cfg = _tc_cfg(**cfg_kwargs)
+        header = "TC %d %r %r %r %r %r %d %d %d %d %r %d" % (
+            len(frames), cfg.dedup_tol, cfg.dup_foot_max, cfg.dup_iou_min,
+            cfg.dup_height_ratio, cfg.reid_radius, cfg.reid_max_gap,
+            cfg.identity_ttl, cfg.min_dwell_frames, cfg.min_danger_n,
+            cfg.roi_hysteresis, len(cfg.roi_polygon))
+        for x, y in cfg.roi_polygon:
+            header += " %r %r" % (float(x), float(y))
+        lines = [header]
+        for ndet, tracks in frames:
+            row = "%d %d" % (len(tracks), ndet)
+            for t in tracks:
+                row += " " + " ".join(
+                    "%d" % t[0] if i == 0 else "%r" % t[i] for i in range(12))
+            lines.append(row)
+        counter = TrackCounter(cfg)
+        expected = []
+        for i, (ndet, tracks) in enumerate(frames):
+            obs = [TrackObs(t[0], (t[1], t[2], t[3], t[4]), t[5],
+                            bool(t[6]), t[7], foot=(t[8], t[9]), roi_point=(t[10], t[11]))
+                   for t in tracks]
+            r = counter.update(FrameObs(i + 1, obs,
+                                        n_detections=None if ndet < 0 else ndet))
+            expected.append(result_to_expected(r))
+        cases.append((cid, "\n".join(lines) + "\n", parse_tc, expected))
+
+    # 1) 重复框粘性合并 + 真人不误并 + 滑行帧（coast_frames）
+    frames = []
+    for i in range(12):
+        d = 4.0 * i
+        tracks = [_tc_obs(0, _tc_box(150 + d)),                     # 真人 A
+                  _tc_obs(1, _tc_box(150 + d, 44, 196, 302), 0.8),  # A 的重复框
+                  _tc_obs(2, _tc_box(420 + d))]                     # 真人 B（不许并）
+        if i == 8:
+            tracks = [_tc_obs(0, _tc_box(150 + d), misses=1),       # A 滑行 1 帧
+                      _tc_obs(1, _tc_box(150 + d, 44, 196, 302), 0.8, misses=1),
+                      _tc_obs(2, _tc_box(420 + d))]
+        frames.append((3, tracks))
+    add("tc_duplicate_and_coast", {}, frames)
+
+    # 2) ID 切换 re-id 合并 + 丢失窗口外的第二个目标
+    frames = []
+    for i in range(6):
+        frames.append((1, [_tc_obs(0, _tc_box(200 + 4.0 * i))]))
+    for i in range(6, 12):                    # 丢失 6 帧
+        frames.append((0, []))
+    for i in range(12, 20):                   # 新 ID 重现
+        frames.append((1, [_tc_obs(7, _tc_box(250 + 4.0 * (i - 12)))]))
+    add("tc_reid_merge", {"reid_max_gap": 15, "reid_radius": 0.6}, frames)
+
+    # 3) ROI 滞回 + 最短驻留 + 边界抖动 + 一次访问只计一次
+    frames = []
+    for i in range(14):
+        frames.append((1, [_tc_obs(0, _tc_box(120 + 30.0 * i))]))
+    for i in range(6):                        # 深处内部，然后贴边界抖动
+        cx = 600.0 + (12.0 if i % 2 == 0 else -2.0)
+        frames.append((1, [_tc_obs(0, _tc_box(cx))]))
+    for i in range(6):                        # 走出来
+        frames.append((1, [_tc_obs(0, _tc_box(700 + 10.0 * i))]))
+    add("tc_roi_hysteresis", {}, frames)
+
+    # 4) min_danger_n 门控：两人各 3 个重复框
+    frames = []
+    for i in range(10):
+        d = 3.0 * i
+        tracks = []
+        for base, tid0 in ((120.0, 0), (500.0, 10)):
+            tracks.append(_tc_obs(tid0, _tc_box(base + d, 40, 200, 300), 0.92))
+            tracks.append(_tc_obs(tid0 + 1, _tc_box(base + d, 44, 196, 302), 0.80))
+            tracks.append(_tc_obs(tid0 + 2, _tc_box(base + d, 48, 190, 306), 0.55))
+        frames.append((6, tracks))
+    add("tc_gate_min_danger_n", {"roi_polygon": []}, frames)
+
+    # 5) 身份记录回收（identity_ttl）与 ROI 离开
+    frames = []
+    for i in range(5):
+        frames.append((1, [_tc_obs(0, _tc_box(500))]))
+    for i in range(5, 25):
+        frames.append((0, []))
+    frames.append((1, [_tc_obs(3, _tc_box(500))]))
+    add("tc_identity_ttl", {"identity_ttl": 4, "reid_radius": 0.0}, frames)
+
+    return cases
+
+
 def _all_cases():
     return (build_lap_cases() + build_dbscan_cases() + build_kalman_cases()
-            + build_ema_cases() + build_fsm_cases() + [build_bytetrack_case()])
+            + build_ema_cases() + build_fsm_cases() + [build_bytetrack_case()]
+            + build_track_counter_cases())
 
 
 @pytest.fixture(scope="module")
 def cpp_outputs(harness):
     """一次性把所有单行用例喂给 C++ 程序，返回 {case_id: 解析结果}。"""
     cases = _all_cases()
-    singles = [c for c in cases if c[0] != "bt_occlusion_crossing"]
+    singles = [c for c in cases if c[0] != "bt_occlusion_crossing"
+               and not c[0].startswith("tc_")]
     stdin_text = "\n".join(c[1] for c in singles) + "\n"
     lines = run_harness(harness, stdin_text)
     assert len(lines) == len(singles), (len(lines), len(singles))
@@ -431,9 +617,14 @@ def cpp_outputs(harness):
     for (cid, _cmd, parser, _expected), line in zip(singles, lines):
         assert not line.startswith("ERR"), (cid, line)
         out[cid] = parser(line)
-    for cid, block, parser, _expected in cases:
+    for cid, block, parser, expected in cases:
         if cid == "bt_occlusion_crossing":
             out[cid] = parser(run_harness(harness, block)[0])
+        elif cid.startswith("tc_"):
+            # TC 每个用例输出 F 行（F = 帧数），必须单独喂 stdin 才能对齐帧数
+            lines = run_harness(harness, block)
+            assert len(lines) == len(expected), (cid, len(lines), len(expected))
+            out[cid] = [parser(ln) for ln in lines]
     return out
 
 
@@ -474,6 +665,23 @@ def test_bytetrack_header_compiles_standalone(tmp_path):
     if not ok:
         pytest.xfail("bytetrack_tracker.h 编译失败（已知缺陷，归 board-perf）：\n" + err[:800])
     assert ok
+
+
+def test_track_counter_cases_exercise_all_paths(cpp_outputs):
+    """TC 用例必须真的走到重复合并 / ROI 事件 / 门控分叉，避免"两边都空"的假通过。"""
+    dup = cpp_outputs["tc_duplicate_and_coast"]
+    assert any(fr["supp"] > 0 for fr in dup), "重复框合并没有被触发"
+    assert max(fr["n"] for fr in dup) <= 2, "真人 A + 真人 B 应≤2 人"
+    roi = cpp_outputs["tc_roi_hysteresis"]
+    kinds = [e["entering"] for fr in roi for e in fr["events"]]
+    assert kinds.count(1) == 1 and kinds.count(0) == 1, kinds
+    assert any(fr["vis"] == 1 for fr in roi)
+    gate = cpp_outputs["tc_gate_min_danger_n"]
+    assert all(fr["lgate"] == 1 for fr in gate), "旧口径 6 人应开门"
+    assert all(fr["gate"] == 0 for fr in gate), "去重后 2 人不应开门"
+    reid = cpp_outputs["tc_reid_merge"]
+    assert max(fr["n"] for fr in reid) == 1, "ID 切换后人数不应涨到 2"
+    assert reid[-1]["vis"] == 0
 
 
 def test_lap_dedup_semantics_documented():

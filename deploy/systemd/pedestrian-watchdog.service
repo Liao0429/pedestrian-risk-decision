@@ -1,0 +1,20 @@
+# 看门狗: 单次检查, 由 pedestrian-watchdog.timer 定时触发
+# (替代旧版 while true + sleep 15 的常驻脚本; 旧版缺陷见 board_service_hardening.md 3.2 节)
+[Unit]
+Description=Pedestrian Risk Decision Watchdog (one-shot check)
+After=pedestrian-risk.service
+# 看门狗自己永远不能被限流: 它的职责就是去救被限流的主服务
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/pedestrian-watchdog.sh
+# 单次运行有界, 避免卡在 systemctl/journalctl 上
+TimeoutStartSec=60
+# 看门狗不产生 core dump
+LimitCORE=0
+LogRateLimitIntervalSec=30s
+LogRateLimitBurst=120
+
+[Install]
+WantedBy=multi-user.target

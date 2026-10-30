@@ -64,6 +64,22 @@
 
 ---
 
+### 3.2 「板子老是卡死」的完整机制链（Round 2 新增，板端实证）
+
+| 环节 | 证据 |
+|---|---|
+| 1 旧代码在 VENC 取流路径崩 | 38 个 core 全部落在 2026-10-30 10:37~11:08；core.1235 gdb：SIGSEGV / SEGV_MAPERR / si_addr=0x0，指令 str r0,[r8] 且 r8=0，函数 RKVencChannel::getStreamInfo+136（旧代码只分配 1 个 pack 槽、只发 pstPack[0]） |
+| 2 崩溃进入重启风暴 | 崩溃时**整栈重建**（VI/ISP/VENC/RKNN）；Restart=on-failure + RestartSec=5 |
+| 3 30s 内第 6 次启动被 systemd 拒绝 | 构建机受控复刻：Start request repeated too quickly，NRestarts 冻结、ActiveState=failed、is-active rc=3 → **演示永久停摆** |
+| 4 整机被拖到 sshd 都握不上手 | 2026-10-31 00:05:32 后 **91 分钟 journal 零写入**（journalctl --list-boots 原文：boot -2 止于 00:05:32，下一条到 01:36:34）；02:05 再次同型：**ping 通、554/1984/8554 端口开、TCP 22 可连但 12s 不出 SSH banner** |
+| 5 现场旁证 | 掉线时 ps 仍能看到应用在 D 状态占 32% CPU、systemd --user 占 66%；板子 211MB 内存、**单核** CPU、load average 11；go2rtc 仍在跑而 pedestrian-risk 已停止 —— 与"用户态饥饿"形态一致 |
+
+**结论**：所谓"卡死"不是单一 bug，而是「VENC 路径崩溃 → 重启风暴 → StartLimit 永久放弃 → 整机用户态饥饿（sshd 无法完成握手）」这条链。修复分两半：
+- **代码侧**：VENC 多 pack 全发 + 有限超时 + 去掉无界打印（见 §3）→ 观察期内无新 core；
+- **部署侧**：Restart=always + StartLimitIntervalSec=0 + 崩溃时不要全栈重建 + 重启次数告警（见 §5.2）。
+
+---
+
 ## 4. 算法层（C++/Python 双实现一致性）
 
 | # | 问题 | 影响 | 修复 |
@@ -134,6 +150,39 @@ GPIO loopback=56 button=67 PWM=pwmchip8/pwm0
 
 ---
 
+### 6.2 NPU 算力利用率归因（T8，板端受控实测）
+
+问题：infer=91.5ms/帧 占整帧 71%，而 YOLOv5n INT8 在 1 TOPS NPU 上理论远低于此。
+
+| 观测项 | 实测 | 含义 |
+|---|---|---|
+| submit_avg | **88.01 ms**（p10 87.87 / p50 87.94 / max 89.11） | rknn_run 一提交即阻塞 88ms |
+| wait_avg | **0.11 ms** | rknn_wait 几乎不耗时 |
+| RKNN_QUERY_PERF_RUN | ret=-1（runtime v0.9.2 不支持） | 拿不到"纯 NPU 计算"计时，**没有用估算冒充实测** |
+| 每帧 C++ 侧可归因开销 | 约 3.5ms（同步 + 后处理） | 微优化空间仅约 4% |
+
+**结论**：91.6ms 属于**驱动/NPU 提交路径本身**，不是我们的 mem_sync、不是 post_process、也不是调度等待 → **C++ 侧没有优化空间**。
+并且 RKNN_FLAG_ASYNC / non_block 在该驱动上**不产生真异步**（提交即阻塞）→ "CPU/NPU 流水线重叠"这条路在 RV1106 + 该驱动上**不可行**。
+剩余可行方向只有：推理降频、更小输入（需重标定）、换模型/换驱动。
+
+**方法论更正**：早期观察到的"帧率周期性下探到 5.4~6.9"经受控复测（看门狗停用、无其它 SSH/取证会话）消失（min=7.13 / p10=7.45），归因于**外部 CPU 争抢**，不是 go2rtc 背压、不是 config reload、也不是内部长尾。
+
+---
+
+### 5.2 板卡服务加固（T10）
+
+| 缺陷 | 证据 | 修复 |
+|---|---|---|
+| Restart=on-failure + StartLimitIntervalSec=30/Burst=5 → 30s 内第 6 次启动被拒，服务**永久停摆** | 构建机 6 组受控实验（复刻出 Start request repeated too quickly、NRestarts 冻结、窗口过后才恢复）；**板端实证**：02:02:11 崩溃循环触发同一条消息 | Restart=always + StartLimitIntervalSec=0 |
+| 看门狗脚本用 is-active 判活，而该命令在 auto-restart 窗口同样返回 3 → 每 15~16s 盲目 restart（反而喂满限流窗口）；从不 reset-failed、不看返回码 | 板端 journal（2026-10-27 01:20:23→01:26:57 共 27 条，间隔 15/16s；出处与适用范围见本地报告 §3.1） | 改为 timer 驱动的 oneshot：failed 才介入并先 reset-failed；**inactive 默认不动手**；/run/pedestrian-risk.hold 抑制文件 |
+| 部署窗口缺陷：stop → 上传 5MB(40~60s) → mv → start 期间服务 inactive，旧看门狗会把**旧二进制**拉起，随后被 mv 覆盖 → "旧进程 + 新文件" | board-perf 现场复盘 + 板端 NRestarts 异常 | 部署脚本强制：**停看门狗 + 置 hold → 上传 → md5 校验 → 安装 → 验证 active → 才放开看门狗**；FAIL 分支保留 hold |
+| MemoryMax=200M 在 211MB 板上约 95% RAM，既不保护系统又把服务变成唯一 OOM 受害者 | 现场形态：go2rtc 还在、pedestrian-risk 没了、sshd 出不了 banner | MemoryMax=160M + MemoryHigh=128M + OOMPolicy=continue |
+| LimitCORE 未在早期生效 → 38 个 core 占约 477MiB、根分区 80% | du 实测（表观 3.52GiB，稀疏实占 477MiB） | unit 显式 LimitCORE=0 + scripts/board_maintenance.sh（清 core/轮转日志/vacuum journal，清前先导出证据） |
+
+附带修复：board_maintenance.sh 会在 vacuum 前**先导出 journal**（10-30/10-31 的行为证据只存在于 journal 里），避免自己毁掉证据。
+
+---
+
 ## 6. 参考视频（同类型作品）逆向分析
 
 素材：`G:\毕设论文\学校参考材料\784859453-1-30080.m4s`（只读，未入库）。
@@ -178,11 +227,32 @@ H.264 High@L5.0 1920×1080@30fps、43.233s、1297 帧、2.29Mbps，B 站 DASH �
 
 ---
 
+### 7.1 算法层新增：轨迹级计数去重（T11/T12）
+
+参考视频第 4 个坑是"跟踪器重复计数"。本项目原状：板端没接 ByteTrack，人数 = 当帧检测框数。
+
+新增 src/algorithms/track_counter.{h,py}（C++11 header-only + Python 镜像，逐值 parity）：轨迹身份级去重 + ROI 进出事件（滞回 + 最短驻留）+ re-id 合并 + tentative 不计 + 滑行框不计。
+
+| 合成序列场景 | legacy（当帧框数） | spatial（仅 2cm 几何去重） | states（只数已确认轨迹） | **tracked（本模块）** |
+|---|---|---|---|---|
+| 单人 3 框 / 20 帧 | 60 | 60 | 60 | **20（-66.7%）** |
+| 双人各 3 框 / 30 帧 | 180 | 180 | 180 | **60（-66.7%）** |
+| 丢失 12 帧后 ID 切换 / 30 帧 | 18 | 39 | 40 | **16（-60%）** |
+| 重复框在 ROI 内 / 12 帧 | 24 | 24 | 24 | **12（-50%）** |
+| min_danger_n=3 误开门帧 | 30/30 | 30/30 | — | **0/30** |
+
+**关键实测**：spatial（仅靠现有 2cm 脚点去重）与 legacy **完全相同** → 6cm 量级的脚点偏移下，2cm 几何去重**完全无效**，必须用身份级判据。这一条直接解释了"伸一只手判出两个人"。
+
+---
+
 ## 8. 明确未验证 / 仍在进行
 
 - 画面撕裂是否彻底消失：需长时抓帧对比。
 - BGR→RGB 修正与 `conf=0.35` 对识别精度的增益：无人工 GT，未量化。
-- core dump 根因：仅一个被截断的 core（`core.1403`，SIGSEGV，PC 落在 `.bss` 数组 `s_rgb_scratch` 内部 → 控制流劫持/内存踩踏），未最终确认。
+- ~~core dump 根因未确认~~ → **2026-10-31 已定位**：用 `gdb-multiarch` + 带调试符号的 `core.1235`（102MB 完整 core，mtime 10-30 11:35，早于本轮修复）解出：
+  `SIGSEGV / si_code=1 (SEGV_MAPERR) / si_addr=0x0`，崩溃指令 `str r0, [r8]` 且 `r8=0x0` → **对 NULL 的写**；
+  崩溃函数 `RKVencChannel::getStreamInfo(rkVENC_STREAM_S*, RTVideoPacket*) + 136`，调用链 `RKVencChannel::getStream()` ← 我们代码；12 个线程中仅 VENC 线程崩，其余停在 futex 等待。
+  → 崩溃点与本轮 P0 修复的 VENC 路径（旧代码只分配 1 个 pack 槽 / 只发 `pstPack[0]` / 不检查 `SendFrame` 返回值）**完全对应**；core 时间集中在 10-30 上午，修复后观察期无新 core。
 - 码率 / GOP（`10*1024` + `GOP=1`，vendor 值）未做真机码流测量。
 - 帧率进一步提升的三项（推理降频、CPU/NPU 流水线重叠、输入 640→416）为**推断，未实现**。
 - 硬件自检的真机实跑、USB host 模式能否开启：进行中。
@@ -193,6 +263,18 @@ H.264 High@L5.0 1920×1080@30fps、43.233s、1297 帧、2.29Mbps，B 站 DASH �
 - **板卡在 2026-10-31 00:00 起 SSH/RTSP 握手不可用**：ping 通、22/554/1984 端口开着、go2rtc API 仍有响应，但 sshd 拿不到 banner（Windows 与构建机两个独立主机都失败）。现场指标：load > 11、可用内存 ~18MB（总 211MB）、根分区 80% 满、**38 个 core dump 共 546MB**。
   → T6 的终版二进制（含 R/B 修复）与仓库 config 的**最后一次部署 + 终验被阻塞**，等板恢复后一条命令即可完成（步骤见本地 `docs/review/20261030_round3/ref_video_alignment.md` §7）。
   → 这本身是可用性缺陷：建议清掉 core dump/日志、给 `pedestrian-risk.service` 加 core 限制与日志上限，并复核 `MemoryMax=200M` 在 211MB 板上的合理性。
+
+---
+
+### 8.1 Round 2 新增未验证/待办
+
+- **T6 板端终验已完成**（ROI 红 / Dangerous Person 红 / Clusters+Assembly 黄 逐像素读数；fps 7.74~7.85）。蓝框未取到样本（抓帧时画面无人）→ 蓝框颜色仍未直接验证（通道已由三处独立读数间接证明）。
+- **T8 的 dec2（推理降频）变体数据作废**：该变体启动即 SIGABRT（`std::length_error: vector::reserve`），根因是 main.cc 里 `od_results` 为栈上未初始化结构体，而降频在首帧跳过推理 → `od_results.count` 是栈垃圾 → reserve(垃圾)。**已修**（显式清零 + 每帧钳制 count ∈ [0, OBJ_NUMB_MAX_SIZE] + 降频首帧强制推理），但**修复版（dec2c）未上板复测**。
+  泛化风险：任何"跳过推理"的路径（降频 / 推理失败 / 初始化失败 / 未来开关）都会踩到未初始化的 `od_results` → 清零必须放在声明处或每帧入口，不能依赖 post_process。
+- **T12 板端 A/B 未做**（track_counter 已接入 main.cc，编译开关 BOARD_TRACK_COUNT，host 侧 15/15 通过；板端重复计数改善幅度未实测）。
+- **板卡在 2026-10-31 02:05 再次失联**（与 00:05 同型：ping 通、22 可连无 banner、554/1984/8554 端口开），需用户再次断电重启；T10 的加固（`board_recover.sh` / `board_maintenance.sh`）**尚未在板上执行**。
+- 崩溃-重启风暴"拖垮整机"目前是**强相关**（现场时间顺序 + 同型症状），不是受控实验证明的因果，报告里按"现场证据链 + 可复现线索"表述。
+- 板上 root 直登已不可用（root/luckfox 认证失败），现用 pico/luckfox + sudo；`board_recover.sh` 已适配。
 
 ---
 

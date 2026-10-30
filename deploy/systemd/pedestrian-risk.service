@@ -1,0 +1,49 @@
+# Pedestrian Risk Decision — 板端主服务单元 (Luckfox Pico Max / RV1106)
+# 加固依据、实测证据与取值理由见 docs/review/20261030_round3/board_service_hardening.md
+#
+# 与 20261030 现场取证(旧版) 的差异:
+#   Restart=on-failure    -> always    : 旧版对被 systemd 主动停止的退出不再拉起
+#   StartLimitIntervalSec=30 + StartLimitBurst=5 -> StartLimitIntervalSec=0 (禁用限流)
+#   RestartSec=5          -> 3
+#   MemoryMax=200M        -> 160M + MemoryHigh=128M (211MB 板子上 200M 约为 95% RAM, 不合理)
+#   新增                  -> OOMPolicy=continue / LogRateLimit* / TimeoutStopSec=15
+#   LimitCORE=0           : 保留
+[Unit]
+Description=Pedestrian Risk Decision Demo (Luckfox Pico Max RV1106)
+After=network.target
+# 禁用启动限流。旧配置 5 次/30s 命中后单元停在 failed, Restart= 不再尝试自动重启,
+# 必须 reset-failed + 显式 start 才能恢复 (板上 journal: "Start request repeated too quickly")。
+# man systemd.unit: "may be set to 0 to disable any kind of rate limiting."
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/pico/daima/luckfox_pico_rtsp_yolov5_demo
+Environment=LD_LIBRARY_PATH=./lib
+ExecStart=/home/pico/daima/luckfox_pico_rtsp_yolov5_demo/luckfox_pico_rtsp_yolov5
+Restart=always
+RestartSec=3
+# 资源护栏: 板子 211MB 物理内存, 空闲基线(systemd/sshd/go2rtc/看门狗)约 65MB。
+# 200M 既保护不了系统(约 95% RAM), 又会让本服务成为 cgroup 内唯一的 OOM 受害者。
+MemoryMax=160M
+# 软限: 先触发回收/节流, 避免直接撞硬限导致整单元被终止
+MemoryHigh=128M
+TasksMax=100
+# 被 OOM killer 杀掉时不要连带终止整个单元 (默认 stop 会把服务干净地停掉)
+OOMPolicy=continue
+KillMode=mixed
+KillSignal=SIGTERM
+# 旧版 10s; 考虑 VPU/NPU 驱动可能处于不可中断等待(D), 给 SIGKILL 留出时间
+TimeoutStopSec=15
+# 禁止产生 core dump (板上曾积累 38 个 core, 表观 3.52GiB / 实占约 477MiB)
+LimitCORE=0
+# 只限制 journald 收到的消息 (本服务 stdout 走 append: 文件, 不经过 journald)。
+# 崩溃循环时用它防止 journal/闪存被刷爆 (旧版实测 6 分钟内刷出 50+ 条重启记录)。
+LogRateLimitIntervalSec=30s
+LogRateLimitBurst=500
+StandardOutput=append:/tmp/enhanced_latest.log
+StandardError=append:/tmp/enhanced_latest.log
+
+[Install]
+WantedBy=multi-user.target

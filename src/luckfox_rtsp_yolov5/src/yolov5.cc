@@ -337,8 +337,13 @@ int inference_yolov5_model(rknn_app_context_t *app_ctx,
         // NPU 侧真实推理时间（us），与 CPU 观测到的 infer 墙钟时间对比即可定位开销
         rknn_perf_run pr;
         memset(&pr, 0, sizeof(pr));
-        if (rknn_query(app_ctx->rknn_ctx, RKNN_QUERY_PERF_RUN, &pr, sizeof(pr)) == RKNN_SUCC)
-            s_npu_run_us = pr.run_duration;
+        const int qret = rknn_query(app_ctx->rknn_ctx, RKNN_QUERY_PERF_RUN, &pr, sizeof(pr));
+        static bool perf_q_logged = false;
+        if (!perf_q_logged) {
+            printf("[RKNN] RKNN_QUERY_PERF_RUN ret=%d (0=成功；非 0 表示该运行时/驱动不支持)\n", qret);
+            perf_q_logged = true;
+        }
+        if (qret == RKNN_SUCC) s_npu_run_us = pr.run_duration;
     }
 #endif
 

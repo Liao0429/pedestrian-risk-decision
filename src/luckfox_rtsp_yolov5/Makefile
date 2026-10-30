@@ -26,7 +26,7 @@ ALGO_HEADERS = include/enhanced_decision.h include/risk_config.h \
                ../algorithms/risk_fsm.h ../algorithms/minijson.h
 
 .PHONY: all test bench test-enhanced test-minijson test-risk-config test-golden \
-        test-preprocess test-selftest test-lcd-menu test-ili9341 test-xpt2046 \
+        test-preprocess test-track-count test-det-count test-selftest test-lcd-menu test-ili9341 test-xpt2046 \
         test-sysfs-spi clean help luckfox
 
 all: test
@@ -43,7 +43,7 @@ else
 LINUX_TESTS :=
 endif
 
-test: test-enhanced test-minijson test-risk-config test-golden test-preprocess test-hardware test-selftest test-lcd-menu test-ili9341 test-xpt2046 $(LINUX_TESTS)
+test: test-enhanced test-minijson test-risk-config test-golden test-preprocess test-track-count test-det-count test-hardware test-selftest test-lcd-menu test-ili9341 test-xpt2046 $(LINUX_TESTS)
 
 test-enhanced: $(TEST_DIR)/test_enhanced_decision.cc $(SRC_DIR)/enhanced_decision.cc $(ALGO_HEADERS)
 	$(CXX) $(CXXFLAGS) $(INC) $(TEST_DIR)/test_enhanced_decision.cc $(SRC_DIR)/enhanced_decision.cc \
@@ -83,6 +83,20 @@ test-preprocess: $(TEST_DIR)/test_preprocess.cc $(SRC_DIR)/preprocess.cc \
 	$(CXX) $(CXXFLAGS) $(INC) $(TEST_DIR)/test_preprocess.cc $(SRC_DIR)/preprocess.cc \
 	    -o $(TEST_DIR)/test_preprocess
 	./$(TEST_DIR)/test_preprocess ../../tests/golden/preprocess
+
+# 检测计数钳制 / 推理调度回归（task-8 崩溃修复的泛化保护，host 可跑）
+# 锁死：任意垃圾 count 钳制后 reserve 不抛；首帧必推理；decimate<=1 恒推理。
+test-det-count: $(TEST_DIR)/test_detection_count_clamp.cc include/board_infer.h
+	$(CXX) $(CXXFLAGS) -Iinclude $(TEST_DIR)/test_detection_count_clamp.cc -o $(TEST_DIR)/test_detection_count_clamp
+	./$(TEST_DIR)/test_detection_count_clamp
+
+# 轨迹级计数去重接线级 A/B（task-11）：ByteTrack + TrackCounter vs 当帧检测框数。
+# 验证"同人重复框 6cm 偏移"下旧口径翻倍、身份级去重纠正，以及 min_danger_n 误开门差异。
+test-track-count: $(TEST_DIR)/test_track_count_integration.cc \
+                  ../algorithms/bytetrack_tracker.h ../algorithms/track_counter.h
+	$(CXX) $(CXXFLAGS) -I../algorithms $(TEST_DIR)/test_track_count_integration.cc \
+	    -o $(TEST_DIR)/test_track_count_integration
+	./$(TEST_DIR)/test_track_count_integration
 
 # 硬件驱动模块（三色 LED + 按键 + 舵机云台 + 语音告警）主机测试：使用
 # FakeGpio/FakePwm 内存替身，验证颜色映射/防抖/边沿检测/角度换算/云台
@@ -227,6 +241,8 @@ clean:
 	      $(TEST_DIR)/test_risk_config \
 	      $(TEST_DIR)/test_golden_regression \
 	      $(TEST_DIR)/test_preprocess \
+	      $(TEST_DIR)/test_track_count_integration \
+	      $(TEST_DIR)/test_detection_count_clamp \
 	      $(TEST_DIR)/test_hardware_modules \
 	      $(TEST_DIR)/test_selftest \
 	      $(TEST_DIR)/test_lcd_menu \

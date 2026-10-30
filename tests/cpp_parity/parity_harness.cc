@@ -12,6 +12,11 @@
 //   FSM    <n> [n density rgcc fiedler trend now_ms]*
 //   BT     <track_thresh> <det_thresh> <match_thresh> <max_lost> <min_hits> <F>
 //          其后紧跟 F 行，每行 "<k> x1 y1 x2 y2 conf ..."（k 为当帧检测数）
+//   TC     <F> <dedup_tol> <dup_foot_max> <dup_iou_min> <dup_height_ratio> <reid_radius>
+//          <reid_max_gap> <identity_ttl> <min_dwell> <min_danger_n> <hyst>
+//          <npoly> x1 y1 ... xnpoly ynpoly
+//          其后紧跟 F 行，每行 "<k> <n_det> [tid x1 y1 x2 y2 score conf misses footx footy roix roiy]*"
+//          （k=当帧轨迹数，n_det<0 表示用 k；每帧输出一行，共 F 行）
 //   '#' 开头为注释
 // 输出统一 %.12g，便于 Python 端逐值比较。
 
@@ -31,6 +36,7 @@
 #include "kalman_filter.h"
 #include "ema_smoother.h"
 #include "bytetrack_tracker.h"
+#include "track_counter.h"
 
 static void pr(double v) { std::printf("%.12g", v); }
 
@@ -160,6 +166,98 @@ static void cmdBt(std::istream& in, double tb, double db, double mb, int ml, int
     std::printf("\n");
 }
 
+// ---------------- TRACK COUNTER ----------------
+// 逐帧输出一行，字段顺序与 tests/test_cpp_python_parity.py 的 parse_tc 一一对应。
+static void printTcFrame(const track_count::Result& r) {
+    std::printf("n=%d det=%d spat=%d trk=%d supp=%d dang=%d vis=%d gate=%d lgate=%d ",
+                r.n, r.n_detections, r.n_spatial_dedup, r.n_tracks, r.n_suppressed,
+                r.dangerous_now, r.visitors_total, r.gate_ok ? 1 : 0,
+                r.legacy_gate_ok ? 1 : 0);
+    std::printf("stats=%d,%d,%d,%d,%d,%d,%d,%d,%d,%d ", r.stats.frames,
+                r.stats.duplicates_suppressed, r.stats.id_switch_merges,
+                r.stats.total_legacy_count, r.stats.total_spatial_count,
+                r.stats.total_dedup_count, r.stats.max_legacy_count,
+                r.stats.max_dedup_count, r.stats.frames_legacy_gate_open,
+                r.stats.frames_dedup_gate_open);
+    std::printf("persons=");
+    if (r.persons.empty()) {
+        std::printf("-");
+    } else {
+        for (std::size_t i = 0; i < r.persons.size(); ++i) {
+            const track_count::PersonState& p = r.persons[i];
+            if (i) std::printf(";");
+            std::printf("%d|", p.identity_id);
+            for (std::size_t k = 0; k < p.track_ids.size(); ++k) {
+                if (k) std::printf(",");
+                std::printf("%d", p.track_ids[k]);
+            }
+            std::printf("|");
+            pr(p.x1); std::printf(","); pr(p.y1); std::printf(",");
+            pr(p.x2); std::printf(","); pr(p.y2);
+            std::printf("|"); pr(p.score);
+            std::printf("|"); pr(p.foot_x); std::printf(","); pr(p.foot_y);
+            std::printf("|"); pr(p.roi_x); std::printf(","); pr(p.roi_y);
+            std::printf("|%d|%d|%d", p.in_roi ? 1 : 0, p.dwell, p.confirmed ? 1 : 0);
+        }
+    }
+    std::printf(" events=");
+    if (r.events.empty()) {
+        std::printf("-");
+    } else {
+        for (std::size_t i = 0; i < r.events.size(); ++i) {
+            const track_count::RoiEvent& e = r.events[i];
+            if (i) std::printf(";");
+            std::printf("%d|%d|%d|%d|", e.identity_id, e.track_id,
+                        e.entering ? 1 : 0, e.since_frame);
+            pr(e.signed_distance);
+        }
+    }
+    std::printf("\n");
+}
+
+static void cmdTc(std::istream& in, std::istringstream& iss) {
+    int frames = 0, reid_gap = 0, ttl = 0, dwell = 0, dangn = 0, npoly = 0;
+    double dedup = 0.0, footMax = 0.0, iouMin = 0.0, hratio = 0.0, reidR = 0.0, hyst = 0.0;
+    iss >> frames >> dedup >> footMax >> iouMin >> hratio >> reidR
+        >> reid_gap >> ttl >> dwell >> dangn >> hyst >> npoly;
+    track_count::Config cfg;
+    cfg.dedup_tol = dedup;
+    cfg.dup_foot_max = footMax;
+    cfg.dup_iou_min = iouMin;
+    cfg.dup_height_ratio = hratio;
+    cfg.reid_radius = reidR;
+    cfg.reid_max_gap = reid_gap;
+    cfg.identity_ttl = ttl;
+    cfg.min_dwell_frames = dwell;
+    cfg.min_danger_n = dangn;
+    cfg.roi_hysteresis = hyst;
+    for (int i = 0; i < npoly; ++i) {
+        double px = 0.0, py = 0.0;
+        iss >> px >> py;
+        cfg.roi_polygon.push_back(std::make_pair(px, py));
+    }
+    track_count::TrackCounter tc(cfg);
+    for (int fi = 0; fi < frames; ++fi) {
+        int k = 0, ndet = -1;
+        if (!(in >> k >> ndet)) { std::printf("ERR TC_EOF\n"); return; }
+        track_count::FrameObs fo;
+        fo.frame_id = fi + 1;
+        fo.n_detections = ndet;
+        for (int i = 0; i < k; ++i) {
+            track_count::Obs o;
+            int conf = 1, miss = 0;
+            in >> o.track_id >> o.x1 >> o.y1 >> o.x2 >> o.y2 >> o.score
+               >> conf >> miss >> o.foot_x >> o.foot_y >> o.roi_x >> o.roi_y;
+            o.confirmed = conf != 0;
+            o.misses = miss;
+            o.has_foot = true;
+            o.has_roi = true;
+            fo.tracks.push_back(o);
+        }
+        printTcFrame(tc.update(fo));
+    }
+}
+
 int main() {
     std::string line;
     while (std::getline(std::cin, line)) {
@@ -171,6 +269,10 @@ int main() {
             double tb, db, mb; int ml, mh, frames;
             iss >> tb >> db >> mb >> ml >> mh >> frames;
             cmdBt(std::cin, tb, db, mb, ml, mh, frames);
+            continue;
+        }
+        if (cmd == "TC") {
+            cmdTc(std::cin, iss);
             continue;
         }
         std::vector<double> a;

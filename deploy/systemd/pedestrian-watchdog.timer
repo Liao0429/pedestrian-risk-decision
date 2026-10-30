@@ -1,0 +1,13 @@
+# 看门狗定时器: 由 systemd 自己调度, 脚本崩溃/被杀也不会失去下一次检查
+[Unit]
+Description=Run Pedestrian Risk watchdog every 30s
+
+[Timer]
+# 开机 90s 后才开始 (避开 VENC/ISP 初始化期), 之后每 30s 一次
+OnBootSec=90s
+OnUnitActiveSec=30s
+AccuracySec=1s
+Unit=pedestrian-watchdog.service
+
+[Install]
+WantedBy=timers.target

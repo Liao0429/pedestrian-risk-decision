@@ -31,6 +31,8 @@
 #include "preprocess.h"
 #include "../../algorithms/crowd_dbscan.h"   // DBSCAN 簇计数（OSD Clusters 行）
 #include "board_infer.h"                      // NPU 归因：npu/submit/wait 计数（task-8）
+#include "../../algorithms/bytetrack_tracker.h" // 轨迹跟踪（task-11 计数去重）
+#include "../../algorithms/track_counter.h"     // 身份级计数去重 + ROI 进出（task-11）
 
 #define DISP_WIDTH  720
 #define DISP_HEIGHT 480
@@ -57,6 +59,11 @@
 #ifndef BOARD_INFER_DECIMATE
 #define BOARD_INFER_DECIMATE 1
 #endif
+// BOARD_TRACK_COUNT=0：编译期关闭轨迹级计数去重，回到"当帧检测框数"旧口径（A/B 用）。
+// 运行时还可用 config 的 track_count_enabled 覆盖（默认 true）。
+#ifndef BOARD_TRACK_COUNT
+#define BOARD_TRACK_COUNT 1
+#endif
 // VENC 单帧最大 pack 数（SPS/PPS 与 slice 可能分成多个 pack）
 #define VENC_MAX_PACKS 8
 
@@ -73,6 +80,53 @@ static inline uint64_t nowUs() {
   return (uint64_t)ts.tv_sec * 1000000ull + (uint64_t)ts.tv_nsec / 1000ull;
 }
 
+// ---- 心跳诊断辅助（task-8 下探定位）----
+// 读 /proc/self/stat 的 utime+stime（clock ticks），用于算自身 CPU 占用
+static bool read_self_cpu_ticks(unsigned long long *ticks) {
+  FILE *f = fopen("/proc/self/stat", "r");
+  if (!f) return false;
+  char buf[512];
+  const bool ok = (fgets(buf, sizeof buf, f) != NULL);
+  fclose(f);
+  if (!ok) return false;
+  const char *p = strrchr(buf, ')');       // comm 里可能含空格，从最后一个 ')' 后解析
+  if (!p) return false;
+  ++p;
+  char state = 0;
+  unsigned long long ut = 0, st = 0;
+  const int n = sscanf(p, " %c %*d %*d %*d %*d %*d %*u %*u %*u %*u %*u %llu %llu",
+                       &state, &ut, &st);
+  if (n < 3) return false;
+  *ticks = ut + st;
+  return true;
+}
+
+// 统计 /proc/net/tcp{,6} 中本地端口属于 ports[] 且状态为 ESTABLISHED(01) 的连接数
+// 用途：区分"外部拉流（go2rtc/客户端）背压"与"内部偶发长尾"
+static int count_estab_on_ports(const int *ports, int nports) {
+  const char *files[2] = {"/proc/net/tcp", "/proc/net/tcp6"};
+  int cnt = 0;
+  for (int fi = 0; fi < 2; ++fi) {
+    FILE *f = fopen(files[fi], "r");
+    if (!f) continue;
+    char line[320];
+    if (fgets(line, sizeof line, f) == NULL) { fclose(f); continue; }   // 跳过表头
+    while (fgets(line, sizeof line, f) != NULL) {
+      char local[64] = {0};
+      char st[8] = {0};
+      if (sscanf(line, " %*d: %63s %*s %7s", local, st) != 2) continue;
+      if (strcmp(st, "01") != 0) continue;                 // 01 = ESTABLISHED
+      const char *colon = strrchr(local, ':');
+      if (colon == NULL) continue;
+      const long port = strtol(colon + 1, NULL, 16);
+      for (int k = 0; k < nports; ++k)
+        if (port == (long)ports[k]) { ++cnt; break; }
+    }
+    fclose(f);
+  }
+  return cnt;
+}
+
 // 分阶段耗时累加器（每秒清零并打印）
 struct StageAccum {
   uint64_t vi_us;
@@ -85,13 +139,18 @@ struct StageAccum {
   uint64_t submit_us;   // non_block 提交耗时（需 BOARD_RKNN_NONBLOCK=1）
   uint64_t wait_us;     // rknn_wait 等待耗时（同上）
   int npu_samples;
+  int io_samples;       // submit/wait 采样数（NONBLOCK=1 时）
   int infer_skips;      // 推理降频跳过的帧数
+  unsigned long long cpu_ticks_start;  // 窗口起点 /proc/self/stat utime+stime
+  unsigned long long cpu_ticks_end;
   int frames;
   uint64_t window_start_us;
   StageAccum()
       : vi_us(0), prep_us(0), infer_us(0), decide_us(0), draw_us(0), enc_us(0),
-        npu_us(0), submit_us(0), wait_us(0), npu_samples(0), infer_skips(0),
-        frames(0), window_start_us(0) {}
+        npu_us(0), submit_us(0), wait_us(0), npu_samples(0), io_samples(0),
+        infer_skips(0),
+        cpu_ticks_start(0), cpu_ticks_end(0), frames(0),
+        window_start_us(0) {}
 };
 
 // disp size
@@ -235,6 +294,29 @@ int main(int argc, char *argv[]) {
   enhancedCfg.spectral_interval = riskCfg.spectral_interval;
   pedestrian::EnhancedDecision enhancedDecision(enhancedCfg);
 
+  // ==== 轨迹级计数去重（task-11）：ByteTrack + track_count::TrackCounter ====
+  // 动机：当帧"检测框数"会把同一人被 NMS 漏掉的重复框算成多人；2cm 脚点去重在
+  // 6cm 偏移下完全失效（track-count 实测），必须用轨迹身份级判据。
+  // 旧/新口径 A/B：编译开关 BOARD_TRACK_COUNT，运行时 config.track_count_enabled。
+  ByteTrack tracker(0.5, 0.1, 0.8, 30, 3, 1.0, false);
+  {
+    std::string terr;
+    if (!ByteTrack::paramsValid(0.5, 0.1, 0.8, 30, 3, &terr))
+      fprintf(stderr, "[FATAL] ByteTrack 参数非法: %s\n", terr.c_str());
+  }
+  track_count::Config tcCfg;
+  for (size_t v = 0; v < riskCfg.roi.polygon.size(); ++v)
+    tcCfg.roi_polygon.push_back(std::make_pair((double)riskCfg.roi.polygon[v].first,
+                                               (double)riskCfg.roi.polygon[v].second));
+  tcCfg.roi_hysteresis = 8.0;
+  tcCfg.min_dwell_frames = 3;
+  tcCfg.min_danger_n = riskCfg.fsm.min_danger_n;   // 必须与 FSM 门控一致
+  track_count::TrackCounter counter(tcCfg);
+  const bool trackCountOn = (BOARD_TRACK_COUNT != 0) && riskCfg.track_count_enabled;
+  printf("[TRACK] track_count=%d (compile=%d, cfg=%d) min_hits=3 min_danger_n=%d roi_pts=%d\n",
+         (int)trackCountOn, (int)BOARD_TRACK_COUNT, (int)riskCfg.track_count_enabled,
+         tcCfg.min_danger_n, (int)tcCfg.roi_polygon.size());
+
   // ROI 配置自检：启动即打印生效的多边形顶点；顶点越界说明配置坐标系不是
   // 720x480 显示坐标（如误用了模型输入/抓图分辨率坐标），闯入判定必然失真。
   if (riskCfg.roi.enabled) {
@@ -264,6 +346,11 @@ int main(int argc, char *argv[]) {
   rknn_app_context_t rknn_app_ctx;
   object_detect_result_list od_results;
   memset(&rknn_app_ctx, 0, sizeof(rknn_app_context_t));
+  // 关键：od_results 必须显式清零。post_process 每帧会 memset，但推理降频
+  // (BOARD_INFER_DECIMATE>1) 会跳过首帧推理；不初始化则 count 是栈垃圾 ->
+  // dets/groundPts.reserve(垃圾) 抛 std::length_error -> terminate -> SIGABRT。
+  // 2026-10-31 板端实测复现：dec2 变体启动即 ABRT、systemd Restart=on-failure 循环。
+  memset(&od_results, 0, sizeof(object_detect_result_list));
 
   VENC_STREAM_S stFrame;
   memset(&stFrame, 0, sizeof(stFrame));
@@ -474,6 +561,10 @@ int main(int argc, char *argv[]) {
   //  4) 逐帧/逐框调试打印改编译开关，运行期只保留 1Hz 心跳。
   StageAccum acc;
   acc.window_start_us = nowUs();
+  {
+    unsigned long long tk = 0;
+    if (read_self_cpu_ticks(&tk)) acc.cpu_ticks_start = tk;
+  }
   int vi_fail = 0;
   int venc_fail = 0;
   const int kViTimeoutMs   = 200;  // VI 无帧：200ms 回循环检查 g_stop
@@ -499,7 +590,14 @@ int main(int argc, char *argv[]) {
               newCfg.roi.polygon != riskCfg.roi.polygon ||
               newCfg.conf_threshold != riskCfg.conf_threshold) {
             riskCfg = newCfg;
-            fprintf(stderr, "[ROI] Config reloaded: roi enabled=%d vertices=%zu conf=%.2f\n",
+            // 轨迹计数器的 ROI 多边形同步更新；重建会清零身份/访客计数（低频事件）
+            tcCfg.roi_polygon.clear();
+            for (size_t v = 0; v < riskCfg.roi.polygon.size(); ++v)
+              tcCfg.roi_polygon.push_back(std::make_pair((double)riskCfg.roi.polygon[v].first,
+                                                         (double)riskCfg.roi.polygon[v].second));
+            counter = track_count::TrackCounter(tcCfg);
+            fprintf(stderr, "[ROI] Config reloaded: roi enabled=%d vertices=%zu conf=%.2f "
+                            "(track counter rebuilt)\n",
                     (int)riskCfg.roi.enabled, riskCfg.roi.polygon.size(),
                     (double)riskCfg.conf_threshold);
           }
@@ -563,7 +661,11 @@ int main(int argc, char *argv[]) {
     // BOARD_INFER_DECIMATE=N：每 N 帧推理一次，中间帧沿用上一帧 od_results（框/置信度）。
     // 代价：检测框最坏滞后 N-1 帧（Kalman 平滑与 FSM 仍逐帧运行，不改变等级逻辑）。
     int infer_ret = 0;
-    if (BOARD_INFER_DECIMATE <= 1 || ((int)(frameSeq % (uint64_t)BOARD_INFER_DECIMATE) == 0)) {
+    // 防御（永远生效，不依赖降频开关）：任何来源（未初始化/解码异常/驱动异常）
+    // 的 count 都不能越界，否则 reserve(count) 会拿到垃圾长度
+    // （板端已复现 std::length_error -> ABRT）。实现见 board_infer.h，有 host 单测。
+    od_results.count = board_clamp_detection_count(od_results.count, OBJ_NUMB_MAX_SIZE);
+    if (board_should_run_inference(frameSeq, (int)BOARD_INFER_DECIMATE)) {
       infer_ret = inference_yolov5_model(&rknn_app_ctx, &od_results, riskCfg.conf_threshold);
       if (infer_ret != 0) {
         RK_LOGE("inference_yolov5_model fail ret=%d", infer_ret);
@@ -573,7 +675,7 @@ int main(int argc, char *argv[]) {
       if (npu_us >= 0) { acc.npu_us += (uint64_t)npu_us; ++acc.npu_samples; }
       const int64_t sub_us = board_infer_last_submit_us();
       const int64_t wt_us = board_infer_last_wait_us();
-      if (sub_us >= 0) acc.submit_us += (uint64_t)sub_us;
+      if (sub_us >= 0) { acc.submit_us += (uint64_t)sub_us; ++acc.io_samples; }
       if (wt_us >= 0) acc.wait_us += (uint64_t)wt_us;
     } else {
       ++acc.infer_skips;
@@ -584,10 +686,14 @@ int main(int argc, char *argv[]) {
     pedestrian::RiskLevel crowd = pedestrian::RISK_SAFE;
     int featN = 0;
     int featClusters = 0;   // DBSCAN 簇数（OSD 用；不影响决策等级）
+    int trackDangerous = -1; // 轨迹级 Dangerous Person（新口径；-1 = 未启用/未计算）
     double featRho = 0.0, featGcc = 0.0, featFiedler = 0.0;
     {
       std::vector<std::pair<float,float> > groundPts;
       groundPts.reserve((size_t)od_results.count);
+      // 显示坐标检测框（与 groundPts 同一套 person 过滤条件），供 ByteTrack 关联
+      std::vector<std::vector<double> > dets;
+      dets.reserve((size_t)od_results.count);
       for (int i = 0; i < od_results.count; i++) {
         object_detect_result *dres = &(od_results.results[i]);
         if (std::find(riskCfg.target_classes.begin(), riskCfg.target_classes.end(),
@@ -603,6 +709,59 @@ int main(int argc, char *argv[]) {
         float gx = (float)px, gy = (float)py;
         pedestrian::mapToGround(H, gx, gy);   // 像素 -> 地面米（与 RiskEngine 同一 IPM）
         groundPts.push_back(std::make_pair(gx, gy));
+
+        if (trackCountOn) {
+          int bx1 = (int)dres->box.left,  by1 = (int)dres->box.top;
+          int bx2 = (int)dres->box.right, by2 = (int)dres->box.bottom;
+          mapCoordinates(&bx1, &by1);
+          mapCoordinates(&bx2, &by2);
+          std::vector<double> d(5);
+          d[0] = (double)bx1; d[1] = (double)by1; d[2] = (double)bx2;
+          d[3] = (double)by2; d[4] = (double)dres->prop;
+          dets.push_back(d);
+        }
+      }
+
+      // ---- 轨迹级计数去重：ByteTrack -> TrackCounter -> 去重脚点 ----
+      if (trackCountOn) {
+        const std::vector<TrackResult> trks = tracker.update(dets);   // frame_id 内部自增
+        const std::vector<TrackInfo> tinfo = tracker.trackInfo();     // 与 trks 同序
+        track_count::FrameObs fo;
+        fo.frame_id = (int)frameSeq;
+        fo.n_detections = (int)dets.size();
+        fo.tracks.reserve(trks.size());
+        for (size_t i = 0; i < trks.size(); ++i) {
+          track_count::Obs o;
+          o.track_id  = trks[i].id;
+          o.x1 = trks[i].x1; o.y1 = trks[i].y1;
+          o.x2 = trks[i].x2; o.y2 = trks[i].y2;
+          o.score = trks[i].score;
+          o.confirmed = (i < tinfo.size()) ? tinfo[i].confirmed : true;
+          o.misses    = (i < tinfo.size()) ? tinfo[i].misses : 0;
+          float fgx = (float)((o.x1 + o.x2) * 0.5);
+          float fgy = (float)o.y2;
+          pedestrian::mapToGround(H, fgx, fgy);       // 米制脚点（与 groundPts 同源）
+          o.has_foot = true; o.foot_x = (double)fgx; o.foot_y = (double)fgy;
+          o.has_roi  = true;
+          o.roi_x = (o.x1 + o.x2) * 0.5; o.roi_y = (o.y1 + o.y2) * 0.5;   // 像素
+          fo.tracks.push_back(o);
+        }
+        const track_count::Result tcRes = counter.update(fo);
+        trackDangerous = tcRes.dangerous_now;
+        // 去重后的脚点替换 groundPts：er.n/density/r_gcc/fiedler、DBSCAN 簇数、
+        // FSM 的 min_danger_n 门控因此同时变成"身份级"口径（无需逐处改）。
+        groundPts.clear();
+        groundPts.reserve(tcRes.persons.size());
+        for (size_t i = 0; i < tcRes.persons.size(); ++i)
+          groundPts.push_back(std::make_pair((float)tcRes.persons[i].foot_x,
+                                             (float)tcRes.persons[i].foot_y));
+#if BOARD_VERBOSE_DETECT
+        printf("[TRACK] frame=%d dets=%d tracks=%zu persons=%d dup_suppressed=%d "
+               "dangerous=%d visitors=%d gate_ok=%d legacy_gate_ok=%d\n",
+               (int)frameSeq, (int)dets.size(), trks.size(), (int)tcRes.persons.size(),
+               tcRes.n_suppressed, tcRes.dangerous_now, tcRes.visitors_total,
+               (int)tcRes.gate_ok, (int)tcRes.legacy_gate_ok);
+#endif
       }
       const pedestrian::EnhancedResult er = enhancedDecision.processFrame(groundPts);
       crowd       = static_cast<pedestrian::RiskLevel>(er.level);
@@ -644,7 +803,7 @@ int main(int argc, char *argv[]) {
 
     // ---- 绘制：目标框 / ROI / OSD ----
     bool roiPolyLogged = false;
-    int dangerPersons = 0;   // 当前帧检测框中心落入 ROI 的目标数（OSD Dangerous Person）
+    int dangerPersons = 0;   // 旧口径：当前帧检测框中心落入 ROI 的检测数（A/B 基线）
     for (int i = 0; i < od_results.count; i++) {
       object_detect_result *det_result = &(od_results.results[i]);
       if (std::find(riskCfg.target_classes.begin(), riskCfg.target_classes.end(),
@@ -739,9 +898,12 @@ int main(int argc, char *argv[]) {
       cv::putText(frame, line2, cv::Point(8, 42), cv::FONT_HERSHEY_SIMPLEX, 0.5,
                   lvl_color, 1, cv::LINE_AA);
 
-      // 第三行 Dangerous Person：本帧检测框中心落在 ROI 内的目标数（对齐参考作品 OSD）
+      // 第三行 Dangerous Person：轨迹级去重口径（track_count 的滞回+最短驻留身份数）；
+      // 关闭 track_count 时回退到旧口径（ROI 内当帧检测数），便于 A/B 对照。
+      const int dangerShow = (trackCountOn && trackDangerous >= 0) ? trackDangerous
+                                                                  : dangerPersons;
       char line3[64];
-      snprintf(line3, sizeof line3, "Dangerous Person: %d", dangerPersons);
+      snprintf(line3, sizeof line3, "Dangerous Person: %d", dangerShow);
       cv::putText(frame, line3, cv::Point(8, 64), cv::FONT_HERSHEY_SIMPLEX, 0.5,
                   osd_red, 1, cv::LINE_AA);
 
@@ -827,23 +989,65 @@ int main(int argc, char *argv[]) {
     if (t_enc - acc.window_start_us >= 1000000ull) {
       const double win_s = (double)(t_enc - acc.window_start_us) / 1000000.0;
       const int n = acc.frames > 0 ? acc.frames : 1;
-      printf("[PERF] fps=%.2f frames=%d persons=%d level=%s vi=%.1f prep=%.1f "
+      // 墙钟/单调时间戳：便于与外部事件（拉流接入、journal、NTP、config reload）对齐
+      struct timespec wts;
+      clock_gettime(CLOCK_REALTIME, &wts);
+      struct tm tmv;
+      localtime_r(&wts.tv_sec, &tmv);
+      char wall[32];
+      snprintf(wall, sizeof wall, "%02d:%02d:%02d.%03d", tmv.tm_hour, tmv.tm_min,
+               tmv.tm_sec, (int)(wts.tv_nsec / 1000000));
+      unsigned long long tk_end = 0;
+      const bool have_tk = read_self_cpu_ticks(&tk_end);
+      if (have_tk) acc.cpu_ticks_end = tk_end;
+      const int estab_ports[2] = {554, 8554};
+      const int estab_cnt = count_estab_on_ports(estab_ports, 2);
+      double cpu_pct = -1.0;
+      if (have_tk && acc.cpu_ticks_end >= acc.cpu_ticks_start) {
+        const long hz = sysconf(_SC_CLK_TCK);
+        if (hz > 0)
+          cpu_pct = (double)(acc.cpu_ticks_end - acc.cpu_ticks_start) * 100.0 /
+                    (double)hz / win_s;
+      }
+      printf("[PERF] t=%s mono_ms=%llu fps=%.2f cpu=%.1f%% estab_rtsp=%d frames=%d persons=%d level=%s vi=%.1f prep=%.1f "
              "infer=%.1f decide=%.1f draw=%.1f enc=%.1f | per-frame ms: "
              "vi=%.2f prep=%.2f infer=%.2f decide=%.2f draw=%.2f enc=%.2f | "
              "npu_avg=%.2f submit_avg=%.2f wait_avg=%.2f npu_samples=%d infer_skips=%d decimate=%d sync_mode=%d\n",
-             acc.frames / win_s, acc.frames, featN, RiskEngine::levelName(crowd),
+             wall, (unsigned long long)(t_enc / 1000), (double)(acc.frames) / win_s,
+             cpu_pct, estab_cnt, acc.frames, featN, RiskEngine::levelName(crowd),
              acc.vi_us / 1000.0, acc.prep_us / 1000.0, acc.infer_us / 1000.0,
              acc.decide_us / 1000.0, acc.draw_us / 1000.0, acc.enc_us / 1000.0,
              acc.vi_us / 1000.0 / n, acc.prep_us / 1000.0 / n, acc.infer_us / 1000.0 / n,
              acc.decide_us / 1000.0 / n, acc.draw_us / 1000.0 / n, acc.enc_us / 1000.0 / n,
              acc.npu_samples > 0 ? acc.npu_us / 1000.0 / acc.npu_samples : -1.0,
-             acc.npu_samples > 0 ? acc.submit_us / 1000.0 / acc.npu_samples : -1.0,
-             acc.npu_samples > 0 ? acc.wait_us / 1000.0 / acc.npu_samples : -1.0,
+             acc.io_samples > 0 ? acc.submit_us / 1000.0 / acc.io_samples : -1.0,
+             acc.io_samples > 0 ? acc.wait_us / 1000.0 / acc.io_samples : -1.0,
              acc.npu_samples, acc.infer_skips, (int)BOARD_INFER_DECIMATE,
              board_infer_sync_mode());
+      // 下探诊断：窗口 fps < 6.5 时额外打一行（含 loadavg / RSS / 本窗口分段）
+      if ((double)acc.frames / win_s < 6.5) {
+        double la[3] = {-1.0, -1.0, -1.0};
+        FILE *lf = fopen("/proc/loadavg", "r");
+        if (lf) { if (fscanf(lf, "%lf %lf %lf", &la[0], &la[1], &la[2]) != 3) {} fclose(lf); }
+        long rss_kb = -1;
+        FILE *sf = fopen("/proc/self/status", "r");
+        if (sf) {
+          char ln[128];
+          while (fgets(ln, sizeof ln, sf) != NULL)
+            if (strncmp(ln, "VmRSS:", 6) == 0) { sscanf(ln + 6, "%ld", &rss_kb); break; }
+          fclose(sf);
+        }
+        printf("[DIAG] t=%s fps=%.2f cpu=%.1f%% estab_rtsp=%d loadavg=%.2f/%.2f/%.2f rss_kb=%ld "
+               "vi=%.1f prep=%.1f infer=%.1f draw=%.1f enc=%.1f frames=%d\n",
+               wall, (double)acc.frames / win_s, cpu_pct, estab_cnt, la[0], la[1], la[2],
+               rss_kb, acc.vi_us / 1000.0, acc.prep_us / 1000.0, acc.infer_us / 1000.0,
+               acc.draw_us / 1000.0, acc.enc_us / 1000.0, acc.frames);
+      }
       fflush(stdout);   // 心跳必须立即落盘：看门狗按文件 mtime 判活
+      const unsigned long long tk_prev = acc.cpu_ticks_end;
       acc = StageAccum();
       acc.window_start_us = t_enc;
+      acc.cpu_ticks_start = have_tk ? tk_prev : 0;
     }
 #endif
   }

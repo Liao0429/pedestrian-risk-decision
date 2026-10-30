@@ -34,7 +34,35 @@
  *
  * 说明：本头文件的算法与 tests/test_bytetrack_tracker.py 验证过的 Python 版
  * 一一对应；因板端不便链接第三方线性代数库，匈牙利算法与 Kalman 滤波均为
- * 纯 C++ 手写实现。移植到板端后建议在真实工程中重新编译并做数值验证。
+ * 纯 C++ 手写实现。数值一致性由 tests/test_bytetrack_sequences.py 用真实编译产物
+ * 在多人交叉 / 遮挡重现 / ID 切换 / 重复框 等真实序列上逐值比对（%.17g）。
+ *
+ * ---------------------------------------------------------------------------
+ * 生命周期与 ID 分配契约（接线前必读，踩过坑的地方都在这里）
+ * ---------------------------------------------------------------------------
+ * 1. **frame_id 必须递增且从 > 1 开始，或直接传 -1 让内部自增**：
+ *    createTrack 用 "frame_id <= 1" 判定"首帧直接确认"（与 Python 版一致）。
+ *    若调用方每帧都传同一个 frame_id（比如恒传 0），每条新建轨迹都会立刻
+ *    confirmed=true，min_hits 形同虚设、未确认轨迹防抖失效。
+ *    推荐：update(dets) 不传 frame_id（内部自增 1,2,3...），或传递增的真帧号。
+ *
+ * 2. **ID 单调递增，但 reset() 会从 0 重新分配**：m_nextId 只在 reset() 时归零。
+ *    任何按 track_id 建索引的下游模块（如 track_counter.h 的身份映射）必须与
+ *    ByteTrack 同生命周期 —— reset() 时同步 reset()，否则旧 ID 会映射到新目标。
+ *
+ * 3. **轨迹删除只有一条路径**：连续 misses > max_lost 帧后 prune 掉（即容忍
+ *    max_lost+1 帧漏检）。未确认的"幽灵轨迹"走同一条路径，不会永远驻留。
+ *
+ * 4. **states() 返回全部活跃轨迹，含未确认（confirmed=false）的**：
+ *    output_confirmed_only=true 才会过滤。计数场景应当用 trackInfo() 的
+ *    confirmed 自行过滤（tentative 不计人数），而不是把 states() 直接当人数。
+ *
+ * 5. **trackInfo() 与 states() 同序**：m_tracks 始终按创建顺序（= ID 升序）排列，
+ *    prune() 保序压缩，因此二者可以用同一个下标对齐。
+ *
+ * 6. **参数校验不抛异常**：板端常以 -fno-exceptions 编译，构造器对非法参数
+ *    （如 match_thresh>1 会接受任意零 IoU 配对）保持宽容；请用
+ *    ByteTrack::paramsValid(...) 显式校验（条件与 Python 版 ValueError 完全一致）。
  */
 
 #ifndef PEDESTRIAN_BYTETRACK_TRACKER_H
@@ -45,6 +73,7 @@
 #include <cmath>
 #include <cstddef>
 #include <limits>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -474,11 +503,57 @@ public:
           m_frameId(0) {}
 
     /**
+     * @brief 参数合法性校验（条件与 Python 版 ByteTrack.__init__ 的 ValueError 一致）。
+     *
+     * 板端常以 -fno-exceptions 编译，故不抛异常：构造器保持宽容，由调用方显式
+     * 校验，避免"阈值写反了但静默跑偏"（例如 match_thresh > 1 会让任意零 IoU
+     * 配对都通过代价门限，直接造成 ID 串号）。
+     *
+     * @param err 可选，失败时写入原因。
+     * @return 全部参数合法返回 true。
+     */
+    static bool paramsValid(double track_thresh, double det_thresh,
+                            double match_thresh, int max_lost, int min_hits,
+                            std::string* err = 0) {
+        if (!(track_thresh > 0.0 && track_thresh <= 1.0)) {
+            if (err) *err = "track_thresh 必须在 (0, 1]";
+            return false;
+        }
+        if (!(det_thresh >= 0.0 && det_thresh < track_thresh)) {
+            if (err) *err = "det_thresh 必须满足 0 <= det_thresh < track_thresh";
+            return false;
+        }
+        if (!(match_thresh > 0.0 && match_thresh <= 1.0)) {
+            if (err) *err = "match_thresh 必须在 (0, 1]";
+            return false;
+        }
+        if (max_lost < 1) {
+            if (err) *err = "max_lost 必须为正整数";
+            return false;
+        }
+        if (min_hits < 1) {
+            if (err) *err = "min_hits 必须为正整数";
+            return false;
+        }
+        return true;
+    }
+
+    /** 当前实例的构参是否合法（等价于 paramsValid(构造器入参)）。 */
+    bool paramsValid() const {
+        return paramsValid(m_trackThresh, m_detThresh, m_matchThresh,
+                           m_maxLost, m_minHits, 0);
+    }
+
+    /**
      * 输入一帧检测结果，返回所有活跃轨迹。
      *
-     * @param detections 检测框列表，每元素为 (x1, y1, x2, y2, score)。
-     * @param frame_id   显式帧号；<0 时使用内部自增计数。
-     * @return 按 track_id 升序的 TrackResult 列表。
+     * @param detections 检测框列表，每元素为 (x1, y1, x2, y2, score)；
+     *                   长度 < 5 或含 NaN/Inf 的行被**丢弃**（防御上游异常，
+     *                   Python 版对应位置会抛 IndexError；板端宁可丢一帧检测，
+     *                   也不能越界读 UB）。
+     * @param frame_id   显式帧号；<0 时使用内部自增计数。注意：<=1 的帧号会让
+     *                   本帧新建轨迹直接 confirmed（见文件头契约第 1 条）。
+     * @return 按 track_id 升序的 TrackResult 列表（含未确认轨迹）。
      */
     std::vector<TrackResult> update(
         const std::vector<std::vector<double>>& detections,
@@ -497,6 +572,11 @@ public:
         std::vector<bt_detail::Box> high_boxes, low_boxes;
         std::vector<double> high_scores, low_scores;
         for (const auto& d : detections) {
+            if (d.size() < 5) continue;                     // 防御：行长度不足
+            if (!std::isfinite(d[0]) || !std::isfinite(d[1]) ||
+                !std::isfinite(d[2]) || !std::isfinite(d[3]) ||
+                !std::isfinite(d[4]))
+                continue;                                   // 防御：NaN / Inf
             bt_detail::Box b{d[0], d[1], d[2], d[3]};
             const double score = d[4];
             if (score >= m_trackThresh) {

@@ -1,0 +1,206 @@
+# systemd StartLimit / cgroup 语义 实测原始输出（构建机 192.168.0.63, Ubuntu 22.04, systemd 249）
+# 复现方式: 见同目录 systemd_startlimit_probe.sh / systemd_oom_probe.sh / systemd_cgroup_retry_probe.sh
+# 采集时间: 2026-10-31 01:02 ~ 01:14 (Asia/Shanghai)
+# 说明: 全部为一次性 /run/systemd/system/ 临时单元, 脚本末尾自清理; 输出未经修改（仅删除主机名后的时间列）。
+
+========== 实验 A/B/E: StartLimit 语义 + 修复方案 ==========
+sudo ok: root
+===== [1] board config reproduced: Restart=on-failure RestartSec=5 StartLimitIntervalSec=30 StartLimitBurst=5 =====
+-- effective config --
+Restart=on-failure
+RestartUSec=5s
+StartLimitIntervalUSec=30s
+StartLimitBurst=5
+01:06:23 start
+start rc=0
+01:07:03 after 40s
+-- show A --
+Result=exit-code
+NRestarts=5
+ExecMainStatus=1
+ActiveState=failed
+SubState=failed
+-- is-active A (what the watchdog tests) --
+failed
+is-active rc=3
+-- journal A --
+2026-10-31T01:06:23+0800 systemd[1]: Started DSH StartLimit probe A (reproduces board config).
+2026-10-31T01:06:23+0800 systemd[1]: dsh-probe-a.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-31T01:06:23+0800 systemd[1]: dsh-probe-a.service: Failed with result 'exit-code'.
+2026-10-31T01:06:28+0800 systemd[1]: dsh-probe-a.service: Scheduled restart job, restart counter is at 1.
+2026-10-31T01:06:28+0800 systemd[1]: Stopped DSH StartLimit probe A (reproduces board config).
+2026-10-31T01:06:28+0800 systemd[1]: Started DSH StartLimit probe A (reproduces board config).
+2026-10-31T01:06:28+0800 systemd[1]: dsh-probe-a.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-31T01:06:28+0800 systemd[1]: dsh-probe-a.service: Failed with result 'exit-code'.
+2026-10-31T01:06:33+0800 systemd[1]: dsh-probe-a.service: Scheduled restart job, restart counter is at 2.
+2026-10-31T01:06:33+0800 systemd[1]: Stopped DSH StartLimit probe A (reproduces board config).
+2026-10-31T01:06:33+0800 systemd[1]: Started DSH StartLimit probe A (reproduces board config).
+2026-10-31T01:06:33+0800 systemd[1]: dsh-probe-a.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-31T01:06:33+0800 systemd[1]: dsh-probe-a.service: Failed with result 'exit-code'.
+2026-10-31T01:06:38+0800 systemd[1]: dsh-probe-a.service: Scheduled restart job, restart counter is at 3.
+2026-10-31T01:06:38+0800 systemd[1]: Stopped DSH StartLimit probe A (reproduces board config).
+2026-10-31T01:06:38+0800 systemd[1]: Started DSH StartLimit probe A (reproduces board config).
+2026-10-31T01:06:38+0800 systemd[1]: dsh-probe-a.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-31T01:06:38+0800 systemd[1]: dsh-probe-a.service: Failed with result 'exit-code'.
+2026-10-31T01:06:44+0800 systemd[1]: dsh-probe-a.service: Scheduled restart job, restart counter is at 4.
+2026-10-31T01:06:44+0800 systemd[1]: Stopped DSH StartLimit probe A (reproduces board config).
+2026-10-31T01:06:44+0800 systemd[1]: Started DSH StartLimit probe A (reproduces board config).
+2026-10-31T01:06:44+0800 systemd[1]: dsh-probe-a.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-31T01:06:44+0800 systemd[1]: dsh-probe-a.service: Failed with result 'exit-code'.
+2026-10-31T01:06:49+0800 systemd[1]: dsh-probe-a.service: Scheduled restart job, restart counter is at 5.
+2026-10-31T01:06:49+0800 systemd[1]: Stopped DSH StartLimit probe A (reproduces board config).
+2026-10-31T01:06:49+0800 systemd[1]: dsh-probe-a.service: Start request repeated too quickly.
+2026-10-31T01:06:49+0800 systemd[1]: dsh-probe-a.service: Failed with result 'exit-code'.
+2026-10-31T01:06:49+0800 systemd[1]: Failed to start DSH StartLimit probe A (reproduces board config).
+===== [2] can the watchdog rescue it? explicit restart/start while start-limit-hit =====
+restart rc=0
+start rc=0
+activating
+is-failed rc=1
+===== [3] recovery requires reset-failed =====
+start after reset rc=0
+Result=exit-code
+NRestarts=1
+ActiveState=activating
+SubState=auto-restart
+===== [4] proposed fix: StartLimitIntervalSec=0 + Restart=always + RestartSec=3 =====
+start B rc=0
+-- show B after 45s of instant failure (A would already be dead) --
+Result=exit-code
+NRestarts=13
+ActiveState=activating
+SubState=auto-restart
+StartLimitIntervalUSec=0
+-- journal B (last 6) --
+2026-10-31T01:07:57+0800 systemd[1]: dsh-probe-b.service: Failed with result 'exit-code'.
+2026-10-31T01:08:00+0800 systemd[1]: dsh-probe-b.service: Scheduled restart job, restart counter is at 13.
+2026-10-31T01:08:00+0800 systemd[1]: Stopped DSH StartLimit probe B (hardened: rate limit disabled).
+2026-10-31T01:08:00+0800 systemd[1]: Started DSH StartLimit probe B (hardened: rate limit disabled).
+2026-10-31T01:08:00+0800 systemd[1]: dsh-probe-b.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-31T01:08:00+0800 systemd[1]: dsh-probe-b.service: Failed with result 'exit-code'.
+===== [5] cleanup =====
+  UNIT LOAD ACTIVE SUB DESCRIPTION
+0 loaded units listed.
+To show all installed unit files use 'systemctl list-unit-files'.
+cleanup done
+
+[stderr]
+Failed to reset failed state of unit dsh-probe-a.service: Unit dsh-probe-a.service not loaded.
+
+[exit 0]
+
+========== 实验 C/D: cgroup OOM (OOMPolicy=stop vs continue) ==========
+===== [C] OOMPolicy=stop + MemoryMax=32M + Restart=always =====
+-- show C --
+Result=success
+NRestarts=0
+OOMPolicy=stop
+ActiveState=active
+SubState=running
+active
+is-active rc=0
+-- show C after +8s (did Restart=always revive it?) --
+Result=success
+NRestarts=0
+ActiveState=active
+SubState=running
+-- journal C --
+2026-10-31T01:09:03+0800 systemd[1]: Started DSH OOM probe C (OOMPolicy=stop, MemoryMax=32M).
+2026-10-31T01:09:27+0800 systemd[1]: Stopping DSH OOM probe C (OOMPolicy=stop, MemoryMax=32M)...
+2026-10-31T01:09:27+0800 systemd[1]: dsh-probe-c.service: Deactivated successfully.
+2026-10-31T01:09:27+0800 systemd[1]: Stopped DSH OOM probe C (OOMPolicy=stop, MemoryMax=32M).
+2026-10-31T01:11:02+0800 systemd[1]: Started DSH OOM probe c (OOMPolicy=stop).
+-- kernel OOM lines --
+===== [D] OOMPolicy=continue (proposed) =====
+-- show D --
+Result=success
+NRestarts=0
+OOMPolicy=continue
+ActiveState=active
+SubState=running
+===== [E] retry window: can a 15s-cadence watchdog revive a start-limit-hit unit? =====
+-- state after burst --
+Result=exit-code
+NRestarts=5
+ActiveState=failed
+SubState=failed
+-- T+9s: explicit restart INSIDE the 30s window --
+restart(inside window) rc=1
+Result=exit-code
+NRestarts=5
+ActiveState=failed
+SubState=failed
+-- T+11s: is-active (what the watchdog tests) --
+failed
+is-active rc=3
+-- T+34s: explicit restart AFTER the interval has passed --
+restart(after window) rc=0
+Result=exit-code
+NRestarts=2
+ActiveState=activating
+SubState=auto-restart
+-- journal E (tail 8) --
+2026-10-31T01:12:33+0800 systemd[1]: Started DSH probe E (board config, fast cadence).
+2026-10-31T01:12:33+0800 systemd[1]: dsh-probe-e.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-31T01:12:33+0800 systemd[1]: dsh-probe-e.service: Failed with result 'exit-code'.
+2026-10-31T01:12:35+0800 systemd[1]: dsh-probe-e.service: Scheduled restart job, restart counter is at 2.
+2026-10-31T01:12:35+0800 systemd[1]: Stopped DSH probe E (board config, fast cadence).
+2026-10-31T01:12:35+0800 systemd[1]: Started DSH probe E (board config, fast cadence).
+2026-10-31T01:12:35+0800 systemd[1]: dsh-probe-e.service: Main process exited, code=exited, status=1/FAILURE
+2026-10-31T01:12:35+0800 systemd[1]: dsh-probe-e.service: Failed with result 'exit-code'.
+===== cleanup =====
+0 loaded units listed.
+To show all installed unit files use 'systemctl list-unit-files'.
+done
+
+[stderr]
+Job for dsh-probe-e.service failed because the control process exited with error code.
+See "systemctl status dsh-probe-e.service" and "journalctl -xeu dsh-probe-e.service" for details.
+
+[exit 0]
+
+========== 实验 G/H: MemoryMax 是否生效 + 15s 重试节奏 ==========
+===== [G] raw cgroup numbers: is MemoryMax enforced? =====
+-- show G --
+MainPID=182718
+Result=success
+NRestarts=0
+MemoryCurrent=28106752
+MemoryMax=33554432
+ActiveState=active
+SubState=running
+-- cgroup files --
+cgroup.controllers
+cgroup.events
+cgroup.freeze
+cgroup.kill
+cgroup.max.depth
+memory.max = 33554432 
+memory.current = 28975104 
+memory.peak = 33554432 
+memory.events = low 0 high 0 max 1790 oom 0 oom_kill 0 oom_group_kill 0 
+memory.oom.group = 0 
+MainPID=182718
+VmSize:	  538072 kB
+VmRSS:	   35300 kB
+-- journal G --
+2026-10-31T01:13:21+0800 systemd[1]: Started DSH probe G memory.
+-- kernel oom --
+===== [H] watchdog cadence: retry every 15s against a start-limit-hit unit =====
+T+01:13:41 attempt#1 rc=1  Result=exit-code NRestarts=5 ActiveState=failed SubState=failed 
+T+01:13:56 attempt#2 rc=1  Result=exit-code NRestarts=5 ActiveState=failed SubState=failed 
+T+01:14:11 attempt#3 rc=0  Result=exit-code NRestarts=0 ActiveState=activating SubState=auto-restart 
+T+01:14:27 attempt#4 rc=1  Result=exit-code NRestarts=5 ActiveState=failed SubState=failed 
+-- journal H (tail 6) --
+2026-10-31T01:14:18+0800 systemd[1]: dsh-probe-h.service: Start request repeated too quickly.
+2026-10-31T01:14:18+0800 systemd[1]: dsh-probe-h.service: Failed with result 'exit-code'.
+2026-10-31T01:14:18+0800 systemd[1]: Failed to start DSH probe H retry cadence.
+2026-10-31T01:14:27+0800 systemd[1]: dsh-probe-h.service: Start request repeated too quickly.
+2026-10-31T01:14:27+0800 systemd[1]: dsh-probe-h.service: Failed with result 'exit-code'.
+2026-10-31T01:14:27+0800 systemd[1]: Failed to start DSH probe H retry cadence.
+===== cleanup =====
+0 loaded units listed.
+To show all installed unit files use 'systemctl list-unit-files'.
+done
+
+[exit 0]

@@ -31,6 +31,25 @@ int board_infer_sync_mode(void);
 }
 #endif
 
+// ---- 检测结果计数钳制（task-8 崩溃修复的泛化版本，永远生效）----
+// 背景：object_detect_result_list od_results 是栈上结构体，main.cc 早期只 memset 了
+// rknn_app_ctx，od_results 依赖 post_process 每帧清零。任何"跳过推理"的路径
+// （推理降频、推理失败、模型初始化失败、未来新增开关）都会让 count 保持未初始化
+// 栈垃圾；后续 reserve(count) 会抛 std::length_error -> terminate -> SIGABRT
+// （2026-10-31 板端 dec2 变体 100% 复现，systemd 进入 Restart=on-failure 循环）。
+// 修复原则：清零放在声明处，且每个使用点都钳制一次（不依赖上游）。
+static inline int board_clamp_detection_count(int count, int max_size) {
+    if (count < 0 || count > max_size) return 0;
+    return count;
+}
+
+// 推理降频调度：decimate<=1 或首帧必须推理；否则每 decimate 帧推理一次。
+static inline bool board_should_run_inference(unsigned long long frame_seq, int decimate) {
+    if (decimate <= 1) return true;
+    if (frame_seq == 1) return true;                    // 首帧必须有可用检测结果
+    return (frame_seq % (unsigned long long)decimate) == 0;
+}
+
 // 单调时钟微秒（板端 main.cc / yolov5.cc 共用）
 static inline int64_t board_now_us(void) {
     struct timespec ts;
