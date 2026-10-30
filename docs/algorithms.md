@@ -526,3 +526,26 @@ SpectralFeatures f = gl.computeFeatures;
 | `src/algorithms/graph_laplacian.py` | Python 谱特征分析模块 |
 | `src/algorithms/graph_laplacian.h` | C++ header-only 谱特征分析 |
 | `tests/test_graph_laplacian.py` | 单元测试（19 项） |
+### 脚点坐标去重（2026-10-30新增）
+
+在 `computeFeatures()` 入口增加 O(N²) 2cm 容差去重：
+- C++: `graph_laplacian.h:229-240`, `DEDUP_TOL_M=0.02`
+- Python: `graph_laplacian.py:154-165`, `DEDUP_TOL_M=0.02`
+
+解决问题：YOLO多anchor重复检测→同一行人地面脚点近似重合→密度虚增→误判DANGER。
+
+### min_danger_n 人数门控（2026-10-30新增）
+
+FSM 升级路径增加 `min_danger_n=3` 门控：
+- C++: `risk_fsm.h:79,171`, `riskFSMConfig::min_danger_n`
+- Python: `risk_fsm.py:109,252`
+- JSON: `default_config.json fsm.min_danger_n=3`
+
+解决问题：单人场景 n<3 时即使 density=100% 也永不误升 DANGER。
+
+### Jacobi 循环收敛（2026-10-30改进）
+
+特征分解从单主元 Jacobi → 循环 Jacobi：
+- 每 sweep 遍历所有 (p,q) 对而非只消最大非对角元
+- `tol`: 1e-12 → 1e-10, `max_sweeps`: 100 → 50
+- n=30 时 6-9 sweeps 收敛（旧版 n≥10 时 100 sweeps 不收敛→谱特征全 0）

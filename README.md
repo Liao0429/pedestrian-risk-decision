@@ -162,6 +162,19 @@ make test # 编译并运行增强决策/JSON 配置/阈值引擎单元测试（�
 - 交叉编译完整工程：`make luckfox LUCKFOX_SDK_ROOT=<SDK路径>`（需 Luckfox SDK 库与工具链）。
 - 阈值通过 `config/default_config.json` 运行时加载（`RiskEngine::setConfig`），失败自动回退默认值，“可配置”承诺在 C++ 端落地。
 
+
+## 🔧 2026-10-30 关键修复（Hub多Agent审计）
+
+| Bug | 严重度 | 修复 |
+|-----|--------|------|
+| NMS classIds下标错误 | P0 | `classIds[order[i]]` / `classIds[m]` |
+| 脚点坐标去重缺失 | P0 | 2cm容差去重(C++/Python双端) |
+| min_danger_n=3门控 | P0 | n<3永不升DANGER |
+| Jacobi n≥10不收敛 | P0 | 单主元→循环收敛 |
+| letterbox每帧2MB malloc | P1 | 预分配常驻缓冲 |
+
+详见 `docs/review/20261030_hub/FIXES_APPLIED.md` 和 `docs/review/20261030_hub/perf_analysis_opencode.md`
+
 ## 📚 文档索引
 
 | 文档 | 内容 |
