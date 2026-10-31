@@ -230,25 +230,89 @@ def seq_block(params, frames):
 # ----------------------------------------------------------------------
 # 逐值 parity
 # ----------------------------------------------------------------------
+# 浮点字段的比较容差：C++ 与 Python 的求和顺序不同，跨编译器/优化级别会出现
+# 最后一位（ULP）差异。%.17g 会把这点差异放大成两个不同的字符串，因此逐值比较
+# 必须带容差——否则测试结果取决于 CI runner 的 g++ 版本，而不是代码正确性。
+# 实测：同一提交在一个镜像上全绿，换镜像后 3e-14 的分歧就报红。
+FLOAT_REL_TOL = 1e-9
+
+
+def _parse_line(line):
+    """'-'=空帧；否则 'tid,f,f,f,f,f,confirmed,hits,misses,age;...'。"""
+    if line in ("-", ""):
+        return []
+    out = []
+    for rec in line.split(";"):
+        if not rec:
+            continue
+        f = rec.split(",")
+        out.append((int(f[0]), [float(x) for x in f[1:6]],
+                    [int(x) for x in f[6:10]]))
+    return out
+
+
+def _diff_frames(expected, got, limit=3):
+    """逐值比较两边帧序列，返回人类可读的分歧列表（空列表表示一致）。
+
+    整数（ID / confirmed / hits / misses / age）严格相等；浮点（bbox 四角 +
+    分数）按 FLOAT_REL_TOL 相对容差比较。
+    """
+    exp_f = expected.split("|")
+    got_f = got.split("|")
+    detail = []
+    for i in range(max(len(exp_f), len(got_f))):
+        if i >= len(exp_f) or i >= len(got_f):
+            detail.append("frame %d 帧数不同\n  py : %s\n  cpp: %s" % (
+                i, exp_f[i] if i < len(exp_f) else "<missing>",
+                got_f[i] if i < len(got_f) else "<missing>"))
+            break
+        e, g = _parse_line(exp_f[i]), _parse_line(got_f[i])
+        if len(e) != len(g):
+            detail.append("frame %d 轨迹条数不同: py=%d cpp=%d" % (i, len(e), len(g)))
+            continue
+        for k, (pe, pg) in enumerate(zip(e, g)):
+            if pe[0] != pg[0]:
+                detail.append("frame %d 第%d条 ID 不同: py=%d cpp=%d" % (i, k, pe[0], pg[0]))
+                continue
+            for j, (a, b) in enumerate(zip(pe[1], pg[1])):
+                if not math.isclose(a, b, rel_tol=FLOAT_REL_TOL, abs_tol=1e-9):
+                    detail.append("frame %d id=%d 浮点字段%d 分歧: py=%.17g cpp=%.17g |d|=%.3g"
+                                  % (i, pe[0], j, a, b, abs(a - b)))
+            for j, (a, b) in enumerate(zip(pe[2], pg[2])):
+                if a != b:
+                    detail.append("frame %d id=%d 整数字段%d 不同: py=%d cpp=%d"
+                                  % (i, pe[0], j, a, b))
+            if len(detail) >= limit:
+                break
+        if len(detail) >= limit:
+            break
+    return detail
+
+
+@pytest.mark.parametrize("name", sorted(SCENARIOS))
+def test_cpp_python_sequence_parity(name, probe_exe):
+    """真实序列逐值比较：C++ 与 Python 每帧每条轨迹的 12 个字段都必须一致。
+
+    整数严格相等；浮点按 1e-9 相对容差比较，吸收跨编译器 ULP 差异
+    （见 FLOAT_REL_TOL 注释）。
+    """
+    params, frames = SCENARIOS[name]()
+    expected = "|".join(_py_line(fr) for fr in python_frames(params, frames))
+    got = run_probe(probe_exe, seq_block(params, frames))[0]
+    assert got, "探针无输出"
+    detail = _diff_frames(expected, got)
+    if detail:
+        pytest.fail("场景 %s 出现 C++/Python 数值分歧：\n%s" % (name, "\n".join(detail)))
 @pytest.mark.parametrize("name", sorted(SCENARIOS))
 def test_cpp_python_sequence_parity(name, probe_exe):
     """真实序列逐值比较：C++ 与 Python 每帧每条轨迹的 12 个字段都必须一致。"""
     params, frames = SCENARIOS[name]()
     expected = "|".join(_py_line(fr) for fr in python_frames(params, frames))
     got = run_probe(probe_exe, seq_block(params, frames))[0]
-    if expected != got:
-        exp_f = expected.split("|")
-        got_f = got.split("|")
-        detail = []
-        for i in range(max(len(exp_f), len(got_f))):
-            e = exp_f[i] if i < len(exp_f) else "<missing>"
-            g = got_f[i] if i < len(got_f) else "<missing>"
-            if e != g:
-                detail.append("frame %d\n  py : %s\n  cpp: %s" % (i, e, g))
-                if len(detail) >= 3:
-                    break
-        pytest.fail("场景 %s 出现 C++/Python 数值分歧：\n%s" % (name, "\n".join(detail)))
     assert got, "探针无输出"
+    detail = _diff_frames(expected, got)
+    if detail:
+        pytest.fail("场景 %s 出现 C++/Python 数值分歧：\n%s" % (name, "\n".join(detail)))
 
 
 # ----------------------------------------------------------------------
