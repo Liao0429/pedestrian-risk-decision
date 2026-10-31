@@ -12,6 +12,8 @@
 //     │      └─ OK / BACK -> MAIN
 //     ├─ OK(设置)     -> SETTINGS（预留：阈值 / 云台使能）
 //     └─ OK(关于)       -> ABOUT（版本 / 项目信息）
+//   ROI_DRAW（手动画 ROI 多边形，见 roi_draw.h / docs/hardware/roi_draw_touch.md）
+//     ├─ enterRoiDraw() 进入，OK / BACK 或 leaveRoiDraw() 返回 MAIN
 //   任何子页 BACK -> MAIN
 //
 // 风险等级颜色映射（与 led.h 三色灯一致）：
@@ -49,6 +51,7 @@ enum class MenuPage : uint8_t {
     DETECTION,       // 检测画面
     SETTINGS,        // 设置（预留）
     ABOUT,           // 关于
+    ROI_DRAW,        // 手动画 ROI 多边形（触摸 UI，见 roi_draw.h）
     COUNT            // 总页数（保持最后）
 };
 
@@ -58,6 +61,7 @@ inline const char* menuPageName(MenuPage page) {
         case MenuPage::DETECTION: return "DETECTION";
         case MenuPage::SETTINGS:   return "SETTINGS";
         case MenuPage::ABOUT:      return "ABOUT";
+        case MenuPage::ROI_DRAW:   return "ROI_DRAW";
         default:                  return "UNKNOWN";
     }
 }
@@ -221,6 +225,15 @@ public:
                     switchPage(MenuPage::MAIN);
                 }
                 break;
+            case MenuPage::ROI_DRAW:
+                // 手动画 ROI 页面：确定/返回都回到主菜单。
+                // 触摸 ✓ 完成由 hw::RoiDraw::feedTouch 驱动，main.cc 检测
+                // roi.isDone() 后调用 leaveRoiDraw() 并取 roi.zoneJson()；
+                // 物理 BACK 键进入这里（取消）并返回主菜单。
+                if (key == MenuKey::OK || key == MenuKey::BACK) {
+                    switchPage(MenuPage::MAIN);
+                }
+                break;
             default:
                 break;
         }
@@ -278,6 +291,20 @@ public:
     int      personCount() const { return m_personCount; }
     bool     dirty() const { return m_dirty; }
 
+    // ---- ROI_DRAW 页面入口（与 hw::RoiDraw 配合，见 roi_draw.h）----
+    // 进入：MAIN --enterRoiDraw()--> ROI_DRAW（LVGL 后端 drawPage 切页，
+    //       main.cc 随后调用 roi.begin() 在 ILI9341 上画 ROI 界面）。
+    // 退出：ROI_DRAW --leaveRoiDraw()--> MAIN（✓ 完成后 / BACK 取消后）。
+    // 4 键方式等价迁移：ROI_DRAW 页 OK/BACK -> MAIN（onKey 已处理）。
+    void enterRoiDraw() {
+        if (!m_backend) return;
+        switchPage(MenuPage::ROI_DRAW);
+    }
+    void leaveRoiDraw() {
+        if (!m_backend) return;
+        switchPage(MenuPage::MAIN);
+    }
+
 private:
     void onMainKey(MenuKey key) {
         const int itemCount = (int)MainItem::COUNT;
@@ -316,8 +343,11 @@ private:
         if (m_page == MenuPage::MAIN) {
             m_backend->setMenuCursor(m_selected);
         }
-        // 页面切换后立即推送当前缓存参数（风险等级大字 + 参数栏）
-        pushParams();
+        // 页面切换后立即推送当前缓存参数（风险等级大字 + 参数栏）。
+        // ROI_DRAW 页面由 hw::RoiDraw 独立绘制，菜单参数不推送，避免覆盖。
+        if (m_page != MenuPage::ROI_DRAW) {
+            pushParams();
+        }
         m_lastPushMs = -1;
         m_dirty = false;
     }

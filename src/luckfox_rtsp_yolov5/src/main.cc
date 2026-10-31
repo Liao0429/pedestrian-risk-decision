@@ -580,11 +580,11 @@ int main(int argc, char *argv[]) {
     const uint64_t t_frame = nowUs();
     ++frameSeq;
 
-    // ---- 配置热重载：每 300 帧查一次 mtime（旧实现每帧 stat 一次）----
+    // ---- 配置热重载：每 10 帧查一次 mtime（约 1.3s 近实时；stat 开销可忽略）----
     {
       static int cfgCheckFrame = 0;
       static time_t cfgMtime = 0;
-      if (++cfgCheckFrame % 300 == 0) {
+      if (++cfgCheckFrame % 10 == 0) {
         struct stat st;
         if (stat("./config/default_config.json", &st) == 0 && st.st_mtime != cfgMtime) {
           cfgMtime = st.st_mtime;
@@ -592,6 +592,9 @@ int main(int argc, char *argv[]) {
               pedestrian::loadRiskConfigOr("./config/default_config.json", riskCfg);
           if (newCfg.roi.enabled != riskCfg.roi.enabled ||
               newCfg.roi.polygon != riskCfg.roi.polygon ||
+              newCfg.roi.color_b != riskCfg.roi.color_b ||
+              newCfg.roi.color_g != riskCfg.roi.color_g ||
+              newCfg.roi.color_r != riskCfg.roi.color_r ||
               newCfg.conf_threshold != riskCfg.conf_threshold) {
             riskCfg = newCfg;
             // 轨迹计数器的 ROI 多边形同步更新；重建会清零身份/访客计数（低频事件）

@@ -26,7 +26,7 @@ ALGO_HEADERS = include/enhanced_decision.h include/risk_config.h \
                ../algorithms/risk_fsm.h ../algorithms/minijson.h
 
 .PHONY: all test bench test-enhanced test-minijson test-risk-config test-golden \
-        test-preprocess test-track-count test-det-count test-selftest test-lcd-menu test-ili9341 test-xpt2046 \
+        test-preprocess test-track-count test-det-count test-selftest test-lcd-menu test-roi-draw test-ili9341 test-xpt2046 \
         test-sysfs-spi clean help luckfox
 
 all: test
@@ -43,7 +43,7 @@ else
 LINUX_TESTS :=
 endif
 
-test: test-enhanced test-minijson test-risk-config test-golden test-preprocess test-track-count test-det-count test-hardware test-selftest test-lcd-menu test-ili9341 test-xpt2046 $(LINUX_TESTS)
+test: test-enhanced test-minijson test-risk-config test-golden test-preprocess test-track-count test-det-count test-hardware test-selftest test-lcd-menu test-roi-draw test-ili9341 test-xpt2046 $(LINUX_TESTS)
 
 test-enhanced: $(TEST_DIR)/test_enhanced_decision.cc $(SRC_DIR)/enhanced_decision.cc $(ALGO_HEADERS)
 	$(CXX) $(CXXFLAGS) $(INC) $(TEST_DIR)/test_enhanced_decision.cc $(SRC_DIR)/enhanced_decision.cc \
@@ -126,6 +126,15 @@ test-lcd-menu: $(TEST_DIR)/test_lcd_menu.cc ../hardware/lcd_menu.h
 	$(CXX) $(CXXFLAGS) -I../hardware $(TEST_DIR)/test_lcd_menu.cc \
 	    -o $(TEST_DIR)/test_lcd_menu
 	./$(TEST_DIR)/test_lcd_menu
+
+# 手动画 ROI 多边形（触摸 UI 状态机）：使用 RoiFramebufferDisplay/FakeSpi+
+# Ili9341 内存替身，验证 加顶点/删除/完成缩放/清除/撤销/热区命中/去抖/压力
+# 阈值/越界顶点/标定/输出映射/文字渲染/lcd_menu 集成，无真实硬件依赖。
+test-roi-draw: $(TEST_DIR)/test_roi_draw.cc ../hardware/roi_draw.h \
+               ../hardware/ili9341.h ../hardware/lcd_menu.h
+	$(CXX) $(CXXFLAGS) -I../hardware $(TEST_DIR)/test_roi_draw.cc \
+	    -o $(TEST_DIR)/test_roi_draw
+	./$(TEST_DIR)/test_roi_draw
 
 # ILI9341 SPI 显示驱动（320x240 RGB565）：使用 FakeSpi/FakeLcdPins 内存替身，
 # 验证复位/初始化命令序列/窗口参数/矩形填充裁剪/帧缓冲/整帧 flush/读 ID，
