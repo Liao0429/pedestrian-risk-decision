@@ -26,8 +26,10 @@
 //   - 所有方法对 NULL/未打开状态安全返回 false，与现有硬件驱动风格一致。
 //
 // 集成方式（真机阶段，2026-10-30 实测校准）：
-//   // 引脚一律以 pinmux 实测的空闲 GPIO 为准；J11 无背光脚，可把背光直接
-//   // 并到 3.3V 常亮，此时 blGpio 用返回 true 的哑 Gpio 即可。
+//   // 引脚一律以 pinmux 实测的空闲 GPIO 为准。v1.8.1 起 J11 为 11 脚，含 LCD_BL /
+//   // TOUCH_CS / TOUCH_IRQ；推荐 GPIO 分配（见 docs/hardware/pin_map_verified.md）：
+//   //   DC=GPIO1_D0(56)  RST=GPIO1_D1(57)  LCD_BL=GPIO2_D4(92)
+//   //   TOUCH_CS=GPIO1_C6(54)  TOUCH_IRQ=GPIO1_C7(55)  （CS 不接排针 Pin12 硬件 CS0）
 //   hw::SysfsGpio dcGpio(dcPin), resetGpio(rstPin), blGpio;
 //   hw::SysfsGpio lcdCs(lcdCsPin), touchCs(touchCsPin);
 //   hw::SysfsLcdPins pins(&dcGpio, &resetGpio, &blGpio);
