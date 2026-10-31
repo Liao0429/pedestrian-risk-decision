@@ -101,7 +101,7 @@ Details: `results/rerun/_ablation.json` and `docs/figures/fig_ablation_pro.png`.
 
 | Metric | Result |
 |---|---|
-| Frame rate | **7.63 FPS** (229 frames in a 30s RTSP capture; board `[PERF]` log agrees: 7.52~7.74) |
+| Frame rate | **7.69 FPS** (controlled 66 x 1s windows; lead's 30s RTSP capture: 7.63). **With inference decimation (1 in 2 frames): 11.86 FPS (+54%)** |
 | Per-frame breakdown | **infer 91.5ms (71%, bottleneck)** / prep 31.0ms (24%) / enc 4.0ms / draw 2.4ms / decide 0.02ms / vi 0.06ms, total ≈129ms |
 | CPU preprocessing (letterbox+RGB) | 136ms → 33ms (-76%, NEON); **31.0ms** after the Round3 single-pass zero-copy rewrite |
 | Memory (RSS) | **13.8 MiB** (VmRSS 14152 kB) |

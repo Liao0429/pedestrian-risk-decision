@@ -352,6 +352,14 @@ def test_watchdog_and_recover_agree_on_hold_path():
     assert "HOLD=/run/pedestrian-risk.hold" in read(RECOVER)
 
 
+def test_report_records_onboard_verification():
+    """报告必须记录上板实测结果（含 cgroup 内存控制器不生效这一关键发现）。"""
+    body = read(REPORT)
+    for token in ("上板执行结果", "7333c4bf", "MemoryCurrent=[not set]", "暴露 cgroup 内存控制器",
+                  "释放", "568", "剩余 0 个"):
+        assert token in body, "报告缺少上板实测记录: %s" % token
+
+
 def test_report_documents_why_evidence_is_unavailable():
     """"证据不可得的原因"必须写在报告里，免得读者以为我们没查。"""
     body = read(REPORT)
@@ -444,6 +452,20 @@ def test_recover_separates_ssh_reachability_from_sudo():
     body = read(RECOVER)
     assert "raw 'true'" in body, "SSH 就绪探测必须是纯 SSH（不夹 sudo），否则 sudo 故障会被误报成 SSH 不可达"
     assert "sudo 自检" in body and "id -un" in body
+
+
+def test_recover_disables_msys_path_mangling():
+    """Git bash 会把独立的 /tmp/... 参数改写成 Windows 临时目录路径，导致远端 ENOENT。"""
+    body = read(RECOVER)
+    assert "MSYS_NO_PATHCONV" in body, "必须关闭 MSYS 参数自动转换，否则 --put 的远端路径被改写"
+
+
+def test_recover_put_converts_msys_paths():
+    """Git bash 下 /g/... 无法被 Windows 版 python 打开（实测 FileNotFoundError）。"""
+    body = read(RECOVER)
+    assert "winpath" in body, "上传前必须做 MSYS -> Windows 路径转换"
+    assert "cygpath -w" in body
+    assert '--put "$(winpath "$1")"' in body, "helper 通道的 --put 必须用转换后的路径"
 
 
 def test_recover_rejects_single_quote_in_password():

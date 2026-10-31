@@ -113,7 +113,7 @@ pedestrian-risk-decision/
 
 | 指标 | 结果 |
 |---|---|
-| 帧率 | **7.63 FPS**（30s RTSP 抓包 229 帧；板端 `[PERF]` 日志 7.52~7.74 一致） |
+| 帧率 | **7.69 FPS**（受控 66 个 1s 窗口；lead 30s RTSP 抓包 7.63 一致）；**开启推理降频（每 2 帧推理 1 次）实测 11.86 FPS（+54%）** |
 | 单帧耗时分解 | **infer 91.5ms（71%，瓶颈）** / prep 31.0ms（24%）/ enc 4.0ms / draw 2.4ms / decide 0.02ms / vi 0.06ms，合计 ≈129ms |
 | CPU 预处理耗时（letterbox+RGB） | 136ms → 33ms（-76%，NEON）；Round3 单遍零拷贝后 **31.0ms** |
 | 内存占用（RSS） | **13.8 MiB**（VmRSS 14152 kB） |

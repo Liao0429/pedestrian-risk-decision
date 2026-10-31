@@ -4,7 +4,7 @@
 - 时间: 2026-10-31 00:56 ~ 01:30 (Asia/Shanghai)
 - 范围: deploy/systemd/*、scripts/board_maintenance.sh、scripts/board_recover.sh、tests/test_board_service_hardening.py
 - 前置: task-1（板端性能/卡死审计修复）已完成
-- **上板状态: 未上板验证**。板子 192.168.0.136 在 2026-10-31 00:55 实测 TCP22 可连但 12s 内不出 banner、554 已关闭、1984/8554(go2rtc) 仍开，SSH 不可用。按用户要求**未尝试连板**。本文所有结论均来自「板端既有快照 + 构建机实测 + 一手 man 文档」，凡未在板上复现的都在 §7 单列。
+- **上板状态: 已上板验证（2026-10-31 14:26~14:43，pico+sudo），结果见 §10**。此前 00:55 曾出现 TCP22 可连但 12s 内不出 banner、554 关闭、go2rtc 仍开（SSH 不可用）；用户要求期间未连板。本文主体结论来自「板端既有快照 + 构建机实测 + 一手 man 文档」，凡未在板上复现的都在 §7 单列。
 
 ---
 
@@ -249,7 +249,9 @@ systemd.exec(5) LogRateLimitIntervalSec=：
   ② 合成压力实验（C/D/G）里 memory.peak 恰好等于上限、memory.events 的 max 计数 1790，但 **oom_kill=0** —— 内核先用回收/节流，没走到"杀进程"；
   ③ 即便真发生 OOM kill：OOMPolicy=continue 保证单元不会被 systemd"干净停掉"，但 Restart=always 会把它重启 → 潜在重启循环；**封顶这种循环的是断路器 + 告警 + 看门狗冷却（§4.7），不是 MemoryMax 的数值**；
   ④ 上板后若 systemd-cgtop / memory.peak 显示正常运行时逼近 160M，再上调到 176M 并同时下调 go2rtc 的限额。
-- **待上板复核**：恢复后跑一段时间，用 systemd-cgtop 或 systemctl show -p MemoryPeak（若内核支持）观察真实峰值；若峰值逼近 160M，应上调到 176M 并改为下调 go2rtc 的限额，而不是把本服务重新放回 200M。
+- **上板实测（2026-10-31 14:43）：本板内核没有暴露 cgroup 内存控制器，MemoryMax/MemoryHigh 实际不生效**。证据：/sys/fs/cgroup/cgroup.controllers 输出为空（无 memory/cpu/pids），服务 cgroup 目录内只有 cgroup.* 与 cpu.stat，没有 memory.max/memory.current；systemctl show 给出 MemoryCurrent=[not set]、MemoryLimit=infinity，但 MemoryMax 仍显示 167772160（说明 systemd 只是记录了配置，无法执行）。
+  含义与处置：① 200M 与 160M **在本板上都是空配置**，原 200M 从来不是"卡死"的原因（也谈不上是保护）；② TasksMax=100 同理不生效；③ OOMPolicy=continue 也失去对象（没有 memcg，就没有 cgroup 内 OOM）；④ 因此真正的保护手段是 LimitCORE=0 + 断路器 + 落盘告警 + 看门狗冷却（§4.7），以及应用自身的 RSS（实测约 14MB）；⑤ 这些配置**保留**（无害、未来内核启用 memcg 即自动生效），但报告与验收都不得把它们当成绩效依据。
+- **待上板复核（已部分完成）**：若将来换用启用 memcg 的内核，再按原计划观察 memory.peak；当前内核下该项无意义。
 
 ### 4.3 看门狗新架构
 
@@ -424,7 +426,7 @@ inactive 不得 start / 显式开关才 start / failed 必须先 reset-failed / 
 
 3) 验收标准（全部满足才算通过）：
    - systemctl is-active pedestrian-risk == active，且 NRestarts 不持续增长；
-   - systemctl show 显示 StartLimitIntervalUSec=0、OOMPolicy=continue、MemoryMax=167772160（160M）、MemoryHigh=134217728、LimitCORE=0；
+   - systemctl show 显示 **StartLimitIntervalUSec=600000000（=600s）、StartLimitBurst=6、OnFailure=pedestrian-risk-alert.service**、OOMPolicy=continue、MemoryMax=167772160（160M）、MemoryHigh=134217728、LimitCORE=0；
    - systemctl is-active pedestrian-watchdog.timer == active，list-timers 能看到下一次触发；旧的常驻 pedestrian-watchdog.service 已 disabled；
    - 554/8554 端口按预期恢复（RTSP 可拉流）；
    - 连续运行 ≥30 分钟无新 core（core.* 数量不变）、根分区占比下降、load average 回到可接受范围；
@@ -437,7 +439,7 @@ inactive 不得 start / 显式开关才 start / failed 必须先 reset-failed / 
 | 项 | 状态 | 需要的验证 |
 |---|---|---|
 | 板端 systemd 版本与 man 语义完全一致 | **未验证**（推断） | 板上 systemctl --version；rootfs 与构建机同代（gdb 12.1-0ubuntu1~22.04），但仍需实测确认 |
-| 板端内核 cgroup v2 对 MemoryMax/MemoryHigh 生效 | **未验证** | 板上 cat 对应 slice 的 memory.max；旧 unit 已有 MemoryMax=200M 但无法确认是否被强制执行 |
+| 板端内核 cgroup v2 对 MemoryMax/MemoryHigh 生效 | **已核实：不生效**（2026-10-31 14:43 上板实测） | /sys/fs/cgroup/cgroup.controllers **为空**（无 memory/cpu/pids 控制器），服务 cgroup 内无 memory.max/memory.current；systemctl show 显示 MemoryCurrent=[not set]、MemoryLimit=infinity。故 MemoryMax/MemoryHigh/TasksMax 在本板为**不生效配置**（保留无害、内核启用 memcg 后即生效），不能当作保护手段 |
 | OOM 击杀本服务 → systemd 主动停止 → 不重启 | **未复现**（仅有 man 语义支持） | 板上把 MemoryMax 临时调到远低于工作集，观察 memory.events 的 oom_kill 计数与单元 Result |
 | 21 个 2023 时间戳 core 的真实时刻 | **无法判定** | 只能靠 PID 关系确定同会话；若需精确定位需保留更久 journal（建议 vacuum 策略放宽到 ≥7 天） |
 | 38 个 core 为何在 unit 已有 LimitCORE=0 的情况下产生 | **未验证**（推测为手动前台运行） | 检查板上 shell 的 ulimit -c 与历史操作；新版 maintenance 会打印 core_pattern 辅助确认 |
@@ -467,3 +469,51 @@ inactive 不得 start / 显式开关才 start / failed 必须先 reset-failed / 
 - 与 T1（板端性能/卡死审计修复）：本文的 unit 加固是 T1 的稳定性收尾；T1 修的 VENC 代码路径正是本文 core 取证的崩溃点。
 - 与 T6/T8（上板终验 / NPU 归因）：board_recover.sh 第 5 步的验证块可作为它们上板前的基线检查；刷新二进制前建议先跑 board_maintenance.sh 腾空间（根分区曾 80%）。
 - 论文目录只读，本文不涉及其内容。
+
+---
+
+## 10. 上板执行结果（2026-10-31 14:26 ~ 14:43，pico + sudo）
+
+### 10.1 取证（第 1 步，只读）
+
+- 证据目录（板上两份）：/tmp/ped-evidence-20261031-142931（及 143334 那次安装前的刷新副本）与 /root/ped-evidence-20261031-142931 / -143334；本地留档在 tmp/net/ 与 C:/Windows/Temp/bh/。
+- **list-boots（14:29 取证，30 条）关键结论**：boot -1 = 93dc287f…（01:36:34—01:47:28），boot 0 = 1e43a9c9…（**14:11:46**—14:26:20）。**01:47:28 → 14:11:46 之间 12.5 小时完全没有 journal 条目**，中间几次开机（含 lead 提到的 03:53 那次、以及 board-perf 的多次采样）**根本不在 journal 里** → 直接佐证 §3.2 的"journald 反复损坏重建/丢数据"。
+- **00:00~00:05:32 残存 journal 核对**（journal_1030_1031_window.txt，2039 行）：该窗口内 **没有任何 pedestrian-watchdog / pedestrian-risk 单元条目**（唯一的 risk/watchdog 字样都是 sudo 命令行记录，属于审计操作本身）；最后一条是 00:05:32 pico 的 user manager 退出（Stopped target Main User Target / Exit the Session），其后到 01:36 无任何记录。结论：**在残存证据里，看门狗在最后一刻既无"动作"也无"失败"记录** —— 无法证明它救过或没救过，§3.1 的"推断"定性继续成立。
+
+### 10.2 安装前后对照（第 2 步）
+
+| 项 | 安装前（旧 unit） | 安装后（加固 unit） |
+|---|---|---|
+| StartLimitIntervalUSec | 30s | **10min（=600s=600000000）** |
+| StartLimitBurst | （默认 5） | **6** |
+| OnFailure | 无 | **pedestrian-risk-alert.service** |
+| OOMPolicy | stop | **continue** |
+| MemoryMax / High | 200M / 无 | 160M / 128M（**本板不生效，见 §4.2**） |
+| LimitCORE | 0 | 0 |
+| TimeoutStopUSec | 10s | 15s |
+| NRestarts（安装前→后） | 0 | **0**（无自动重启） |
+| 服务状态 | active | active / running，Result=success |
+
+- **二进制核对**：文件 md5 = **7333c4bf7760c0bcb40511c4d7b455f0**（control2）；运行进程 MainPID=2095 的 /proc/2095/exe 指向同一路径、md5 相同、进程启动时间 **Sat Oct 31 14:39:09 2026**（即本次安装的重启时刻）→ 确认跑的是 control2，没有被旧看门狗拉起别的版本。
+- 看门狗换代：旧 pedestrian-watchdog.service = **inactive/disabled**，新 pedestrian-watchdog.timer = **active/enabled**，周期 30s；日志实测每次输出"检查: state=active sub=running / 健康: 日志 0~1 秒前更新（阈值 60 秒）"→ 新看门狗在量产模式下正常工作且不干扰健康服务。
+- 旧 unit 备份：/root/ped-evidence-20261031-143334/ 下有 pedestrian-risk.service(607B, Oct 30 20:47) 与 pedestrian-watchdog.service(221B, Oct 26 22:18)，可用于回滚。
+
+### 10.3 清空间（第 3 步，sudo）
+
+| 项 | 数值 |
+|---|---|
+| df -k 前 | total 6114912 / **used 4430004** / avail 1407076（**76%**） |
+| df -k 后 | total 6114912 / **used 3848332** / avail 1988748（**66%**） |
+| 释放 | **581,672 kB ≈ 568.0 MiB** |
+| 来源 | journalctl --vacuum-size=32M：Archived journals 608.0M → freed **568.0M**（/var/log/journal/1fe5d22f…） |
+| core dump | 清理前 0 个（board-perf 已清）→ **剩余 0 个** |
+| 日志轮转 | /tmp/enhanced_latest.log 488182 B < 32MiB，无需轮转 |
+| 崩溃风暴告警 | /var/lib/pedestrian-risk/storm.log **不存在** → 未触发过 OnFailure |
+| 温度 / 负载 | soc-thermal **70.1°C**（随后 67.8°C）/ loadavg ≈ 11.5（该板常态） |
+| 内存 | total 211 / used 42 / free 105 / buff-cache 63 / available 160（MiB） |
+
+### 10.4 未完成 / 后续
+
+- 观察期仅约 4 分钟（NRestarts 保持 0）；**长跑（>24h）无新 core / 无风暴**仍未验证（§7）。
+- 断路器参数手感、OnFailure 在板端的实际触发（本次未制造崩溃循环）仍未验证；如需演练，建议 board-perf 不在采样时做一次 kill -9 三次的受控试验。
+- cgroup 内存控制器缺失（§4.2）如需修复，要重编内核启用 CONFIG_MEMCG + cgroup v2 controllers，属内核/rootfs 范畴，不在本次代码范围。

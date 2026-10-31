@@ -22,6 +22,13 @@
 # 退出码：0 通过 / 1 验证未通过 / 2 缺少传输手段或前置文件 / 3 板子不可达
 set -u
 
+# Git bash(Windows) 会把"看起来像 POSIX 路径"的**独立参数**自动改写：
+#   /tmp/x  ->  C:/Users/.../AppData/Local/Temp/x （MSYS 把 /tmp 映射到 Windows 临时目录）
+# 于是 --put 的远端目标 /tmp/xxx 到了 paramiko 手里就成了 Windows 路径，板子上创建文件报
+# ENOENT（实测踩过：本地路径已修好，仍报 remote 'No such file'）。这里关掉自动转换；
+# 本地路径改由 winpath() 显式转成 G:/... 形式，远端路径保持 /tmp/... 原样。
+export MSYS_NO_PATHCONV=1 2>/dev/null || true
+
 BOARD_HOST=${BOARD_HOST:-192.168.0.136}
 # 板端 root 的 SSH 直登不可用（2026-10-31 01:49 实测 root -> Authentication failed）；
 # 实际可用的是 pico 登录 + sudo（已验证：echo "$BOARD_PASS" | sudo -S -p '' id -un -> root）。
@@ -58,16 +65,32 @@ die() { rc=$1; shift; echo "[recover] 失败: $*" >&2; exit "$rc"; }
 # ---------- 传输层 ----------
 # raw() = 纯传输原语；bsh() 在其上加 sudo 包装（非 root 登录时）。
 SSH_OPTS='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=8'
+# Git bash(Windows) 下脚本里的本地路径是 /g/... 形式，Windows 版 python 打不开
+# （实测：paramiko put FileNotFoundError '/g/PedestrianRiskDecision/...'）。
+# 有 cygpath 就转成 G:/...；Linux 无 cygpath 则原样返回。
+winpath() {
+    p=$1
+    if command -v cygpath >/dev/null 2>&1; then
+        if w=$(cygpath -w "$p" 2>/dev/null) && [ -n "$w" ]; then
+            printf '%s' "$w"; return 0
+        fi
+    fi
+    # 没有 cygpath 时手工把 MSYS 盘符形式 /g/xxx 转成 g:/xxx（Windows python 可用）
+    case "$p" in
+        /[a-zA-Z]/*) printf '%s' "$p" | sed -E 's|^/([a-zA-Z])/|\1:/|' ;;
+        *) printf '%s' "$p" ;;
+    esac
+}
 if command -v sshpass >/dev/null 2>&1 && command -v ssh >/dev/null 2>&1; then
     MODE=sshpass
     raw() { sshpass -p "$BOARD_PASS" ssh $SSH_OPTS "$BOARD_USER@$BOARD_HOST" "$1"; }
-    bput() { sshpass -p "$BOARD_PASS" scp $SSH_OPTS "$1" "$BOARD_USER@$BOARD_HOST:$2" >/dev/null; }
+    bput() { sshpass -p "$BOARD_PASS" scp $SSH_OPTS "$(winpath "$1")" "$BOARD_USER@$BOARD_HOST:$2" >/dev/null; }
 elif [ -f "${PED_HELPER:-$REPO_ROOT/tmp/net/ssh_exec.py}" ]; then
     MODE=helper
     PED_PYTHON=${PED_PYTHON:-python}
     PED_HELPER=${PED_HELPER:-$REPO_ROOT/tmp/net/ssh_exec.py}
     raw() { "$PED_PYTHON" "$PED_HELPER" "$BOARD_HOST" "$BOARD_USER" "$BOARD_PASS" -- "$1"; }
-    bput() { "$PED_PYTHON" "$PED_HELPER" "$BOARD_HOST" "$BOARD_USER" "$BOARD_PASS" --put "$1" "$2" >/dev/null; }
+    bput() { "$PED_PYTHON" "$PED_HELPER" "$BOARD_HOST" "$BOARD_USER" "$BOARD_PASS" --put "$(winpath "$1")" "$2" >/dev/null; }
 else
     die 2 "既无 sshpass，也未找到 helper（${PED_HELPER:-$REPO_ROOT/tmp/net/ssh_exec.py}）。请安装 sshpass，或用 PED_PYTHON/PED_HELPER 指定。"
 fi
@@ -92,7 +115,10 @@ bsh() {
 # "\n[exit N]\n"；若直接用 tail -n 1 捕获，拿到的是 "[exit 0]" 而不是真正的值，
 # 会导致 ACT/NR 永远不等于期望值（pico+helper 通道下 PASS 判定必失败）。
 bsh_out() {
-    bsh "$1" 2>/dev/null | sed -e '/^\[stderr\]$/,$d' -e '/^\[exit [0-9]*\]$/d' | tr -d '\r'
+    # 去掉 helper 的 [stderr] 段与 [exit N] 行；再去掉空行
+    # （systemctl --value 的输出自带结尾换行，helper 又补一个 "\n[exit N]\n"，
+    #   会产生一个空白行 —— 若不过滤，tail -n 1 会取到空串，导致 ACT/NR 捕获为空）
+    bsh "$1" 2>/dev/null | sed -e '/^\[stderr\]$/,$d' -e '/^\[exit [0-9]*\]$/d' -e '/^[[:space:]]*$/d' | tr -d '\r'
 }
 say "传输方式: $MODE  目标: $BOARD_USER@$BOARD_HOST  sudo包装=$([ -n "$RSUDO" ] && echo yes || echo no)"
 
