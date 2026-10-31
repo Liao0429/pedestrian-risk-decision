@@ -211,7 +211,54 @@ offsetY = (480 - 240*2.0) / 2 = 0
 
 ---
 
-## 6. 接入 main.cc 的最小改动清单（不碰 main.cc，交给 lead/board-perf）
+## 6. 接入 main.cc —— 已完成（BOARD_TOUCH_ROI，默认关闭）
+
+**状态（2026-10-31，board-perf 实施）：已接入。** 编译开关 `BOARD_TOUCH_ROI` 默认 **0**，
+运行时开关 config `touch_roi_enabled` 默认 **false**；两者同时打开才会初始化屏幕与触摸。
+
+### 6.1 怎么开启
+
+1. 交叉编译时打开编译开关（默认关闭；关闭时 touch_roi 符号数为 0，见 6.4）：
+   - 仓库 CMake：`cmake -S src/luckfox_rtsp_yolov5 -B build -DBUILD_LUCKFOX_DEMO=ON -DBOARD_TOUCH_ROI=ON ...`
+   - Luckfox SDK 构建：在 `-DCMAKE_CXX_FLAGS` 里加 `-DBOARD_TOUCH_ROI=1`，并把
+     `src/hardware/{gpio,ili9341,xpt2046,roi_draw,sysfs_spi}.h` 与 `sysfs_spi.cc`
+     放到 `EXAMPLE_DIR/{include,src}`（SDK 的 CMake 会 GLOB `src/*.cc`）。
+2. 打开运行时开关：`config/default_config.json` 里 `\"touch_roi_enabled\": true`（默认 false）。
+3. 未接屏或 SPI 打不开时 `touch_roi::init()` 返回 false，主程序**静默降级继续检测**，
+   不会退出、不影响 fps。
+
+### 6.2 交互与数据流（实现于 src/touch_roi_bridge.cc）
+
+- 进入：屏幕**右下角 80x60 热区**按下 -> `RoiDraw::begin()`；
+- 画框：按下沿采样喂 `feedTouch(x,y,pressure,nowMs)`，压力值取 200（已由 `isTouched()` 判定按下）；
+- 取消：**右上角 60x50 热区**按下 -> `RoiDraw::cancel()`；底部按钮条（DONE/CLEAR/UNDO）由 RoiDraw 自己处理；
+- 完成：`isDone()` -> `zoneJson()` -> **原子合并写回 config 的 roi_zone 段**（字符串感知的
+  花括号配平 + 写 .tmp + rename），主程序 10 帧 mtime 热加载（约 1.3s）自动生效；
+- 防卡死纪律：采样节流 20ms（<=50Hz）、只在有事件时 render（窗口化填充，绝不每帧全屏刷
+  320x240）、不开线程、不忙等、任何硬件失败静默降级。
+
+### 6.3 接屏后的标定步骤（必须做，否则坐标不准）
+
+1. 按第 4 节量出 XPT2046 四角 raw 值（rawXMin/Max、rawYMin/Max）；
+2. 在 `src/touch_roi_bridge.cc` 的 `init()` 里 `g_touch->open()` 之后调用
+   `g_touch->setCalibration(hw::TouchCalibration{...})`（当前用驱动默认全范围 0..4095）；
+3. 若屏幕旋转/接线镜像，再调 `g_roi->setCalibration(offsetX, offsetY, swapXY, invertX, invertY)`；
+4. 若画框输出要排除底部按钮条，调 `g_roi->setOutputMapping(...)`（第 5 节预设 2）；
+5. 用 `tools/roi_live.html` 或 `curl :8088/roi` 对照屏幕坐标与写入 polygon 是否一致。
+
+### 6.4 验证状态（2026-10-31）
+
+- 主机 `mingw32-make test`：全绿（含 test_roi_draw 131、test_lcd_menu 99、test_ili9341 123、test_xpt2046 98）。
+- 交叉编译两个产物（RV1106，-O2 -mfpu=neon-vfpv4）：
+  - `BOARD_TOUCH_ROI` 关闭：md5 `2c36b5af7ee1503add65fc847866a40e`，**touch_roi 符号数 0**；
+  - 打开（`-DBOARD_TOUCH_ROI=1`）：md5 `d7b5a92edb9c75f96e9297a0a9d3ed19`，touch_roi 符号数 25。
+- 默认关闭产物上板（在 control2 基础上仅多 10 帧热加载与 touch 开关解析）：
+  fps 61 窗口 mean **7.61** / max 7.72（基线 7.69，差异在 SSH 取证噪声内）、
+  prep 31.9ms/帧、infer 91.1ms/帧、**NRestarts=0、cores=0**。
+- **真机接屏仍未验证**：触摸手感、XPT2046 标定数值、SPI 窗口化填充的实际刷新率需接屏后按 6.3 联调。
+
+### 6.5 原始接入清单（已全部实现，保留备查）
+
 
 板端 `src/luckfox_rtsp_yolov5/src/main.cc` 现有 LVGL/ILI9341 初始化与主循环，
 需要在其上做以下**增量**（本任务不修改 main.cc）：
@@ -243,3 +290,5 @@ ROI_DRAW --(BACK: menu.onKey(BACK) -> roi.cancel)--> MAIN
   `test_ili9341 123 passed`、`test_xpt2046 98 passed`。
 - 真机（接屏）尚未验证：触摸手感、XPT2046 标定数值、SPI 窗口化填充的实际
   刷新率需上板后按第 4/6 节标定与联调。
+- 2026-10-31 补充：`BOARD_TOUCH_ROI` 已接入 main.cc（默认 0）+ config `touch_roi_enabled`
+  （默认 false）；默认关闭产物上板 fps 7.61、NRestarts=0（零影响已证）。详见第 6 节。

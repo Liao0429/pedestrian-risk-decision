@@ -1,6 +1,7 @@
 {
   "edge_dist_m": 2.0,
   "frame_dt": 0.1,
+  "touch_roi_enabled": false,
   "fsm": {
     "w1": 0.4,
     "w2": 0.3,

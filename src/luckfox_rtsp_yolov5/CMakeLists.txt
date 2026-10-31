@@ -92,6 +92,10 @@ add_test(NAME test_golden_regression
 # 2. 开发板完整工程（交叉编译，需 Luckfox SDK）
 # ---------------------------------------------------------------------------
 option(BUILD_LUCKFOX_DEMO "Build Luckfox RTSP YOLOv5 demo (requires Luckfox SDK)" OFF)
+# 触摸画框 UI（ILI9341 + XPT2046 + RoiDraw）：默认 OFF。
+# 打开后额外编译 touch_roi_bridge.cc 与 ../hardware/sysfs_spi.cc，并定义
+# BOARD_TOUCH_ROI=1；运行时仍需 config 的 touch_roi_enabled=true 才会初始化硬件。
+option(BOARD_TOUCH_ROI "Enable ILI9341/XPT2046 touch ROI drawing UI" OFF)
 
 if(BUILD_LUCKFOX_DEMO)
   if(NOT DEFINED LUCKFOX_SDK_ROOT)
@@ -134,6 +138,17 @@ if(BUILD_LUCKFOX_DEMO)
     _LARGEFILE_SOURCE _LARGEFILE64_SOURCE _FILE_OFFSET_BITS=64)
   target_compile_options(luckfox_pico_rtsp_yolov5 PRIVATE
     -O2 -mfpu=neon-vfpv4 -mfloat-abi=hard)
+  if(BOARD_TOUCH_ROI)
+    target_sources(luckfox_pico_rtsp_yolov5 PRIVATE
+      ${PROJ_SRC_DIR}/touch_roi_bridge.cc
+      ${CMAKE_CURRENT_SOURCE_DIR}/../hardware/sysfs_spi.cc)
+    target_include_directories(luckfox_pico_rtsp_yolov5 PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/../hardware)
+    target_compile_definitions(luckfox_pico_rtsp_yolov5 PRIVATE BOARD_TOUCH_ROI=1)
+    message(STATUS "触摸画框 UI 已启用（BOARD_TOUCH_ROI=1）：额外编译 touch_roi_bridge.cc + sysfs_spi.cc")
+  else()
+    target_compile_definitions(luckfox_pico_rtsp_yolov5 PRIVATE BOARD_TOUCH_ROI=0)
+  endif()
   # RKNN / RTSP / rkaiq / OpenCV 链接参数按实际 SDK 布局调整
   target_link_libraries(luckfox_pico_rtsp_yolov5 PRIVATE
     rknnmrt sample_comm rockit rockchip_mpp rkaiq rtsp rga

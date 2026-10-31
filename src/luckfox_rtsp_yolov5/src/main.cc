@@ -30,7 +30,12 @@
 
 #include "preprocess.h"
 #include "../../algorithms/crowd_dbscan.h"   // DBSCAN 簇计数（OSD Clusters 行）
-#include "board_infer.h"                      // NPU 归因：npu/submit/wait 计数（task-8）
+#include "board_infer.h"
+
+// 触摸画框 UI（默认不编译：BOARD_TOUCH_ROI=0 时本 include 与所有调用点都消失）
+#if BOARD_TOUCH_ROI
+#include "touch_roi_bridge.h"
+#endif                      // NPU 归因：npu/submit/wait 计数（task-8）
 #include "../../algorithms/bytetrack_tracker.h" // 轨迹跟踪（task-11 计数去重）
 #include "../../algorithms/track_counter.h"     // 身份级计数去重 + ROI 进出（task-11）
 
@@ -559,6 +564,16 @@ int main(int argc, char *argv[]) {
   //     整幅 letterbox / 1.2MB memcpy / 1MB 同地址自拷贝，并修正 BGR/RGB 通道。
   //  3) VENC 多 pack 全发（旧实现只发 pstPack[0]）。
   //  4) 逐帧/逐框调试打印改编译开关，运行期只保留 1Hz 心跳。
+#if BOARD_TOUCH_ROI
+  // 触摸画框 UI：编译开关 BOARD_TOUCH_ROI=1 且 config.touch_roi_enabled=true 才初始化。
+  // 初始化失败必须静默降级（继续正常检测），绝不因为 UI 失败影响主流程。
+  bool touchRoiOn = false;
+  if (riskCfg.touch_roi_enabled) {
+    touchRoiOn = touch_roi::init();
+    fprintf(stderr, "[TOUCH_ROI] init %s\n", touchRoiOn ? "ok" : "FAILED（继续正常检测）");
+  }
+#endif
+
   StageAccum acc;
   acc.window_start_us = nowUs();
   {
@@ -579,6 +594,12 @@ int main(int argc, char *argv[]) {
   while (!g_stop) {
     const uint64_t t_frame = nowUs();
     ++frameSeq;
+
+#if BOARD_TOUCH_ROI
+    // 触摸画框 UI：协作式轮询（内部 <=50Hz 节流，不建线程/不忙等）。
+    // 默认编译关闭时这段代码不存在；开启但 config 未启用时 touchRoiOn=false 也不执行。
+    if (touchRoiOn) touch_roi::tick((uint32_t)(nowUs() / 1000));
+#endif
 
     // ---- 配置热重载：每 10 帧查一次 mtime（约 1.3s 近实时；stat 开销可忽略）----
     {
@@ -1062,6 +1083,9 @@ int main(int argc, char *argv[]) {
 #endif
   }
 
+#if BOARD_TOUCH_ROI
+  if (touchRoiOn) touch_roi::shutdown();
+#endif
   // ---- 退出：安全清理所有已初始化资源 ----
   pedestrian::letterbox_params_free(&lbp);
   cleanup();

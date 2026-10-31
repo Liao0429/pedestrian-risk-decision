@@ -70,6 +70,10 @@ struct RiskConfig {
     bool   track_count_enabled = true;
     // 谱特征(Jacobi)降频间隔帧数：1=每帧都算；3=每 3 帧算 1 次（默认）
     int    spectral_interval = 3;
+  // 触摸画框 UI 运行时开关（编译开关 BOARD_TOUCH_ROI 默认 0）。
+  // 只有编译时打开 BOARD_TOUCH_ROI=1 且此处为 true，才会初始化 ILI9341/XPT2046；
+  // 默认 false = 完全不碰硬件，行为与不接 UI 的版本一致。
+  bool   touch_roi_enabled = false;
 
     // ROI 危险区域（YOLOv5 像素坐标系，720x480）
     struct RoiZone {
@@ -230,7 +234,13 @@ inline RiskConfig loadRiskConfig(const std::string& path) {
         cfg.nms_threshold = static_cast<float>(v->asDouble());
     }
     // 轨迹计数去重开关（可选）。缺失默认 true（新口径）。
-    if (const minijson::Value* v = root.find("track_count_enabled")) {
+    if (const minijson::Value* v = root.find("touch_roi_enabled")) {
+    if (!v->isBool())
+      throw std::runtime_error("touch_roi_enabled 必须是布尔值");
+    cfg.touch_roi_enabled = v->asBool();
+  }
+
+  if (const minijson::Value* v = root.find("track_count_enabled")) {
         if (!v->isBool())
             throw std::runtime_error("track_count_enabled 必须是布尔值");
         cfg.track_count_enabled = v->asBool();
