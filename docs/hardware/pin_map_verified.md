@@ -471,5 +471,15 @@ ILI9341 readId=1 id=00 00 00 00（无屏幕，预期非 9341）
 | TOUCH_IRQ | GPIO1_C7 | 55 | （未确认） | PWM11_IR_M1，已 disabled |
 
    排针编号除 Pin19/20 外为推断（需万用表/官方原理图确认）；sysfs 编号为板上实测（pinmux）。
+3b. **四个侧按按键 S1-S4 的 GPIO（v1.8.1 新增，接线表定稿）**：四键经 J12(5P) 引出，**内部上拉 + 按下为低**（源码 `Button(&gpio, false /*activeHigh*/)`）；J8 告警开关仍为 GPIO2_A3=67（10kΩ 下拉、按下为高），两者独立。
+
+| 按键 | GPIO 名 | sysfs | 排针（推断） | 实测状态（2026-10-31 pinmux 探针） |
+|---|---|---|---|---|
+| S1 | GPIO2_A4 | **68** | Pin21 | MUX/GPIO 均 UNCLAIMED |
+| S2 | GPIO2_A5 | **69** | Pin22 | MUX/GPIO 均 UNCLAIMED |
+| S3 | GPIO2_A6 | **70** | Pin23（推断相邻） | MUX/GPIO 均 UNCLAIMED |
+| S4 | GPIO2_A7 | **71** | Pin24（推断相邻） | MUX/GPIO 均 UNCLAIMED |
+
+   > 证据：2026-10-31 板上 `cat /sys/kernel/debug/pinctrl/*/pinmux-pins` 实测 pin 68/69/70/71 全部 `(MUX UNCLAIMED) (GPIO UNCLAIMED)`；`/sys/kernel/debug/gpio` 仅 gpio-33/117/118 被驱动占用。备用空闲：GPIO2_B1=73、GPIO1_D4..D7=60..63、GPIO2_C0..C7=80..87（同批实测 UNCLAIMED）。
 4. **J10A ↔ J10B**：v1.8.1 起 J10B 与 J10A 为**同一网络名**（PAN_SIG 等 8 个），但 PCB 上没有铜走线直连（横跨 U1 无布线通道）→ **用户必须杜邦线短接 J10A-x ↔ J10B-x**，丝印已标注。
 5. 焊盘数 **133**（不含 4 个 φ3.2 安装孔，安装孔在 Edge.Cuts/drl 里）。
