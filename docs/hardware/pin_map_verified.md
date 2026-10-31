@@ -459,12 +459,13 @@ ILI9341 readId=1 id=00 00 00 00（无屏幕，预期非 9341）
 
 1. **供电**：SJ1 = **0.3mm 细走线，默认连通**（5V → 舵机轨，丝印「CUT=断开舵机供电」）；SJ2 = **5V↔VBUS 焊盘桥，默认断开**（防反灌）。两种供电方案：A（推荐）USB-C 供开发板 + 底板 J1 只供外设，SJ2 保持断开；B 底板 J1 单电源 → 短接 SJ2，开发板经 U1-40 得电，此时不要插 USB-C 供电。
 2. **J11 = 11 脚**：5V / GND / SCLK / MOSI / MISO / CS / DC / RST / **LCD_BL / TOUCH_CS / TOUCH_IRQ**。CS 一律 **GPIO 手工片选**（不接排针 Pin12 硬件 CS0；板上只有 /dev/spidev0.0，无 spidev0.1）。
-3. **J11 五个 GPIO 推荐分配（接线表定稿）**：
+3. **J11 六个 GPIO 推荐分配（接线表定稿）**：LCD 与触摸**必须两个独立 CS**（同一 SPI 总线共享 MISO，源码 `setCsGpio(&lcdCs)` / `setCsGpio(&touchCs)` 分别片选），否则数据打架。
 
 | 信号 | GPIO 名 | sysfs | 排针（推断） | 说明 |
 |---|---|---|---|---|
 | DC | GPIO1_D0 | 56 | Pin19 | UART3_TX 复用组，当前未启用 |
 | RST | GPIO1_D1 | 57 | Pin20 | UART3_RX 复用组，当前未启用 |
+| **LCD_CS** | **GPIO2_B0** | **72** | （未确认） | fbtft 参考节点已 disabled，实测未占用；与 TOUCH_CS 独立片选 |
 | LCD_BL | GPIO2_D4 | 92 | （未确认） | 无复用占用 |
 | TOUCH_CS | GPIO1_C6 | 54 | （未确认） | PWM10_M1，已 disabled |
 | TOUCH_IRQ | GPIO1_C7 | 55 | （未确认） | PWM11_IR_M1，已 disabled |
