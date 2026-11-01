@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""按 Bsafiusion / UniFuse 两套论文配色重制全部数据图表 + 首屏主视觉。
+"""按沉稳配色主题重制全部数据图表 + 首屏主视觉。
 
 原理：不改动任何原始绘图脚本的数据逻辑，只在源码层把硬编码 hex 映射到
-palette.py 的主题色，并把输出文件名加 _bsa / _unifuse 后缀，然后 exec 执行。
+palette.py 的主题色，然后 exec 执行原脚本，因此数据口径与原脚本完全一致。
 这样 16 张图的数据来源、统计口径与原脚本 100% 一致。
 
 运行：
@@ -23,6 +23,11 @@ from palette import apply, colors, level_colors, get, cmap_seq, cmap_div
 
 FIG = os.path.join(ROOT, "docs", "figures")
 os.makedirs(FIG, exist_ok=True)
+
+# 原绘图脚本会重写 results/rerun/_aggregate.json（median 被 float 化、_comment 溯源注释丢失），
+# 重出图前做快照、跑完还原，避免污染数据产物。
+AGG = os.path.join(ROOT, "results", "rerun", "_aggregate.json")
+_AGG_SNAPSHOT = open(AGG, "rb").read() if os.path.exists(AGG) else None
 
 # 旧 hex -> 主题语义
 def build_map(theme):
@@ -161,10 +166,11 @@ except Exception as e:
     print("hero FAIL:", type(e).__name__, e)
 
 # ---------------- 汇总 ----------------
-bsa = sorted(glob.glob(os.path.join(FIG, "*_bsa.png")))
-uni = sorted(glob.glob(os.path.join(FIG, "*_unifuse.png")))
-print(f"\n_bsa 图: {len(bsa)} 张")
-for f in bsa: print("  ", os.path.basename(f), f"{os.path.getsize(f)//1024}KB")
-print(f"_unifuse 图: {len(uni)} 张")
-for f in uni: print("  ", os.path.basename(f), f"{os.path.getsize(f)//1024}KB")
+if _AGG_SNAPSHOT is not None:
+    open(AGG, "wb").write(_AGG_SNAPSHOT)
+
+figs = sorted(f for f in glob.glob(os.path.join(FIG, "*.png"))
+              if not os.path.basename(f).startswith(("demo_", "palette_preview")))
+print(f"\n主图: {len(figs)} 张")
+for f in figs: print("  ", os.path.basename(f), f"{os.path.getsize(f)//1024}KB")
 print("hero:", os.path.exists(os.path.join(FIG, "hero_overview.png")))

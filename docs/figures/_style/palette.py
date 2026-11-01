@@ -4,17 +4,14 @@
 
 主题
 ----
-bsafiusion  AAAI 2025《Bsafiusion: A bidirectional stepwise feature alignment
-            network for unaligned medical image fusion》—— 高饱和、强对比，
-            用于区分不同模态 / 模块，视觉冲击强。
-unifuse     ICCV 2025《UniFuse: A Unified All-in-One Framework for Multi-Modal
-            Medical Image Fusion Under Diverse Degradations and Misalignments》
-            —— 冷调蓝灰深浅层次，沉稳高级，适合统一框架类示意图。
+steady      学术沉稳（项目自带）
+            —— 低饱和冷调蓝灰单色阶，靠明度阶梯区分层级；风险三级用明度差
+            而非色相撞色，久看不刺眼，适合论文插图与正式汇报。
 
 用法
 ----
     from palette import apply, colors, level_colors, cmap_seq, cmap_div
-    apply("unifuse")                 # 设好 rcParams（字体/dpi/去上右框/配色循环）
+    apply("steady")                 # 设好 rcParams（字体/dpi/去上右框/配色循环）
     plt.bar(x, y, color=level_colors()["danger"])
     plt.imshow(mat, cmap=cmap_seq())   # 顺序色图（密度 / 权重）
     plt.imshow(delta, cmap=cmap_div()) # 发散色图（差值 / 提升量）
@@ -137,70 +134,6 @@ class Theme:
         return f"{self.key}_cat"
 
 
-BSAFIUSION = Theme(
-    key="bsafiusion",
-    label="Bsafiusion（AAAI 2025，高饱和强对比）",
-    source="Bsafiusion: A bidirectional stepwise feature alignment network "
-           "for unaligned medical image fusion, AAAI 2025",
-    intent="高饱和、强对比；用互不相似的高纯度色相把不同模态/模块一次分清，"
-           "适合方法总览图、消融对比、双轴图。",
-    primary=(
-        "#0057FF",  # 电光蓝  主干/编码器、主折线
-        "#00C2FF",  # 亮青    解码器/融合支路
-        "#00C389",  # 翡翠绿  特征对齐模块（需配 marker）
-        "#FFD400",  # 亮黄    注意力权重/柱状
-        "#FF8A00",  # 橙      融合输出、双轴第二系列
-        "#E4003A",  # 品红红  DANGER/误差/损失曲线
-        "#B5179E",  # 洋红    对比方法（baseline）
-        "#7B2FF7",  # 紫      消融变体
-        "#64748B",  # 蓝灰    参考线/中性基线
-    ),
-    accent="#FF2E88",     # 霓虹粉：最优值描边、箭头、重点标注（非数据系列）
-    safe="#00B884",       # 翡翠绿：SAFE（L*≈66）
-    warning="#FFB000",    # 琥珀：WARNING（L*≈76）
-    danger="#E4003A",     # 品红红：DANGER（L*≈47）
-    bg="#FFFFFF",
-    panel="#F5F8FF",
-    grid="#D9E2F0",
-    text="#0B1F3A",
-    text_muted="#5A6B85",
-    axis="#0B1F3A",
-    seq_stops=("#F4FAFF", "#B7E4FF", "#4FB8FF", "#0A6BFF", "#0033CC", "#001A4D"),
-    div_stops=("#001A4D", "#0057FF", "#8FC2FF", "#F6F7F9", "#FFC46B", "#FF8A00", "#8A2E00"),
-)
-
-UNIFUSE = Theme(
-    key="unifuse",
-    label="UniFuse（ICCV 2025，冷调蓝灰层次）",
-    source="UniFuse: A Unified All-in-One Framework for Multi-Modal Medical "
-           "Image Fusion Under Diverse Degradations and Misalignments, ICCV 2025",
-    intent="冷调、单色系深浅分层；用同一蓝色家族的明度阶梯表现统一框架的层级与"
-           "多模态融合流程，专业克制，适合框架图、热力图、趋势图。",
-    primary=(
-        "#0F2A44",  # 墨蓝    主干/最深一档、标题
-        "#1B3F63",  # 深藏蓝  编码器
-        "#2E6E9B",  # 中蓝    解码器
-        "#4A8DB7",  # 亮蓝    融合支路
-        "#3F7A8C",  # 青灰    第二色家族（区分另一模态）
-        "#7FA9C4",  # 雾蓝    辅助系列
-        "#A9C6DB",  # 浅雾蓝  背景带/次要系列
-        "#CBD8E3",  # 浅蓝灰  网格带/最浅一档
-        "#64748B",  # 石板灰  中性/基线
-    ),
-    accent="#E07A5F",     # 低饱和珊瑚：最优值标注、重点框（唯一暖色，克制使用）
-    safe="#3F7A8C",       # 青灰蓝：SAFE（L*≈50）
-    warning="#D9A441",    # 琥珀：WARNING（L*≈68）
-    danger="#8C2F39",     # 酒红：DANGER（L*≈33）
-    bg="#FFFFFF",
-    panel="#F4F7FA",
-    grid="#DCE4EC",
-    text="#10243A",
-    text_muted="#5B6B7C",
-    axis="#10243A",
-    seq_stops=("#F7FAFC", "#D6E5EF", "#A9C6DB", "#6E9DBE", "#2E6E9B", "#1B3F63", "#0F2A44"),
-    div_stops=("#0F2A44", "#2E6E9B", "#9EC1DA", "#F2F5F8", "#E3C7AE", "#B0795A", "#5E3B26"),
-)
-
 STEADY = Theme(
     key="steady",
     label="学术沉稳（冷调蓝灰，深浅分层）",
@@ -232,10 +165,10 @@ STEADY = Theme(
     div_stops=("#16324F", "#356F94", "#A8C3D6", "#F3F6F9", "#DCC4B4", "#A9805F", "#5A3B26"),
 )
 
-THEMES = {t.key: t for t in (BSAFIUSION, UNIFUSE, STEADY)}
+THEMES = {t.key: t for t in (STEADY,)}
 
 
-def get(theme: str | Theme = "bsafiusion") -> Theme:
+def get(theme: str | Theme = "steady") -> Theme:
     """按名字取主题对象；已传对象则原样返回。"""
     if isinstance(theme, Theme):
         return theme
@@ -245,12 +178,12 @@ def get(theme: str | Theme = "bsafiusion") -> Theme:
         raise ValueError(f"未知主题 {theme!r}，可选：{', '.join(THEMES)}") from None
 
 
-def colors(theme: str | Theme = "bsafiusion") -> list[str]:
+def colors(theme: str | Theme = "steady") -> list[str]:
     """分类主色序列（可直接给 color= 或 zip 到多系列）。"""
     return list(get(theme).primary)
 
 
-def level_colors(theme: str | Theme = "bsafiusion") -> dict[str, str]:
+def level_colors(theme: str | Theme = "steady") -> dict[str, str]:
     """SAFE/WARNING/DANGER -> hex；配套 HATCH 使用。"""
     t = get(theme)
     return {k: getattr(t, k) for k in LEVELS}
@@ -283,22 +216,22 @@ for _t in THEMES.values():
     _register(_t)
 
 
-def cmap_cat(theme: str | Theme = "bsafiusion") -> ListedColormap:
+def cmap_cat(theme: str | Theme = "steady") -> ListedColormap:
     """分类色图（柱/散点按类别着色，离散、不插值）。"""
     return _cmap(get(theme).cmap_cat_name)  # type: ignore[return-value]
 
 
-def cmap_seq(theme: str | Theme = "bsafiusion") -> LinearSegmentedColormap:
+def cmap_seq(theme: str | Theme = "steady") -> LinearSegmentedColormap:
     """顺序色图：密度、注意力权重、单向量纲（浅 -> 深）。"""
     return _cmap(get(theme).cmap_seq_name)  # type: ignore[return-value]
 
 
-def cmap_div(theme: str | Theme = "bsafiusion") -> LinearSegmentedColormap:
+def cmap_div(theme: str | Theme = "steady") -> LinearSegmentedColormap:
     """发散色图：基线-增强差值、提升量、相关系数（负 -> 0 -> 正）。"""
     return _cmap(get(theme).cmap_div_name)  # type: ignore[return-value]
 
 
-def apply(theme: str | Theme = "bsafiusion", *, dpi: int = 300, font_scale: float = 1.0) -> Theme:
+def apply(theme: str | Theme = "steady", *, dpi: int = 300, font_scale: float = 1.0) -> Theme:
     """应用主题到全局 rcParams 并返回主题对象。
 
     dpi         : 画布与保存分辨率（论文默认 300）
@@ -353,7 +286,7 @@ def apply(theme: str | Theme = "bsafiusion", *, dpi: int = 300, font_scale: floa
     return t
 
 
-def _demo(theme: str = "bsafiusion", out_dir: str = ".") -> str:
+def _demo(theme: str = "steady", out_dir: str = ".") -> str:
     """渲染一张三面板预览图（柱/线/热力图），用于目检配色，不涉及实验数据。"""
     import os
 
