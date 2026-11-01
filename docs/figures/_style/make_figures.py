@@ -81,12 +81,12 @@ elif "--hero-only" not in sys.argv:
 
 # ---------------- hero_overview.png ----------------
 def hero():
-    apply("unifuse")
-    T = get("unifuse")
-    lc = level_colors("unifuse")
-    P = colors("unifuse")
-    PB = colors("bsafiusion")
-    lcB = level_colors("bsafiusion")
+    apply("steady")
+    T = get("steady")
+    lc = level_colors("steady")
+    P = colors("steady")
+    PB = colors("steady")
+    lcB = level_colors("steady")
 
     summary = json.load(open(os.path.join(ROOT, "results", "images500_gt_eval", "summary.json"), encoding="utf-8"))
 
