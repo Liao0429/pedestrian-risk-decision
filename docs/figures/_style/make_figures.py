@@ -72,12 +72,9 @@ def run_all(theme, suffix):
         except Exception as e:
             print(f"  [FAIL] {rel}: {type(e).__name__}: {e}")
 
-if "--steady" in sys.argv:
-    # 沉稳主题直接覆盖主文件名（不带后缀），作为仓库默认图表
+if "--hero-only" not in sys.argv:
+    # 只生成沉稳主题，直接覆盖主文件名（不带后缀）
     run_all("steady", "")
-elif "--hero-only" not in sys.argv:
-    run_all("bsafiusion", "bsa")
-    run_all("unifuse", "unifuse")
 
 # ---------------- hero_overview.png ----------------
 def hero():
