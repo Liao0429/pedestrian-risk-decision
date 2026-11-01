@@ -56,7 +56,7 @@
 
 ## 2. 发现的三个真实不一致（需修正）
 
-### P1（严重）- pytest 用例数：文档写 131，实际 336
+### P1（已澄清）- pytest 用例数：README/FACTS 写 131 是旧值，论文的 436 才是准的
 
 | 位置 | 写法 |
 |---|---|
@@ -95,8 +95,8 @@ tests/test_golden_independent.py           1
 合计                                     336
 ```
 
-**结论**：真实测试函数 **336 个**（25 个文件；参数化后 pytest 实际收集数只会更多）。文档中的 131 是旧值，低估 61 %。
-**动作**：README 已改为「336 个 pytest 测试函数（25 个测试文件）」；论文与 FACTS 需同步更正。
+**结论**：源码 `def test_` 函数 **336 个**（25 个文件），经 20 处 `parametrize` 展开后 pytest 实际收集 **436 个用例**——与论文 7.2 节「436 项全部通过（4 项依赖 POSIX shell 跳过）」完全吻合。因此**论文是对的**，README 与 FACTS 的 131 才是旧值（低估 70 %）。
+**动作**：README 已改为「436 个 pytest 用例（336 个测试函数，parametrize 展开；25 个测试文件）」；FACTS 已补 436（collect 口径）与 336（函数口径）两行；论文无需改动。
 
 > 说明：本机 Python 环境未安装 pytest（`No module named pytest`），因此未能执行 `pytest --collect-only` 取得精确收集数；336 为源码 `def test_` 静态统计值，属**下界**。
 
@@ -179,7 +179,7 @@ tests/test_golden_independent.py           1
 ## 5. 结论
 
 - **核心实验数字全部可溯源且三方一致**：图片评测 10 项、视频评测 6 项、消融 5 项、谱特征 3 项、真机性能 4 项，共 28 项，无一例凭空出现。
-- **发现 1 处硬错误**（P1，pytest 用例数 131 -> 336，低估 61 %）。
+- **发现 1 处硬错误并已澄清**（P1，pytest 用例数 README/FACTS 写 131，真实为 436 个用例 / 336 个测试函数，低估 70 %）。
 - **发现 1 处产物级隐患**（P2，两份视频汇总 json 互相矛盾，复现者易引错）。
 - **发现 1 处口径未标注**（P3，真机 FPS 6.9 vs 7.69）。
 - **发现 1 处论文缺项**（MAE / RMSE / Pearson 未进论文）。
@@ -189,7 +189,7 @@ tests/test_golden_independent.py           1
 
 | 优先级 | 动作 | 位置 |
 |---|---|---|
-| P1 | 131 -> 336（25 个测试文件） | README（已改）、毕业论文.md、docs/FACTS.md |
+| P1 | 131 -> 436 用例 / 336 函数 | README（已改）、docs/FACTS.md（已补两行）；论文 436 原本正确 |
 | P2 | 标注 `_comparison_summary.json` 的 enh 侧为旧口径 | `results/rerun/` |
 | P3 | FACTS 补 7.69 / 11.86 两条并注明口径 | `docs/FACTS.md` |
 | P2 | 论文实验章补 MAE / RMSE / Pearson 三行 | 毕业论文.md |

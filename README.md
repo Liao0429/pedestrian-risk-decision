@@ -20,7 +20,7 @@
 | 真机内存占用（RSS） | **13.8 MiB** | 同上 |
 | 视频等级切换稳定性 | **23.22 → 5.12 次/条（↓78.0 %）** | `results/rerun/_comparison_summary.json` |
 | 板端黄金测试 | **174 / 174 通过**（NEON vs 标量） | `results/edge_board/` |
-| 主机单元测试 | **336 个 pytest 测试函数**（25 个测试文件）+ C++ 驱动/算法测试全通过 | `tests/` |
+| 主机单元测试 | **436 个 pytest 用例**（336 个测试函数，parametrize 展开；25 个测试文件）+ C++ 驱动/算法测试全通过 | `tests/` |
 
 > 全部数字可在 [`docs/FACTS.md`](docs/FACTS.md) 逐条溯源（738 条事实，每条标注来源文件与提取方式），并由 [`docs/CROSSCHECK.md`](docs/CROSSCHECK.md) 做软硬件 / 论文数据 / 文档三向交叉验证。
 

@@ -715,6 +715,8 @@
 | 706 | 真机配置 · _comment | 规则阈值配置。target_classes=检测目标类别集合（COCO id，默认[0]=person；车辆[2,5,7,3]、狗[16]、猫[15]、动物[14,18,19,20,21]）。class_conf_thresholds=按类别差异化置信度阈值（COCO id -> 最低置信度0~1，可选；空对象=不区分，仅用全局检测阈值）。homography_file=外部IPM单应标定文件（文本3x3，与 ipm_calibrate.py --save xxx.txt 输出兼容；空串=用默认硬编码单应，相机位姿变化时配置此路径即可无需重编译）。danger/warning 的 n=人数阈值 | `results/edge_board/default_config.json` | edge_board/default_config.json |
 | 707 | 真机配置 · conf_threshold | 0.6 | `results/edge_board/default_config.json` | edge_board/default_config.json |
 | 708 | 真机报告 · FPS（原文出现值） | 6.9 | `results/edge_board/EDGE_TEST_REPORT.md` | 正则 (\d+(?:\.\d+)?)\s*FPS |
+| 708-a | 真机 FPS · 板端受控口径 | 7.69 | `docs/review/20261030_round3/board_perf.md` | 板端 66×1s 窗口计数，不含 RTSP 解码（与 708 的 6.9 属不同口径，不可混用） |
+| 708-b | 真机 FPS · 同文件另一测量项 | 11.86 | `docs/review/20261030_round3/board_perf.md` | 同上文件，另一统计窗口 |
 | 709 | 真机报告 · MB 内存（原文出现值） | 256 / 12.5 / 211 / 157 | `results/edge_board/EDGE_TEST_REPORT.md` | 正则 (\d+(?:\.\d+)?)\s*MB |
 | 710 | 真机长稳 · 采样记录条数 | 10 | `results/edge_board/long_stability.jsonl` | 非空行计数 |
 | 711 | 代码 · src/algorithms 文件数 | 34 | `src/algorithms` | 目录递归计数 |
@@ -728,7 +730,8 @@
 | 719 | 代码 · tools/ 文件数 | 7 | `tools` | 目录递归计数 |
 | 720 | 代码 · config/ 文件数 | 1 | `config` | 目录递归计数 |
 | 721 | 代码 · dataset/ 文件数 | 666 | `dataset` | 目录递归计数 |
-| 722 | 代码 · pytest 用例数（tests/*.py 中 def test_） | 131 | `tests` | 正则计数 |
+| 722 | 代码 · pytest 用例数（pytest collect 展开后，论文 7.2 节实测） | 436 | `tests` | 336 个 def test_ 函数 × 20 处 parametrize 展开 = 436；论文记「436 项全部通过（4 项依赖 POSIX shell 跳过）」 |
+| 722-a | 代码 · pytest 测试函数数（静态 def test_ 计数） | 336 | `tests` | 25 个测试文件；parametrize 展开前的函数级计数 |
 | 723 | 硬件 · docs/hardware 文件数 | 19 | `docs/hardware` | 目录计数 |
 | 724 | 硬件 · 文档 DISPLAY_MENU_SYSTEM_PLAN.md | 存在 | `docs/hardware/DISPLAY_MENU_SYSTEM_PLAN.md` | 文件存在 |
 | 725 | 硬件 · 文档 HARDWARE_BUILD_GUIDE.md | 存在 | `docs/hardware/HARDWARE_BUILD_GUIDE.md` | 文件存在 |

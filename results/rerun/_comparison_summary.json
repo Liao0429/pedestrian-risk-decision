@@ -2233,5 +2233,6 @@
       }
     ]
   ],
-  "_note": "基线已修正为 AND 规则（与真实引擎一致），旧 OR 基线数据不再使用。增强后 DANGER 帧/视频数上升是 FSM 评分更敏感（含密度权重）与 DANGER 保持机制所致，论文不得再表述为‘增强后 DANGER 下降’。"
+  "_note": "基线已修正为 AND 规则（与真实引擎一致），旧 OR 基线数据不再使用。增强后 DANGER 帧/视频数上升是 FSM 评分更敏感（含密度权重）与 DANGER 保持机制所致，论文不得再表述为‘增强后 DANGER 下降’。",
+  "_deprecated": "2026-11-01: 本文件的 enh 侧聚合（enh_sw=650 / enh_lv DANGER=11748）为 10-30 19:07 旧口径，已被 results/rerun/_aggregate_recomputed.json（10-30 23:22，逐帧 timeline 重算，enh_sw=568 / DANGER=8452）取代。base 侧基线 2578 仍有效，降幅公式沿用。引用视频级聚合时以 _aggregate_recomputed.json 为准。"
 }
