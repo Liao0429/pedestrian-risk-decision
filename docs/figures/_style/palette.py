@@ -201,7 +201,38 @@ UNIFUSE = Theme(
     div_stops=("#0F2A44", "#2E6E9B", "#9EC1DA", "#F2F5F8", "#E3C7AE", "#B0795A", "#5E3B26"),
 )
 
-THEMES = {t.key: t for t in (BSAFIUSION, UNIFUSE)}
+STEADY = Theme(
+    key="steady",
+    label="学术沉稳（冷调蓝灰，深浅分层）",
+    source="项目自带主题：以低饱和蓝灰单色阶为主，风险三级用明度差而非色相撞色",
+    intent="专业克制的冷调蓝灰深浅阶梯，避免高饱和撞色；用于论文插图、汇报 PPT 与"
+           "任何需要久看而不刺眼的正式场合。数据类图表默认使用本主题。",
+    primary=(
+        "#16324F",  # 墨蓝    主干/最深一档、标题
+        "#24506F",  # 深藏蓝  编码器
+        "#356F94",  # 中蓝    解码器
+        "#5B93B5",  # 亮蓝    融合支路
+        "#4E7F84",  # 青灰    第二色家族（区分另一模态）
+        "#8FAEC4",  # 雾蓝    辅助系列
+        "#B6CBD9",  # 浅雾蓝  背景带/次要系列
+        "#D3DEE7",  # 浅蓝灰  网格带/最浅一档
+        "#6B7A89",  # 石板灰  中性/基线
+    ),
+    accent="#3E6B9B",     # 沉稳靛蓝：最优值标注、重点框（不用暖色撞色）
+    safe="#3D7C8F",       # 青蓝：SAFE（L*≈49）
+    warning="#B08127",    # 暗金：WARNING（L*≈58）
+    danger="#8C2F39",     # 酒红：DANGER（L*≈33）
+    bg="#FFFFFF",
+    panel="#F3F6F9",
+    grid="#DDE5EC",
+    text="#12293D",
+    text_muted="#5E6E7E",
+    axis="#12293D",
+    seq_stops=("#F6F9FB", "#D3DEE7", "#B6CBD9", "#8FAEC4", "#5B93B5", "#356F94", "#24506F", "#16324F"),
+    div_stops=("#16324F", "#356F94", "#A8C3D6", "#F3F6F9", "#DCC4B4", "#A9805F", "#5A3B26"),
+)
+
+THEMES = {t.key: t for t in (BSAFIUSION, UNIFUSE, STEADY)}
 
 
 def get(theme: str | Theme = "bsafiusion") -> Theme:

@@ -49,7 +49,8 @@ SOURCES = [
 
 def patch(src, m, suffix):
     src = re.sub(r"#[0-9a-fA-F]{6}", lambda x: m.get(x.group(0).lower(), x.group(0)), src)
-    src = re.sub(r"\.png([\"'])", "_" + suffix + r".png\1", src)
+    if suffix:
+        src = re.sub(r"\.png([\"'])", "_" + suffix + r".png\1", src)
     return src
 
 def run_all(theme, suffix):
@@ -71,7 +72,10 @@ def run_all(theme, suffix):
         except Exception as e:
             print(f"  [FAIL] {rel}: {type(e).__name__}: {e}")
 
-if "--hero-only" not in sys.argv:
+if "--steady" in sys.argv:
+    # 沉稳主题直接覆盖主文件名（不带后缀），作为仓库默认图表
+    run_all("steady", "")
+elif "--hero-only" not in sys.argv:
     run_all("bsafiusion", "bsa")
     run_all("unifuse", "unifuse")
 

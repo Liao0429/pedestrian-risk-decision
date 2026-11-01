@@ -24,35 +24,6 @@
 
 > 全部数字可在 [`docs/FACTS.md`](docs/FACTS.md) 逐条溯源（738 条事实，每条标注来源文件与提取方式），并由 [`docs/CROSSCHECK.md`](docs/CROSSCHECK.md) 做软硬件 / 论文数据 / 文档三向交叉验证。
 
-## 🎨 论文级图表（两套配色方案）
-
-图表配色取自两篇多模态融合论文的插图风格，同一份真实数据各出一版：
-
-- **Bsafiusion**（AAAI 2025）—— 高饱和、强对比，用于区分模块与消融对比
-- **UniFuse**（ICCV 2025）—— 冷调蓝灰深浅层次，沉稳高级，适合统一框架类示意
-
-| Bsafiusion（强对比） | UniFuse（冷调） |
-|---|---|
-| ![bsa](docs/figures/fig2_detect_rate_bsa.png) | ![unifuse](docs/figures/fig2_detect_rate_unifuse.png) |
-
-<details>
-<summary>展开：两套配色的取色规范与全部图表（点击）</summary>
-
-配色规范见 [`docs/figures/_style/README-palette.md`](docs/figures/_style/README-palette.md)，可复用调色板 [`palette.py`](docs/figures/_style/palette.py)：
-
-- **Bsafiusion 主序列**：`#0057FF` `#00C2FF` `#00C389` `#FFD400` `#FF8A00` `#E4003A` `#B5179E` `#7B2FF7` `#64748B`，强调色 `#FF2E88`
-- **UniFuse 主序列**：`#0F2A44` `#1B3F63` `#2E6E9B` `#4A8DB7` `#3F7A8C` `#7FA9C4` `#A9C6DB` `#CBD8E3` `#64748B`，强调色 `#E07A5F`
-- 风险三级不靠颜色单一通道区分：同时叠加 **hatch**（SAFE 无 / WARNING `//` / DANGER `xx`）与 **marker** 形状，灰度打印与色盲读者均可读（三级明度差实测相邻 ≥ 9、首尾 ≥ 18）
-
-一键重制全部图表：
-
-```bash
-G:/DevTools/python/python.exe docs/figures/_style/make_figures.py          # 两套配色全量重制 + 首屏主视觉
-G:/DevTools/python/python.exe docs/figures/_style/make_figures.py --hero-only   # 只重出 hero_overview.png
-```
-
-</details>
-
 ## ✨ 特性
 
 - **轻量化检测**：YOLOv5n + INT8 量化，在边缘端 NPU 上实时检测行人（C++/RKNN）
@@ -104,7 +75,7 @@ pedestrian-risk-decision/
 ├── docs/ # 系统原理/架构/算法/硬件/演示/工作日志
 │ ├── FACTS.md # 738 条可溯源事实表
 │ ├── CROSSCHECK.md # 软硬件 / 论文数据 / 文档三向交叉验证
-│ └── figures/ # 论文级图表（两套配色 + 首屏主视觉）
+│ └── figures/ # 论文级图表（沉稳配色 + 首屏主视觉）
 └── config/default_config.json
 ```
 
@@ -133,8 +104,8 @@ pedestrian-risk-decision/
 | 10–13 人 | 138 | **84.92 %** |
 | 14–19 人 | 12 | **79.43 %** |
 
-![图片基线等级分布](docs/figures/fig1_level_dist_bsa.png)
-![图片基线检出率](docs/figures/fig2_detect_rate_bsa.png)
+![图片基线等级分布](docs/figures/fig1_level_dist.png)
+![图片基线检出率](docs/figures/fig2_detect_rate.png)
 
 ### 视频增强（真实视频，Kalman+谱特征+FSM，111 条全量重跑）
 
@@ -144,21 +115,21 @@ pedestrian-risk-decision/
 - 稀疏/无人场景（`mixkit_50134`，光照正常）：388 帧全程 SAFE（该场景无行人，未触发告警）
 - **前后对比（公平基线，规则与真实引擎一致）**：平均切换次数 **23.22 → 5.12（↓78.0 %）**（基线 2578 次 / 111 条）；基线 **24 条**出现 DANGER、增强 **45 条**；DANGER 帧 **2190 → 8452**（FSM 评分含密度权重+谱特征且带保持机制，比逐帧规则更敏感、更稳定）。明细见 `results/rerun/_comparison_summary.json`；全量见 `results/rerun/`
 
-![视频增强前后对比](docs/figures/fig3_before_after_bsa.png)
-![视频增强等级分布](docs/figures/fig4_video_level_bsa.png)
-![111 条真实视频增强等级分布](docs/figures/fig5_111videos_level_bsa.png)
-![Fiedler 特征值随风险等级分布](docs/figures/fig6_fiedler_boxplot_bsa.png)
-![增强 vs 基线切换次数分布对比](docs/figures/fig7_switches_hist_bsa.png)
-![谱连通度随风险等级趋势](docs/figures/fig8_fiedler_trend_bsa.png)
-![FSM 决策过程时序（mixkit_13192 密集人群）](docs/figures/fig9_fsm_timeline_13192_bsa.png)
-![DANGER 视频数/帧数对比](docs/figures/fig_danger_compare_bsa.png)
-![等级帧占比对比](docs/figures/fig_level_share_compare_bsa.png)
+![视频增强前后对比](docs/figures/fig3_before_after.png)
+![视频增强等级分布](docs/figures/fig4_video_level.png)
+![111 条真实视频增强等级分布](docs/figures/fig5_111videos_level.png)
+![Fiedler 特征值随风险等级分布](docs/figures/fig6_fiedler_boxplot.png)
+![增强 vs 基线切换次数分布对比](docs/figures/fig7_switches_hist.png)
+![谱连通度随风险等级趋势](docs/figures/fig8_fiedler_trend.png)
+![FSM 决策过程时序（mixkit_13192 密集人群）](docs/figures/fig9_fsm_timeline_13192.png)
+![DANGER 视频数/帧数对比](docs/figures/fig_danger_compare.png)
+![等级帧占比对比](docs/figures/fig_level_share_compare.png)
 
 > 数据挖掘结论：Fiedler 与风险等级的 **Spearman ρ = 0.692**（45021 帧全量，2026-10-30 由逐帧 timeline 重算），谱连通度与人群聚集风险显著正相关。
 
 ### 消融实验（各组件贡献，6 条代表性视频）
 
-![消融实验：各组件对等级切换与 DANGER 识别的贡献](docs/figures/fig_ablation_pro_bsa.png)
+![消融实验：各组件对等级切换与 DANGER 识别的贡献](docs/figures/fig_ablation_pro.png)
 
 - **A 基线（无增强）**：平均切换 33.2 次
 - **B +Kalman 平滑**：→ 8.3 次（↓75 %）
