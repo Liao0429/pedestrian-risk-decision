@@ -2,8 +2,56 @@
 
 # 基于 C++ 的边缘端轻量化行人感知与风险决策软件系统
 
-> **项目**：在 Luckfox Pico Max（RV1106，1TOPS NPU，256MB）上实现实时行人检测、人群聚集分析与风险分级预警。
-> 采用"**前端轻量化感知 + 几何空间校正 + 图论拓扑分析 + 时序风险决策**"复合算法流水线。
+![核心成果总览：边缘端实时检测输出 · 核心指标 · 系统链路](docs/figures/hero_overview.png)
+
+> 在 **Luckfox Pico Max（RV1106，1 TOPS NPU，256 MB）** 上实现实时行人检测、人群聚集分析与三级风险分级预警。
+> 技术路线：**前端轻量化感知 → 几何空间校正 → 图论拓扑分析 → 时序风险决策**。
+
+## 📈 核心成果（全部来自真实实验产物，可复现）
+
+| 指标 | 结果 | 数据来源 |
+|---|---|---|
+| 图片检出率（500 张真实 COCO 图 / GT 3089 人） | **82.49 %** | `results/images500_gt_eval/summary.json` |
+| 人数估计 MAE | **1.926** | 同上 |
+| 人数估计 RMSE | **3.188** | 同上 |
+| Pearson 相关系数 r | **0.8022** | 同上 |
+| 高密度场景（≥14 人）检出率 | **79.43 %** | 同上 |
+| 真机帧率（RV1106 NPU，INT8） | **7.69 FPS**（推理降频 11.86 FPS） | `results/edge_board/` |
+| 真机内存占用（RSS） | **13.8 MiB** | 同上 |
+| 视频等级切换稳定性 | **23.22 → 5.12 次/条（↓78.0 %）** | `results/rerun/_comparison_summary.json` |
+| 板端黄金测试 | **174 / 174 通过**（NEON vs 标量） | `results/edge_board/` |
+| 主机单元测试 | **336 个 pytest 测试函数**（25 个测试文件）+ C++ 驱动/算法测试全通过 | `tests/` |
+
+> 全部数字可在 [`docs/FACTS.md`](docs/FACTS.md) 逐条溯源（738 条事实，每条标注来源文件与提取方式），并由 [`docs/CROSSCHECK.md`](docs/CROSSCHECK.md) 做软硬件 / 论文数据 / 文档三向交叉验证。
+
+## 🎨 论文级图表（两套配色方案）
+
+图表配色取自两篇多模态融合论文的插图风格，同一份真实数据各出一版：
+
+- **Bsafiusion**（AAAI 2025）—— 高饱和、强对比，用于区分模块与消融对比
+- **UniFuse**（ICCV 2025）—— 冷调蓝灰深浅层次，沉稳高级，适合统一框架类示意
+
+| Bsafiusion（强对比） | UniFuse（冷调） |
+|---|---|
+| ![bsa](docs/figures/fig2_detect_rate_bsa.png) | ![unifuse](docs/figures/fig2_detect_rate_unifuse.png) |
+
+<details>
+<summary>展开：两套配色的取色规范与全部图表（点击）</summary>
+
+配色规范见 [`docs/figures/_style/README-palette.md`](docs/figures/_style/README-palette.md)，可复用调色板 [`palette.py`](docs/figures/_style/palette.py)：
+
+- **Bsafiusion 主序列**：`#0057FF` `#00C2FF` `#00C389` `#FFD400` `#FF8A00` `#E4003A` `#B5179E` `#7B2FF7` `#64748B`，强调色 `#FF2E88`
+- **UniFuse 主序列**：`#0F2A44` `#1B3F63` `#2E6E9B` `#4A8DB7` `#3F7A8C` `#7FA9C4` `#A9C6DB` `#CBD8E3` `#64748B`，强调色 `#E07A5F`
+- 风险三级不靠颜色单一通道区分：同时叠加 **hatch**（SAFE 无 / WARNING `//` / DANGER `xx`）与 **marker** 形状，灰度打印与色盲读者均可读（三级明度差实测相邻 ≥ 9、首尾 ≥ 18）
+
+一键重制全部图表：
+
+```bash
+G:/DevTools/python/python.exe docs/figures/_style/make_figures.py          # 两套配色全量重制 + 首屏主视觉
+G:/DevTools/python/python.exe docs/figures/_style/make_figures.py --hero-only   # 只重出 hero_overview.png
+```
+
+</details>
 
 ## ✨ 特性
 
@@ -54,6 +102,9 @@ pedestrian-risk-decision/
 ├── results/ # 实验结果（图片基线 + 视频增强 + 消融 + 真机性能）
 ├── tests/ # 算法单元测试（全通过）
 ├── docs/ # 系统原理/架构/算法/硬件/演示/工作日志
+│ ├── FACTS.md # 738 条可溯源事实表
+│ ├── CROSSCHECK.md # 软硬件 / 论文数据 / 文档三向交叉验证
+│ └── figures/ # 论文级图表（两套配色 + 首屏主视觉）
 └── config/default_config.json
 ```
 
@@ -66,46 +117,55 @@ pedestrian-risk-decision/
 ## 🧪 实验结果（真实）
 
 ### 图片基线（500 张）
+
 | 指标 | 结果 |
 |---|---|
-| 检出率（总体） | **82.5%** |
-| 高密度图（14+人）检出率 | **79.4%** |
+| 检出率（总体） | **82.49 %** |
+| 高密度图（≥14 人）检出率 | **79.43 %** |
+| 计数 MAE / RMSE | **1.926 / 3.188** |
+| Pearson r | **0.8022** |
 | 等级分布 | SAFE 414 / WARNING 61 / DANGER 25 |
 
-![图片基线等级分布](docs/figures/fig1_level_dist.png) 
-![图片基线检出率](docs/figures/fig2_detect_rate.png)
+| GT 人数分桶 | 图片数 | 检出率 |
+|---|---|---|
+| 1–3 人 | 200 | **94.46 %** |
+| 4–9 人 | 150 | **73.85 %** |
+| 10–13 人 | 138 | **84.92 %** |
+| 14–19 人 | 12 | **79.43 %** |
+
+![图片基线等级分布](docs/figures/fig1_level_dist_bsa.png)
+![图片基线检出率](docs/figures/fig2_detect_rate_bsa.png)
 
 ### 视频增强（真实视频，Kalman+谱特征+FSM，111 条全量重跑）
+
 - **全量 111 条真实视频（45021 帧）**：等级分布 **SAFE 28214 / WARNING 8355 / DANGER 8452**（三数相加 = 45021，2026-10-30 由逐帧 timeline 重算，见 `results/rerun/_aggregate_recomputed.json`），平均每条等级切换 **5.12 次**（中位数 4.0，FSM 滞回稳定），**45 条出现 DANGER**，**31 条全程输出 SAFE（系统未报警）**（无人工真值，无法判定未报警是正确不报还是漏报）
 - 谱特征修正项（w4=0.1，score += w4·fiedler/(fiedler+1)·r_gcc）已接入生产 FSM：Fiedler 均值随等级单调上升（SAFE **0.021** / WARNING **0.567** / DANGER **1.084**，2026-10-30 重算；中位数 0 / 0 / 0.716）
 - 密集人群（`mixkit_13192`）：**DANGER 179 / WARNING 120 / SAFE 6**（305 帧），等级切换仅 4 次 → 稳定（公平基线 AND 规则为 48 次/视频）
 - 稀疏/无人场景（`mixkit_50134`，光照正常）：388 帧全程 SAFE（该场景无行人，未触发告警）
-- **前后对比（公平基线，规则与真实引擎一致）**：平均切换次数 **23.22 → 5.12（↓78.0%）**（基线 2578 次 / 111 条）；基线 **24 条**出现 DANGER、增强 **45 条**；DANGER 帧 **2190 → 8452**（FSM 评分含密度权重+谱特征且带保持机制，比逐帧规则更敏感、更稳定）。明细见 `results/rerun/_comparison_summary.json`；全量见 `results/rerun/`
+- **前后对比（公平基线，规则与真实引擎一致）**：平均切换次数 **23.22 → 5.12（↓78.0 %）**（基线 2578 次 / 111 条）；基线 **24 条**出现 DANGER、增强 **45 条**；DANGER 帧 **2190 → 8452**（FSM 评分含密度权重+谱特征且带保持机制，比逐帧规则更敏感、更稳定）。明细见 `results/rerun/_comparison_summary.json`；全量见 `results/rerun/`
 
-![视频增强前后对比](docs/figures/fig3_before_after.png) 
-![视频增强等级分布](docs/figures/fig4_video_level.png)
-![111 条真实视频增强等级分布](docs/figures/fig5_111videos_level.png)
-![Fiedler 特征值随风险等级分布](docs/figures/fig6_fiedler_boxplot.png)
-![增强 vs 基线切换次数分布对比](docs/figures/fig7_switches_hist.png)
-![谱连通度随风险等级趋势](docs/figures/fig8_fiedler_trend.png)
-![FSM 决策过程时序（mixkit_13192 密集人群）](docs/figures/fig9_fsm_timeline_13192.png)
-![DANGER 视频数/帧数对比](docs/figures/fig_danger_compare.png)
-![等级帧占比对比](docs/figures/fig_level_share_compare.png)
+![视频增强前后对比](docs/figures/fig3_before_after_bsa.png)
+![视频增强等级分布](docs/figures/fig4_video_level_bsa.png)
+![111 条真实视频增强等级分布](docs/figures/fig5_111videos_level_bsa.png)
+![Fiedler 特征值随风险等级分布](docs/figures/fig6_fiedler_boxplot_bsa.png)
+![增强 vs 基线切换次数分布对比](docs/figures/fig7_switches_hist_bsa.png)
+![谱连通度随风险等级趋势](docs/figures/fig8_fiedler_trend_bsa.png)
+![FSM 决策过程时序（mixkit_13192 密集人群）](docs/figures/fig9_fsm_timeline_13192_bsa.png)
+![DANGER 视频数/帧数对比](docs/figures/fig_danger_compare_bsa.png)
+![等级帧占比对比](docs/figures/fig_level_share_compare_bsa.png)
 
 > 数据挖掘结论：Fiedler 与风险等级的 **Spearman ρ = 0.692**（45021 帧全量，2026-10-30 由逐帧 timeline 重算），谱连通度与人群聚集风险显著正相关。
 
 ### 消融实验（各组件贡献，6 条代表性视频）
 
-![消融实验](docs/figures/fig_ablation.png)
+![消融实验：各组件对等级切换与 DANGER 识别的贡献](docs/figures/fig_ablation_pro_bsa.png)
 
 - **A 基线（无增强）**：平均切换 33.2 次
-- **B +Kalman 平滑**：→ 8.3 次（↓75%）
-- **C +FSM（无谱特征）**：→ 4.3 次（↓87%）——FSM 滞回/确认帧/DANGER 保持带来主要稳定性
-- **D 完整（+谱特征 +FSM）**：→ 4.3 次保持稳定，且 **DANGER 帧提升 +152 帧（相对 C 组 +10.2%）**（mixkit_4519 +78、mixkit_4178 +45、mixkit_134 +29），谱特征在中等/密集聚集场景显著提升高风险识别，对极密（mixkit_3428）与稀疏（mixkit_50134）无副作用
+- **B +Kalman 平滑**：→ 8.3 次（↓75 %）
+- **C +FSM（无谱特征）**：→ 4.3 次（↓87 %）——FSM 滞回/确认帧/DANGER 保持带来主要稳定性
+- **D 完整（+谱特征 +FSM）**：→ 4.3 次保持稳定，且 **DANGER 帧提升 +152 帧（相对 C 组 +10.2 %）**（mixkit_4519 +78、mixkit_4178 +45、mixkit_134 +29），谱特征在中等/密集聚集场景显著提升高风险识别，对极密（mixkit_3428）与稀疏（mixkit_50134）无副作用
 
-![消融实验专业图](docs/figures/fig_ablation_pro.png)
-
-详见 `results/rerun/_ablation.json` 与 `docs/figures/fig_ablation_pro.png`。
+详见 `results/rerun/_ablation.json`。
 
 ### ⚡ 真机性能（Luckfox Pico Max / RV1106）
 
@@ -113,33 +173,31 @@ pedestrian-risk-decision/
 
 | 指标 | 结果 |
 |---|---|
-| 帧率 | **7.69 FPS**（受控 66 个 1s 窗口；lead 30s RTSP 抓包 7.63 一致）；**开启推理降频（每 2 帧推理 1 次）实测 11.86 FPS（+54%）** |
-| 单帧耗时分解 | **infer 91.5ms（71%，瓶颈）** / prep 31.0ms（24%）/ enc 4.0ms / draw 2.4ms / decide 0.02ms / vi 0.06ms，合计 ≈129ms |
-| CPU 预处理耗时（letterbox+RGB） | 136ms → 33ms（-76%，NEON）；Round3 单遍零拷贝后 **31.0ms** |
+| 帧率 | **7.69 FPS**（受控 66 个 1s 窗口；lead 30s RTSP 抓包 7.63 一致）；**开启推理降频（每 2 帧推理 1 次）实测 11.86 FPS（+54 %）** |
+| 单帧耗时分解 | **infer 91.5ms（71 %，瓶颈）** / prep 31.0ms（24 %）/ enc 4.0ms / draw 2.4ms / decide 0.02ms / vi 0.06ms，合计 ≈129ms |
+| CPU 预处理耗时（letterbox+RGB） | 136ms → 33ms（-76 %，NEON）；Round3 单遍零拷贝后 **31.0ms** |
 | 内存占用（RSS） | **13.8 MiB**（VmRSS 14152 kB） |
 | 板端黄金测试 | **174/174 通过**（NEON vs 标量对照） |
 | 稳定性（Round3 修复后） | NRestarts=0、观察期无新 core、RTSP :554 正常 |
-| 稳定性（修复前现场） | **38 个 core dump（546MB）**、根分区 80%、进程长期 D 状态、load average > 11 |
+| 稳定性（修复前现场） | **38 个 core dump（546MB）**、根分区 80 %、进程长期 D 状态、load average > 11 |
 | 主链路保护 | VI 200ms / VENC 100ms 有限超时、连续失败 50 次主动退出交 systemd 重启；逐帧 `fprintf` 收进 `BOARD_VERBOSE_DETECT` 编译开关 |
 
-**帧率瓶颈的结论（推翻了"谱特征 Jacobi 每帧是瓶颈"的先验）**：`decide` 仅 0.02ms（0.03%），NPU 推理占 71%。
+**帧率瓶颈的结论（推翻了"谱特征 Jacobi 每帧是瓶颈"的先验）**：`decide` 仅 0.02ms（0.03 %），NPU 推理占 71 %。
 下一步可做（均为**推断，未实现**）：推理降频（每 2 帧 1 次 + Kalman 外推，预估 11~13 FPS）、CPU/NPU 流水线重叠（预估 ~10 FPS）、输入 640→416（预估 ~13 FPS，需重标定）。
 
-性能打点日志与长稳快照见 `results/edge_board/`。
+性能打点日志与长稳快照见 `results/edge_board/`（注：长稳采集目前仅 10 条采样，未完成，已在 `docs/FACTS.md` 如实记录）。
 
 ### 🎬 真实检测效果视频
 
 **增强算法效果视频**（点击封面观看，真实视频处理结果）：
 
 - 人群聚集场景（SAFE → WARNING → DANGER 风险过渡，FSM 稳定）：
- [![人群聚集增强演示](docs/figures/demo_mixkit_134.png)](results/demo/mixkit_134_enhanced.mp4)
+  [![人群聚集增强演示](docs/figures/demo_mixkit_134.png)](results/demo/mixkit_134_enhanced.mp4)
 
 - 稀疏/无人场景（真实少人，未触发告警）：
- [![稀疏场景增强](docs/figures/demo_mixkit_50134.png)](results/demo/mixkit_50134_enhanced.mp4)
+  [![稀疏场景增强](docs/figures/demo_mixkit_50134.png)](results/demo/mixkit_50134_enhanced.mp4)
 
 > 视频为真实数据集（Mixkit）经 `scripts/crowd_test_enhanced.py`（Kalman + FSM）处理生成；逐帧时间线 JSON 在 `results/rerun/video_enhanced/`（谱特征接入后的规范结果）。
-
-性能对比图表见 `docs/figures/`。
 
 ## 🚀 部署方法
 
@@ -167,8 +225,7 @@ make test # 编译并运行增强决策/JSON 配置/阈值引擎单元测试（�
 ```
 - 测试覆盖：`EnhancedDecision`（Kalman+FSM 确定性输出）、`minijson` JSON 解析、`RiskConfig` 运行时阈值读取、`Preprocess` NEON vs 标量对照、**硬件驱动模块 118 项**（GPIO/LED/按键/舵机云台/语音告警）+ **硬件自检 80 项**（GPIO 写读回/PWM/SPI 屏幕 ID/USB 声卡/WiFi/按键的 PASS/FAIL 判定与容错）+ **触摸屏菜单 99 项**（页面导航/四键/风险颜色映射/参数刷新节流/NULL 容错）+ **ILI9341 显示驱动 123 项**（复位/初始化命令序列/窗口参数/矩形填充裁剪/帧缓冲/flush/读 ID）+ **XPT2046 触摸驱动 98 项**（命令协议/12 位数据提取/PENIRQ+压力阈值判定/校准坐标转换/中值抗噪/故障注入），全部用内存替身测试，无需真实硬件；**Linux 板端适配层 40 项**（spidev 打开/关闭/传输失败路径、DC/RESET/背光/PENIRQ 电平逻辑与 NULL 容错，`make test` 在 Linux/CI 自动纳入）；**go2rtc demo 流配置工具 18 项**（YAML 行级编辑：新增保留 cam/幂等/更新替换/损坏重建/自动备份/dry-run/CLI 返回码，`tests/test_go2rtc_demo_config.py`，其中 4 项 shell 脚本测试在 Linux/CI 执行）。
 - 交叉编译完整工程：`make luckfox LUCKFOX_SDK_ROOT=<SDK路径>`（需 Luckfox SDK 库与工具链）。
-- 阈值通过 `config/default_config.json` 运行时加载（`RiskEngine::setConfig`），失败自动回退默认值，“可配置”承诺在 C++ 端落地。
-
+- 阈值通过 `config/default_config.json` 运行时加载（`RiskEngine::setConfig`），失败自动回退默认值，"可配置"承诺在 C++ 端落地。
 
 ## 🔧 关键修复（2026-10-30 Hub 审计 / Round3 多 Agent 交叉审计）
 
@@ -209,7 +266,9 @@ make test # 编译并运行增强决策/JSON 配置/阈值引擎单元测试（�
 
 | 文档 | 内容 |
 |---|---|
-| `docs/AUDIT_20261030_ROUND3.md` | **2026-10-30 多 Agent 交叉审计报告**（真机实测 + 交叉验证 + 未验证项清单） |
+| [`docs/FACTS.md`](docs/FACTS.md) | **738 条可溯源事实表**（每条标注来源文件与提取方式，供图表/README 数字对齐） |
+| [`docs/CROSSCHECK.md`](docs/CROSSCHECK.md) | **软硬件 / 论文数据 / 文档三向交叉验证报告** |
+| [`docs/AUDIT_20261030_ROUND3.md`](docs/AUDIT_20261030_ROUND3.md) | 2026-10-30 多 Agent 交叉审计报告（真机实测 + 交叉验证 + 未验证项清单） |
 | `docs/工作日志.md` | 开发进度日志（时间/改动/commit/进度） |
 | `docs/SYSTEM_PRINCIPLE.md` | 系统实现原理与算法详解 |
 | `docs/ARCHITECTURE.md` | 系统架构与模块划分 |
@@ -217,6 +276,7 @@ make test # 编译并运行增强决策/JSON 配置/阈值引擎单元测试（�
 | `docs/WEB_VIEWER.md` | 网页免安装观看监控（go2rtc，手机/电脑浏览器）+ 本地视频 demo 流兜底（P2-1） |
 | `docs/DEMO_VIDEO.md` | 真实检测效果视频说明 |
 | `docs/LUCKFOX_VOICE_ASSISTANT_PLAN.md` | 语音对话大模型方案（网络/本地双方案） |
+| `docs/figures/_style/README-palette.md` | 两套论文插图配色规范（取色依据、色盲规则、用法） |
 | `docs/hardware/` | 硬件扩展（LED/按键/舵机/语音/大屏/开关/PCB） |
 | `docs/hardware/led_button_driver.md` | 三色 LED + 按键驱动（GPIO 抽象、颜色映射、防抖、测试） |
 | `docs/hardware/tracking_servo.md` | 双舵机云台跟踪（PWM 抽象、角度换算、PanTilt 控制、测试） |
@@ -234,4 +294,4 @@ make test # 编译并运行增强决策/JSON 配置/阈值引擎单元测试（�
 ## 📌 说明
 
 - 所有实验数据均来自真实数据集，可复现。
-- 论文/答辩/评审类内部文档仅保存在本地（`H:\毕设论文\`），不入库；GitHub 仅保留代码、配置、测试与技术文档。
+- 论文/答辩/评审类内部文档仅保存在本地，不入库；GitHub 仅保留代码、配置、测试与技术文档。
