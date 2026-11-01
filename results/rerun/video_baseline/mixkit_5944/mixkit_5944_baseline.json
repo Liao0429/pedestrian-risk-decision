@@ -2551,9 +2551,9 @@
       "level": "SAFE"
     },
     {
-      "n": 2,
+      "n": 1,
       "density": 0.0,
-      "r_gcc": 0.5,
+      "r_gcc": 0.0,
       "level": "SAFE"
     },
     {
@@ -3181,9 +3181,9 @@
       "level": "SAFE"
     },
     {
-      "n": 2,
+      "n": 1,
       "density": 0.0,
-      "r_gcc": 0.5,
+      "r_gcc": 0.0,
       "level": "SAFE"
     },
     {
@@ -3439,33 +3439,33 @@
       "level": "SAFE"
     },
     {
-      "n": 2,
+      "n": 1,
       "density": 0.0,
-      "r_gcc": 0.5,
+      "r_gcc": 0.0,
       "level": "SAFE"
     },
     {
-      "n": 2,
+      "n": 1,
       "density": 0.0,
-      "r_gcc": 0.5,
+      "r_gcc": 0.0,
       "level": "SAFE"
     },
     {
-      "n": 2,
+      "n": 1,
       "density": 0.0,
-      "r_gcc": 0.5,
+      "r_gcc": 0.0,
       "level": "SAFE"
     },
     {
-      "n": 2,
+      "n": 1,
       "density": 0.0,
-      "r_gcc": 0.5,
+      "r_gcc": 0.0,
       "level": "SAFE"
     },
     {
-      "n": 2,
+      "n": 1,
       "density": 0.0,
-      "r_gcc": 0.5,
+      "r_gcc": 0.0,
       "level": "SAFE"
     },
     {

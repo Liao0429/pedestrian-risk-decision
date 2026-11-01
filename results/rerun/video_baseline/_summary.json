@@ -3,11 +3,11 @@
   "results": {
     "mixkit_13192": {
       "frames": 305,
-      "switches": 48,
+      "switches": 63,
       "level_distribution": {
-        "SAFE": 90,
-        "WARNING": 53,
-        "DANGER": 162
+        "SAFE": 106,
+        "WARNING": 83,
+        "DANGER": 116
       }
     },
     "mixkit_13265": {
@@ -26,10 +26,10 @@
     },
     "mixkit_14084": {
       "frames": 255,
-      "switches": 53,
+      "switches": 23,
       "level_distribution": {
-        "WARNING": 55,
-        "SAFE": 200
+        "WARNING": 14,
+        "SAFE": 241
       }
     },
     "mixkit_151": {
@@ -41,27 +41,26 @@
     },
     "mixkit_15914": {
       "frames": 294,
-      "switches": 2,
+      "switches": 0,
       "level_distribution": {
-        "SAFE": 293,
-        "WARNING": 1
+        "SAFE": 294
       }
     },
     "mixkit_15997": {
       "frames": 712,
-      "switches": 38,
+      "switches": 8,
       "level_distribution": {
-        "SAFE": 684,
-        "WARNING": 28
+        "SAFE": 706,
+        "WARNING": 6
       }
     },
     "mixkit_17630": {
       "frames": 282,
-      "switches": 116,
+      "switches": 80,
       "level_distribution": {
-        "SAFE": 78,
-        "WARNING": 181,
-        "DANGER": 23
+        "SAFE": 160,
+        "WARNING": 120,
+        "DANGER": 2
       }
     },
     "mixkit_18264": {
@@ -108,10 +107,9 @@
     },
     "mixkit_23168": {
       "frames": 180,
-      "switches": 2,
+      "switches": 0,
       "level_distribution": {
-        "SAFE": 179,
-        "WARNING": 1
+        "SAFE": 180
       }
     },
     "mixkit_23327": {
@@ -137,10 +135,9 @@
     },
     "mixkit_241": {
       "frames": 379,
-      "switches": 6,
+      "switches": 0,
       "level_distribution": {
-        "SAFE": 371,
-        "WARNING": 8
+        "SAFE": 379
       }
     },
     "mixkit_25516": {
@@ -152,28 +149,27 @@
     },
     "mixkit_25890": {
       "frames": 309,
-      "switches": 29,
+      "switches": 28,
       "level_distribution": {
-        "SAFE": 278,
-        "WARNING": 27,
-        "DANGER": 4
+        "SAFE": 273,
+        "WARNING": 34,
+        "DANGER": 2
       }
     },
     "mixkit_28616": {
       "frames": 152,
-      "switches": 48,
+      "switches": 27,
       "level_distribution": {
-        "WARNING": 40,
-        "SAFE": 111,
-        "DANGER": 1
+        "WARNING": 15,
+        "SAFE": 137
       }
     },
     "mixkit_31086": {
       "frames": 202,
-      "switches": 14,
+      "switches": 4,
       "level_distribution": {
-        "SAFE": 191,
-        "WARNING": 11
+        "SAFE": 200,
+        "WARNING": 2
       }
     },
     "mixkit_32622": {
@@ -185,54 +181,49 @@
     },
     "mixkit_3428": {
       "frames": 456,
-      "switches": 55,
+      "switches": 130,
       "level_distribution": {
-        "DANGER": 423,
-        "WARNING": 32,
-        "SAFE": 1
+        "DANGER": 350,
+        "WARNING": 104,
+        "SAFE": 2
       }
     },
     "mixkit_3429": {
       "frames": 246,
-      "switches": 58,
+      "switches": 25,
       "level_distribution": {
-        "SAFE": 141,
-        "WARNING": 81,
-        "DANGER": 24
+        "SAFE": 185,
+        "WARNING": 61
       }
     },
     "mixkit_3469": {
       "frames": 295,
-      "switches": 56,
+      "switches": 32,
       "level_distribution": {
-        "SAFE": 223,
-        "WARNING": 70,
-        "DANGER": 2
+        "SAFE": 250,
+        "WARNING": 45
       }
     },
     "mixkit_39767": {
       "frames": 249,
-      "switches": 8,
+      "switches": 0,
       "level_distribution": {
-        "SAFE": 244,
-        "WARNING": 5
+        "SAFE": 249
       }
     },
     "mixkit_4000": {
       "frames": 401,
-      "switches": 95,
+      "switches": 80,
       "level_distribution": {
-        "SAFE": 322,
-        "WARNING": 77,
-        "DANGER": 2
+        "SAFE": 338,
+        "WARNING": 63
       }
     },
     "mixkit_4026": {
       "frames": 237,
-      "switches": 4,
+      "switches": 0,
       "level_distribution": {
-        "SAFE": 235,
-        "WARNING": 2
+        "SAFE": 237
       }
     },
     "mixkit_40656": {
@@ -258,11 +249,11 @@
     },
     "mixkit_4147": {
       "frames": 471,
-      "switches": 61,
+      "switches": 115,
       "level_distribution": {
-        "DANGER": 357,
-        "WARNING": 110,
-        "SAFE": 4
+        "DANGER": 108,
+        "WARNING": 304,
+        "SAFE": 59
       }
     },
     "mixkit_41537": {
@@ -274,18 +265,18 @@
     },
     "mixkit_4154": {
       "frames": 150,
-      "switches": 16,
+      "switches": 57,
       "level_distribution": {
-        "DANGER": 142,
-        "WARNING": 8
+        "SAFE": 2,
+        "WARNING": 42,
+        "DANGER": 106
       }
     },
     "mixkit_4157": {
       "frames": 493,
-      "switches": 8,
+      "switches": 0,
       "level_distribution": {
-        "SAFE": 482,
-        "WARNING": 11
+        "SAFE": 493
       }
     },
     "mixkit_41574": {
@@ -311,47 +302,45 @@
     },
     "mixkit_4178": {
       "frames": 298,
-      "switches": 96,
+      "switches": 58,
       "level_distribution": {
-        "SAFE": 213,
-        "WARNING": 83,
-        "DANGER": 2
+        "SAFE": 252,
+        "WARNING": 46
       }
     },
     "mixkit_4180": {
       "frames": 278,
-      "switches": 95,
+      "switches": 94,
       "level_distribution": {
-        "WARNING": 156,
-        "SAFE": 13,
-        "DANGER": 109
+        "WARNING": 163,
+        "DANGER": 110,
+        "SAFE": 5
       }
     },
     "mixkit_4185": {
       "frames": 156,
-      "switches": 63,
+      "switches": 53,
       "level_distribution": {
-        "WARNING": 70,
-        "DANGER": 25,
-        "SAFE": 61
+        "WARNING": 68,
+        "DANGER": 8,
+        "SAFE": 80
       }
     },
     "mixkit_4186": {
       "frames": 117,
-      "switches": 45,
+      "switches": 30,
       "level_distribution": {
-        "WARNING": 91,
-        "DANGER": 16,
-        "SAFE": 10
+        "WARNING": 99,
+        "SAFE": 16,
+        "DANGER": 2
       }
     },
     "mixkit_4188": {
       "frames": 586,
-      "switches": 191,
+      "switches": 44,
       "level_distribution": {
-        "WARNING": 340,
-        "SAFE": 218,
-        "DANGER": 28
+        "SAFE": 550,
+        "WARNING": 36
       }
     },
     "mixkit_42121": {
@@ -398,26 +387,25 @@
     },
     "mixkit_42137": {
       "frames": 325,
-      "switches": 4,
+      "switches": 0,
       "level_distribution": {
-        "SAFE": 323,
-        "WARNING": 2
+        "SAFE": 325
       }
     },
     "mixkit_4231": {
       "frames": 474,
-      "switches": 134,
+      "switches": 130,
       "level_distribution": {
-        "DANGER": 298,
-        "WARNING": 176
+        "WARNING": 301,
+        "DANGER": 171,
+        "SAFE": 2
       }
     },
     "mixkit_4269": {
       "frames": 210,
-      "switches": 5,
+      "switches": 0,
       "level_distribution": {
-        "WARNING": 5,
-        "SAFE": 205
+        "SAFE": 210
       }
     },
     "mixkit_43150": {
@@ -429,7 +417,7 @@
     },
     "mixkit_4331": {
       "frames": 447,
-      "switches": 2,
+      "switches": 4,
       "level_distribution": {
         "SAFE": 444,
         "WARNING": 3
@@ -437,62 +425,60 @@
     },
     "mixkit_4332": {
       "frames": 596,
-      "switches": 102,
+      "switches": 100,
       "level_distribution": {
-        "WARNING": 362,
-        "DANGER": 218,
-        "SAFE": 16
+        "WARNING": 390,
+        "SAFE": 44,
+        "DANGER": 162
       }
     },
     "mixkit_4344": {
       "frames": 388,
-      "switches": 26,
+      "switches": 0,
       "level_distribution": {
-        "SAFE": 372,
-        "WARNING": 16
+        "SAFE": 388
       }
     },
     "mixkit_4348": {
       "frames": 553,
-      "switches": 10,
+      "switches": 0,
       "level_distribution": {
-        "SAFE": 546,
-        "WARNING": 7
+        "SAFE": 553
       }
     },
     "mixkit_4384": {
       "frames": 185,
-      "switches": 29,
+      "switches": 6,
       "level_distribution": {
-        "WARNING": 15,
-        "SAFE": 170
+        "SAFE": 182,
+        "WARNING": 3
       }
     },
     "mixkit_4390": {
       "frames": 120,
-      "switches": 66,
+      "switches": 34,
       "level_distribution": {
-        "WARNING": 54,
-        "SAFE": 43,
-        "DANGER": 23
+        "WARNING": 50,
+        "SAFE": 69,
+        "DANGER": 1
       }
     },
     "mixkit_4401": {
       "frames": 594,
-      "switches": 218,
+      "switches": 226,
       "level_distribution": {
-        "DANGER": 57,
-        "WARNING": 383,
-        "SAFE": 154
+        "DANGER": 18,
+        "WARNING": 300,
+        "SAFE": 276
       }
     },
     "mixkit_4437": {
       "frames": 937,
-      "switches": 260,
+      "switches": 175,
       "level_distribution": {
-        "WARNING": 608,
-        "DANGER": 227,
-        "SAFE": 102
+        "WARNING": 744,
+        "DANGER": 102,
+        "SAFE": 91
       }
     },
     "mixkit_4450": {
@@ -504,11 +490,11 @@
     },
     "mixkit_4451": {
       "frames": 559,
-      "switches": 54,
+      "switches": 27,
       "level_distribution": {
-        "WARNING": 426,
-        "SAFE": 91,
-        "DANGER": 42
+        "WARNING": 455,
+        "SAFE": 93,
+        "DANGER": 11
       }
     },
     "mixkit_4519": {
@@ -527,10 +513,10 @@
     },
     "mixkit_4547": {
       "frames": 848,
-      "switches": 92,
+      "switches": 58,
       "level_distribution": {
-        "SAFE": 465,
-        "WARNING": 383
+        "SAFE": 749,
+        "WARNING": 99
       }
     },
     "mixkit_4600": {
@@ -570,11 +556,11 @@
     },
     "mixkit_4661": {
       "frames": 230,
-      "switches": 56,
+      "switches": 69,
       "level_distribution": {
-        "SAFE": 71,
-        "WARNING": 156,
-        "DANGER": 3
+        "SAFE": 111,
+        "WARNING": 118,
+        "DANGER": 1
       }
     },
     "mixkit_46788": {
@@ -649,36 +635,33 @@
     },
     "mixkit_48507": {
       "frames": 646,
-      "switches": 158,
+      "switches": 20,
       "level_distribution": {
-        "SAFE": 492,
-        "WARNING": 153,
-        "DANGER": 1
+        "SAFE": 631,
+        "WARNING": 15
       }
     },
     "mixkit_48509": {
       "frames": 333,
-      "switches": 33,
+      "switches": 6,
       "level_distribution": {
-        "SAFE": 311,
-        "DANGER": 1,
-        "WARNING": 21
+        "SAFE": 330,
+        "WARNING": 3
       }
     },
     "mixkit_48510": {
       "frames": 274,
-      "switches": 2,
+      "switches": 0,
       "level_distribution": {
-        "SAFE": 273,
-        "WARNING": 1
+        "SAFE": 274
       }
     },
     "mixkit_4855": {
       "frames": 356,
-      "switches": 12,
+      "switches": 6,
       "level_distribution": {
-        "SAFE": 338,
-        "WARNING": 18
+        "SAFE": 352,
+        "WARNING": 4
       }
     },
     "mixkit_4856": {
@@ -788,10 +771,10 @@
     },
     "mixkit_805": {
       "frames": 404,
-      "switches": 10,
+      "switches": 14,
       "level_distribution": {
-        "SAFE": 363,
-        "WARNING": 41
+        "SAFE": 378,
+        "WARNING": 26
       }
     },
     "mixkit_8739": {
@@ -803,18 +786,18 @@
     },
     "mixkit_8869": {
       "frames": 257,
-      "switches": 14,
+      "switches": 8,
       "level_distribution": {
-        "SAFE": 245,
-        "WARNING": 12
+        "SAFE": 253,
+        "WARNING": 4
       }
     },
     "mixkit_9060": {
       "frames": 175,
-      "switches": 47,
+      "switches": 25,
       "level_distribution": {
-        "WARNING": 66,
-        "SAFE": 109
+        "WARNING": 29,
+        "SAFE": 146
       }
     },
     "mixkit_9607": {
@@ -826,18 +809,17 @@
     },
     "mixkit_991": {
       "frames": 594,
-      "switches": 2,
+      "switches": 0,
       "level_distribution": {
-        "SAFE": 593,
-        "WARNING": 1
+        "SAFE": 594
       }
     },
     "mixkit_992": {
       "frames": 281,
-      "switches": 35,
+      "switches": 15,
       "level_distribution": {
-        "WARNING": 44,
-        "SAFE": 237
+        "WARNING": 27,
+        "SAFE": 254
       }
     },
     "mixkit_993": {

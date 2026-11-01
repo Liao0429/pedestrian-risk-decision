@@ -24,84 +24,84 @@
       },
       "B +Kalman": {
         "frames": 600,
-        "switches": 2,
+        "switches": 0,
         "dist": {
-          "SAFE": 598,
-          "WARNING": 2
+          "SAFE": 600
         }
       },
       "C +FSM(无谱特征)": {
         "frames": 600,
         "switches": 12,
         "dist": {
-          "SAFE": 293,
-          "WARNING": 69,
-          "DANGER": 238
+          "SAFE": 327,
+          "WARNING": 202,
+          "DANGER": 71
         }
       },
       "D 完整(增强)": {
         "frames": 600,
         "switches": 12,
         "dist": {
-          "SAFE": 306,
-          "WARNING": 27,
-          "DANGER": 267
+          "SAFE": 327,
+          "WARNING": 202,
+          "DANGER": 71
         }
       }
     },
     "mixkit_13192": {
       "A 基线(无增强)": {
         "frames": 305,
-        "switches": 48,
+        "switches": 63,
         "dist": {
-          "SAFE": 90,
-          "WARNING": 53,
-          "DANGER": 162
+          "SAFE": 106,
+          "WARNING": 83,
+          "DANGER": 116
         }
       },
       "B +Kalman": {
         "frames": 305,
-        "switches": 18,
+        "switches": 25,
         "dist": {
-          "SAFE": 80,
-          "WARNING": 46,
-          "DANGER": 179
+          "SAFE": 108,
+          "WARNING": 44,
+          "DANGER": 153
         }
       },
       "C +FSM(无谱特征)": {
         "frames": 305,
         "switches": 4,
         "dist": {
-          "SAFE": 6,
-          "WARNING": 120,
-          "DANGER": 179
+          "SAFE": 54,
+          "WARNING": 122,
+          "DANGER": 129
         }
       },
       "D 完整(增强)": {
         "frames": 305,
         "switches": 4,
         "dist": {
-          "SAFE": 6,
-          "WARNING": 120,
-          "DANGER": 179
+          "SAFE": 54,
+          "WARNING": 111,
+          "DANGER": 140
         }
       }
     },
     "mixkit_3428": {
       "A 基线(无增强)": {
         "frames": 456,
-        "switches": 55,
+        "switches": 130,
         "dist": {
-          "DANGER": 423,
-          "WARNING": 32,
-          "SAFE": 1
+          "DANGER": 350,
+          "WARNING": 104,
+          "SAFE": 2
         }
       },
       "B +Kalman": {
         "frames": 456,
-        "switches": 0,
+        "switches": 4,
         "dist": {
-          "DANGER": 456
+          "DANGER": 452,
+          "WARNING": 4
         }
       },
       "C +FSM(无谱特征)": {
@@ -143,8 +143,8 @@
         "switches": 2,
         "dist": {
           "SAFE": 2,
-          "WARNING": 81,
-          "DANGER": 520
+          "WARNING": 85,
+          "DANGER": 516
         }
       },
       "D 完整(增强)": {
@@ -160,38 +160,37 @@
     "mixkit_4178": {
       "A 基线(无增强)": {
         "frames": 298,
-        "switches": 96,
+        "switches": 58,
         "dist": {
-          "SAFE": 213,
-          "WARNING": 83,
-          "DANGER": 2
+          "SAFE": 252,
+          "WARNING": 46
         }
       },
       "B +Kalman": {
         "frames": 298,
-        "switches": 30,
+        "switches": 34,
         "dist": {
-          "SAFE": 53,
-          "WARNING": 193,
-          "DANGER": 52
+          "SAFE": 107,
+          "WARNING": 188,
+          "DANGER": 3
         }
       },
       "C +FSM(无谱特征)": {
         "frames": 298,
         "switches": 6,
         "dist": {
-          "SAFE": 13,
-          "WARNING": 176,
-          "DANGER": 109
+          "SAFE": 23,
+          "WARNING": 205,
+          "DANGER": 70
         }
       },
       "D 完整(增强)": {
         "frames": 298,
         "switches": 6,
         "dist": {
-          "SAFE": 3,
-          "WARNING": 141,
-          "DANGER": 154
+          "SAFE": 23,
+          "WARNING": 175,
+          "DANGER": 100
         }
       }
     },

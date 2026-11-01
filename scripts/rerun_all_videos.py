@@ -26,6 +26,9 @@ def main():
     print(f"[rerun] 发现 {len(videos)} 条视频", flush=True)
     cfg = load_config("config/default_config.json")
     edge_dist = cfg.get("edge_dist_m", 2.0)
+    # 与板端运行时一致：用配置里的 conf_threshold（默认 0.35），不再用脚本旧的 0.25
+    conf = float(cfg.get("conf_threshold", 0.35))
+    print(f"[rerun] conf={conf} edge_dist={edge_dist}", flush=True)
 
     model = YOLO(weights)
     summary = {}
@@ -36,7 +39,7 @@ def main():
         t0 = time.time()
         try:
             # use_spectral=True：启用图拉普拉斯谱特征增强路径
-            process_video(model, video, vout, conf=0.25, imgsz=640, H=None,
+            process_video(model, video, vout, conf=conf, imgsz=640, H=None,
                           scale_mpp=None, device=0, edge_dist=edge_dist,
                           cfg=cfg, use_spectral=True, classes=[0])
             tl = os.path.join(vout, f"{name}_timeline.json")

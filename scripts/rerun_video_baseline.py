@@ -41,6 +41,8 @@ def rule_level(n, rho, gcc, cfg):
 
 def process_baseline(model, video, out_dir, cfg, edge_dist, device=0):
     os.makedirs(out_dir, exist_ok=True)
+    # 与板端/增强路径保持一致：用配置里的 conf_threshold（默认 0.35）
+    conf = float(cfg.get("conf_threshold", 0.35))
     cap = cv2.VideoCapture(video)
     name = os.path.splitext(os.path.basename(video))[0]
     ok, frame = cap.read()
@@ -49,7 +51,7 @@ def process_baseline(model, video, out_dir, cfg, edge_dist, device=0):
     H = get_homography(frame.shape[1], frame.shape[0])  # 真实 IPM（与增强路径一致）
     levels, feats = [], []
     while frame is not None:
-        _, _, pts = detect_pedestrians(model, frame, 0.25, 640, device, H, None, [0])
+        _, _, pts = detect_pedestrians(model, frame, conf, 640, device, H, None, [0])
         n, m, density, r_gcc, clustering = compute_features(pts, edge_dist)
         lvl = rule_level(n, density, r_gcc, cfg)
         levels.append(lvl)

@@ -650,34 +650,34 @@
   {
     "frame": 81,
     "level": "DANGER",
-    "n": 7,
-    "density": 0.7142857142857143,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 1.7639320225002098
+    "fiedler": 1.585786437626905
   },
   {
     "frame": 82,
     "level": "DANGER",
-    "n": 7,
-    "density": 0.7142857142857143,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 1.7639320225002098
+    "fiedler": 1.585786437626905
   },
   {
     "frame": 83,
     "level": "DANGER",
-    "n": 7,
-    "density": 0.7142857142857143,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 1.7639320225002098
+    "fiedler": 1.585786437626905
   },
   {
     "frame": 84,
     "level": "DANGER",
-    "n": 7,
-    "density": 0.7142857142857143,
+    "n": 6,
+    "density": 0.6666666666666666,
     "r_gcc": 1.0,
-    "fiedler": 1.7639320225002098
+    "fiedler": 1.5188056959079843
   },
   {
     "frame": 85,
@@ -1066,66 +1066,66 @@
   {
     "frame": 133,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.585786437626905
   },
   {
     "frame": 134,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.585786437626905
   },
   {
     "frame": 135,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.585786437626905
   },
   {
     "frame": 136,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.585786437626905
   },
   {
     "frame": 137,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.585786437626905
   },
   {
     "frame": 138,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.585786437626905
   },
   {
     "frame": 139,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.585786437626905
   },
   {
     "frame": 140,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.585786437626905
   },
   {
     "frame": 141,
@@ -1210,10 +1210,10 @@
   {
     "frame": 151,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 152,
@@ -1442,82 +1442,82 @@
   {
     "frame": 180,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.6666666666666666,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 1.518805695907986
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 181,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.6666666666666666,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 1.518805695907986
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 182,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.6666666666666666,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 1.518805695907986
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 183,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.6666666666666666,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 1.518805695907986
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 184,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.6666666666666666,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 1.518805695907986
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 185,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.6666666666666666,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 1.518805695907986
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 186,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.6666666666666666,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 1.518805695907986
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 187,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.6666666666666666,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 1.518805695907986
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 188,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.6666666666666666,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 1.518805695907986
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 189,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.6666666666666666,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 1.518805695907986
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 190,
@@ -1658,90 +1658,90 @@
   {
     "frame": 207,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 208,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 209,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 210,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 211,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 212,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 213,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 214,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 215,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 216,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 217,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 218,
@@ -2002,50 +2002,50 @@
   {
     "frame": 250,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 251,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 252,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 253,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 254,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 255,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 256,
@@ -2770,66 +2770,66 @@
   {
     "frame": 346,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 347,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 348,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 349,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 350,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 351,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 352,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 353,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.8,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 2.5857864376269055
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 354,
@@ -4434,10 +4434,10 @@
   {
     "frame": 554,
     "level": "DANGER",
-    "n": 6,
-    "density": 0.6666666666666666,
+    "n": 5,
+    "density": 0.7,
     "r_gcc": 1.0,
-    "fiedler": 1.518805695907986
+    "fiedler": 1.5857864376269044
   },
   {
     "frame": 555,

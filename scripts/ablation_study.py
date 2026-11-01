@@ -60,6 +60,8 @@ def rule_level(n, rho, gcc, cfg):
 def run_one(model, video, H, cfg, edge_dist, use_kalman, use_spectral, use_fsm):
     cap = cv2.VideoCapture(video)
     fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
+    # 与板端/其余实验保持一致：用配置里的 conf_threshold（默认 0.35）
+    conf = float(cfg.get("conf_threshold", 0.35))
     tracker = KalmanTracker(dt=1.0 / max(fps, 1), gate_dist=edge_dist) if use_kalman else None
     fsm = RiskFSM(RiskFSMConfig(**(cfg.get("fsm", {}) if cfg else {}))) if use_fsm else None
     levels = []
@@ -68,7 +70,7 @@ def run_one(model, video, H, cfg, edge_dist, use_kalman, use_spectral, use_fsm):
         ok, frame = cap.read()
         if not ok:
             break
-        _, _, pts = detect_pedestrians(model, frame, 0.25, 640, 0, H, None, [0])
+        _, _, pts = detect_pedestrians(model, frame, conf, 640, 0, H, None, [0])
         if use_kalman and tracker is not None:
             states = tracker.update(pts)
             smooth = [(s[0], s[1]) for s in states.values()]

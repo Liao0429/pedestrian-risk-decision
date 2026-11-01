@@ -266,50 +266,50 @@
   {
     "frame": 33,
     "level": "SAFE",
-    "n": 3,
-    "density": 0.6666666666666666,
+    "n": 2,
+    "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 0.9999999999999998
+    "fiedler": 2.0
   },
   {
     "frame": 34,
     "level": "SAFE",
-    "n": 3,
-    "density": 0.6666666666666666,
+    "n": 2,
+    "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 0.9999999999999998
+    "fiedler": 2.0
   },
   {
     "frame": 35,
     "level": "WARNING",
-    "n": 3,
-    "density": 0.6666666666666666,
+    "n": 2,
+    "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 0.9999999999999998
+    "fiedler": 2.0
   },
   {
     "frame": 36,
     "level": "WARNING",
-    "n": 3,
-    "density": 0.6666666666666666,
+    "n": 2,
+    "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 0.9999999999999998
+    "fiedler": 2.0
   },
   {
     "frame": 37,
     "level": "WARNING",
-    "n": 3,
-    "density": 0.6666666666666666,
+    "n": 2,
+    "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 0.9999999999999998
+    "fiedler": 2.0
   },
   {
     "frame": 38,
     "level": "WARNING",
-    "n": 3,
-    "density": 0.6666666666666666,
+    "n": 2,
+    "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 0.9999999999999998
+    "fiedler": 2.0
   },
   {
     "frame": 39,
@@ -338,62 +338,62 @@
   {
     "frame": 42,
     "level": "WARNING",
-    "n": 3,
-    "density": 0.6666666666666666,
-    "r_gcc": 1.0,
-    "fiedler": 1.0
+    "n": 1,
+    "density": 0.0,
+    "r_gcc": 0.0,
+    "fiedler": 0.0
   },
   {
     "frame": 43,
     "level": "WARNING",
-    "n": 3,
-    "density": 0.6666666666666666,
-    "r_gcc": 1.0,
-    "fiedler": 1.0
+    "n": 1,
+    "density": 0.0,
+    "r_gcc": 0.0,
+    "fiedler": 0.0
   },
   {
     "frame": 44,
     "level": "WARNING",
-    "n": 2,
-    "density": 1.0,
-    "r_gcc": 1.0,
-    "fiedler": 2.0
+    "n": 1,
+    "density": 0.0,
+    "r_gcc": 0.0,
+    "fiedler": 0.0
   },
   {
     "frame": 45,
     "level": "WARNING",
-    "n": 2,
-    "density": 1.0,
-    "r_gcc": 1.0,
-    "fiedler": 2.0
+    "n": 1,
+    "density": 0.0,
+    "r_gcc": 0.0,
+    "fiedler": 0.0
   },
   {
     "frame": 46,
-    "level": "WARNING",
-    "n": 2,
-    "density": 1.0,
-    "r_gcc": 1.0,
-    "fiedler": 2.0
+    "level": "SAFE",
+    "n": 1,
+    "density": 0.0,
+    "r_gcc": 0.0,
+    "fiedler": 0.0
   },
   {
     "frame": 47,
-    "level": "WARNING",
-    "n": 2,
-    "density": 1.0,
-    "r_gcc": 1.0,
-    "fiedler": 2.0
+    "level": "SAFE",
+    "n": 1,
+    "density": 0.0,
+    "r_gcc": 0.0,
+    "fiedler": 0.0
   },
   {
     "frame": 48,
-    "level": "WARNING",
-    "n": 2,
-    "density": 1.0,
-    "r_gcc": 1.0,
-    "fiedler": 2.0
+    "level": "SAFE",
+    "n": 1,
+    "density": 0.0,
+    "r_gcc": 0.0,
+    "fiedler": 0.0
   },
   {
     "frame": 49,
-    "level": "WARNING",
+    "level": "SAFE",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -401,7 +401,7 @@
   },
   {
     "frame": 50,
-    "level": "WARNING",
+    "level": "SAFE",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -538,54 +538,54 @@
   {
     "frame": 67,
     "level": "WARNING",
-    "n": 3,
+    "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.0
+    "fiedler": 2.0
   },
   {
     "frame": 68,
     "level": "WARNING",
-    "n": 3,
+    "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.0
+    "fiedler": 2.0
   },
   {
     "frame": 69,
-    "level": "DANGER",
-    "n": 3,
+    "level": "WARNING",
+    "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.0
+    "fiedler": 2.0
   },
   {
     "frame": 70,
-    "level": "DANGER",
-    "n": 3,
+    "level": "WARNING",
+    "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.0
+    "fiedler": 2.0
   },
   {
     "frame": 71,
-    "level": "DANGER",
-    "n": 3,
+    "level": "WARNING",
+    "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.0
+    "fiedler": 2.0
   },
   {
     "frame": 72,
-    "level": "DANGER",
-    "n": 3,
+    "level": "WARNING",
+    "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.0
+    "fiedler": 2.0
   },
   {
     "frame": 73,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -593,7 +593,7 @@
   },
   {
     "frame": 74,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -601,7 +601,7 @@
   },
   {
     "frame": 75,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -609,7 +609,7 @@
   },
   {
     "frame": 76,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -617,7 +617,7 @@
   },
   {
     "frame": 77,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -625,7 +625,7 @@
   },
   {
     "frame": 78,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -633,7 +633,7 @@
   },
   {
     "frame": 79,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -641,7 +641,7 @@
   },
   {
     "frame": 80,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -649,7 +649,7 @@
   },
   {
     "frame": 81,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -657,7 +657,7 @@
   },
   {
     "frame": 82,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -665,7 +665,7 @@
   },
   {
     "frame": 83,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -673,7 +673,7 @@
   },
   {
     "frame": 84,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -681,7 +681,7 @@
   },
   {
     "frame": 85,
-    "level": "DANGER",
+    "level": "SAFE",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -689,7 +689,7 @@
   },
   {
     "frame": 86,
-    "level": "DANGER",
+    "level": "SAFE",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -697,7 +697,7 @@
   },
   {
     "frame": 87,
-    "level": "DANGER",
+    "level": "SAFE",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -705,7 +705,7 @@
   },
   {
     "frame": 88,
-    "level": "DANGER",
+    "level": "SAFE",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -713,7 +713,7 @@
   },
   {
     "frame": 89,
-    "level": "DANGER",
+    "level": "SAFE",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -721,7 +721,7 @@
   },
   {
     "frame": 90,
-    "level": "DANGER",
+    "level": "SAFE",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -729,7 +729,7 @@
   },
   {
     "frame": 91,
-    "level": "DANGER",
+    "level": "SAFE",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -737,7 +737,7 @@
   },
   {
     "frame": 92,
-    "level": "DANGER",
+    "level": "SAFE",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -745,7 +745,7 @@
   },
   {
     "frame": 93,
-    "level": "DANGER",
+    "level": "SAFE",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -753,7 +753,7 @@
   },
   {
     "frame": 94,
-    "level": "DANGER",
+    "level": "SAFE",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -761,7 +761,7 @@
   },
   {
     "frame": 95,
-    "level": "DANGER",
+    "level": "SAFE",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -769,7 +769,7 @@
   },
   {
     "frame": 96,
-    "level": "DANGER",
+    "level": "SAFE",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -777,7 +777,7 @@
   },
   {
     "frame": 97,
-    "level": "WARNING",
+    "level": "SAFE",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -785,7 +785,7 @@
   },
   {
     "frame": 98,
-    "level": "WARNING",
+    "level": "SAFE",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -793,7 +793,7 @@
   },
   {
     "frame": 99,
-    "level": "WARNING",
+    "level": "SAFE",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -801,7 +801,7 @@
   },
   {
     "frame": 100,
-    "level": "WARNING",
+    "level": "SAFE",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -809,7 +809,7 @@
   },
   {
     "frame": 101,
-    "level": "WARNING",
+    "level": "SAFE",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -1290,49 +1290,49 @@
   {
     "frame": 161,
     "level": "SAFE",
-    "n": 3,
-    "density": 0.3333333333333333,
-    "r_gcc": 0.6666666666666666,
+    "n": 2,
+    "density": 0.0,
+    "r_gcc": 0.5,
     "fiedler": 0.0
   },
   {
     "frame": 162,
     "level": "SAFE",
-    "n": 3,
-    "density": 0.3333333333333333,
-    "r_gcc": 0.6666666666666666,
+    "n": 2,
+    "density": 0.0,
+    "r_gcc": 0.5,
     "fiedler": 0.0
   },
   {
     "frame": 163,
     "level": "SAFE",
-    "n": 3,
-    "density": 0.3333333333333333,
-    "r_gcc": 0.6666666666666666,
+    "n": 2,
+    "density": 0.0,
+    "r_gcc": 0.5,
     "fiedler": 0.0
   },
   {
     "frame": 164,
     "level": "SAFE",
-    "n": 3,
-    "density": 0.3333333333333333,
-    "r_gcc": 0.6666666666666666,
+    "n": 2,
+    "density": 0.0,
+    "r_gcc": 0.5,
     "fiedler": 0.0
   },
   {
     "frame": 165,
     "level": "SAFE",
-    "n": 3,
-    "density": 0.3333333333333333,
-    "r_gcc": 0.6666666666666666,
+    "n": 2,
+    "density": 0.0,
+    "r_gcc": 0.5,
     "fiedler": 0.0
   },
   {
     "frame": 166,
     "level": "SAFE",
-    "n": 3,
-    "density": 0.3333333333333333,
-    "r_gcc": 0.6666666666666666,
+    "n": 2,
+    "density": 0.0,
+    "r_gcc": 0.5,
     "fiedler": 0.0
   },
   {
@@ -1554,62 +1554,62 @@
   {
     "frame": 194,
     "level": "WARNING",
-    "n": 3,
+    "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.0
+    "fiedler": 2.0
   },
   {
     "frame": 195,
     "level": "WARNING",
-    "n": 3,
+    "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.0
+    "fiedler": 2.0
   },
   {
     "frame": 196,
-    "level": "DANGER",
-    "n": 3,
+    "level": "WARNING",
+    "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.0
+    "fiedler": 2.0
   },
   {
     "frame": 197,
-    "level": "DANGER",
-    "n": 3,
+    "level": "WARNING",
+    "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.0
+    "fiedler": 2.0
   },
   {
     "frame": 198,
-    "level": "DANGER",
-    "n": 3,
+    "level": "WARNING",
+    "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.0
+    "fiedler": 2.0
   },
   {
     "frame": 199,
-    "level": "DANGER",
-    "n": 3,
+    "level": "WARNING",
+    "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.0
+    "fiedler": 2.0
   },
   {
     "frame": 200,
-    "level": "DANGER",
-    "n": 3,
+    "level": "WARNING",
+    "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.0
+    "fiedler": 2.0
   },
   {
     "frame": 201,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1617,7 +1617,7 @@
   },
   {
     "frame": 202,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1625,7 +1625,7 @@
   },
   {
     "frame": 203,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1633,7 +1633,7 @@
   },
   {
     "frame": 204,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1641,7 +1641,7 @@
   },
   {
     "frame": 205,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1649,7 +1649,7 @@
   },
   {
     "frame": 206,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1657,7 +1657,7 @@
   },
   {
     "frame": 207,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1665,7 +1665,7 @@
   },
   {
     "frame": 208,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1673,7 +1673,7 @@
   },
   {
     "frame": 209,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1681,7 +1681,7 @@
   },
   {
     "frame": 210,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1689,7 +1689,7 @@
   },
   {
     "frame": 211,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1697,7 +1697,7 @@
   },
   {
     "frame": 212,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1705,7 +1705,7 @@
   },
   {
     "frame": 213,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1713,7 +1713,7 @@
   },
   {
     "frame": 214,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1721,7 +1721,7 @@
   },
   {
     "frame": 215,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1729,7 +1729,7 @@
   },
   {
     "frame": 216,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1737,7 +1737,7 @@
   },
   {
     "frame": 217,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1745,7 +1745,7 @@
   },
   {
     "frame": 218,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1753,7 +1753,7 @@
   },
   {
     "frame": 219,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1761,7 +1761,7 @@
   },
   {
     "frame": 220,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1769,7 +1769,7 @@
   },
   {
     "frame": 221,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1777,7 +1777,7 @@
   },
   {
     "frame": 222,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1785,7 +1785,7 @@
   },
   {
     "frame": 223,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1793,7 +1793,7 @@
   },
   {
     "frame": 224,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1801,7 +1801,7 @@
   },
   {
     "frame": 225,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1809,7 +1809,7 @@
   },
   {
     "frame": 226,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1817,7 +1817,7 @@
   },
   {
     "frame": 227,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1825,7 +1825,7 @@
   },
   {
     "frame": 228,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -1833,15 +1833,15 @@
   },
   {
     "frame": 229,
-    "level": "DANGER",
-    "n": 2,
-    "density": 1.0,
-    "r_gcc": 1.0,
-    "fiedler": 2.0
+    "level": "WARNING",
+    "n": 1,
+    "density": 0.0,
+    "r_gcc": 0.0,
+    "fiedler": 0.0
   },
   {
     "frame": 230,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 1,
     "density": 0.0,
     "r_gcc": 0.0,
@@ -1849,7 +1849,7 @@
   },
   {
     "frame": 231,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 1,
     "density": 0.0,
     "r_gcc": 0.0,
@@ -1857,7 +1857,7 @@
   },
   {
     "frame": 232,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 1,
     "density": 0.0,
     "r_gcc": 0.0,
@@ -1865,7 +1865,7 @@
   },
   {
     "frame": 233,
-    "level": "DANGER",
+    "level": "SAFE",
     "n": 1,
     "density": 0.0,
     "r_gcc": 0.0,
@@ -1873,7 +1873,7 @@
   },
   {
     "frame": 234,
-    "level": "WARNING",
+    "level": "SAFE",
     "n": 1,
     "density": 0.0,
     "r_gcc": 0.0,
@@ -1881,7 +1881,7 @@
   },
   {
     "frame": 235,
-    "level": "WARNING",
+    "level": "SAFE",
     "n": 1,
     "density": 0.0,
     "r_gcc": 0.0,
@@ -1889,7 +1889,7 @@
   },
   {
     "frame": 236,
-    "level": "WARNING",
+    "level": "SAFE",
     "n": 1,
     "density": 0.0,
     "r_gcc": 0.0,
@@ -1897,7 +1897,7 @@
   },
   {
     "frame": 237,
-    "level": "WARNING",
+    "level": "SAFE",
     "n": 1,
     "density": 0.0,
     "r_gcc": 0.0,
@@ -1905,7 +1905,7 @@
   },
   {
     "frame": 238,
-    "level": "WARNING",
+    "level": "SAFE",
     "n": 1,
     "density": 0.0,
     "r_gcc": 0.0,
@@ -2226,58 +2226,58 @@
   {
     "frame": 278,
     "level": "DANGER",
-    "n": 3,
+    "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.0
+    "fiedler": 2.0
   },
   {
     "frame": 279,
     "level": "DANGER",
-    "n": 3,
+    "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.0
+    "fiedler": 2.0
   },
   {
     "frame": 280,
     "level": "DANGER",
-    "n": 3,
+    "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.0
+    "fiedler": 2.0
   },
   {
     "frame": 281,
     "level": "DANGER",
-    "n": 3,
+    "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.0
+    "fiedler": 2.0
   },
   {
     "frame": 282,
     "level": "DANGER",
-    "n": 3,
+    "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.0
+    "fiedler": 2.0
   },
   {
     "frame": 283,
     "level": "DANGER",
-    "n": 3,
+    "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.0
+    "fiedler": 2.0
   },
   {
     "frame": 284,
     "level": "DANGER",
-    "n": 3,
+    "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.0
+    "fiedler": 2.0
   },
   {
     "frame": 285,
@@ -2457,7 +2457,7 @@
   },
   {
     "frame": 307,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2465,7 +2465,7 @@
   },
   {
     "frame": 308,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2473,7 +2473,7 @@
   },
   {
     "frame": 309,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2481,7 +2481,7 @@
   },
   {
     "frame": 310,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2489,7 +2489,7 @@
   },
   {
     "frame": 311,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2497,7 +2497,7 @@
   },
   {
     "frame": 312,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2505,7 +2505,7 @@
   },
   {
     "frame": 313,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2513,7 +2513,7 @@
   },
   {
     "frame": 314,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2521,7 +2521,7 @@
   },
   {
     "frame": 315,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2529,7 +2529,7 @@
   },
   {
     "frame": 316,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2537,7 +2537,7 @@
   },
   {
     "frame": 317,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2545,7 +2545,7 @@
   },
   {
     "frame": 318,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2553,7 +2553,7 @@
   },
   {
     "frame": 319,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2561,7 +2561,7 @@
   },
   {
     "frame": 320,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2569,7 +2569,7 @@
   },
   {
     "frame": 321,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2577,7 +2577,7 @@
   },
   {
     "frame": 322,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2585,7 +2585,7 @@
   },
   {
     "frame": 323,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2593,7 +2593,7 @@
   },
   {
     "frame": 324,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2601,7 +2601,7 @@
   },
   {
     "frame": 325,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2609,7 +2609,7 @@
   },
   {
     "frame": 326,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2617,7 +2617,7 @@
   },
   {
     "frame": 327,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2625,7 +2625,7 @@
   },
   {
     "frame": 328,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2633,7 +2633,7 @@
   },
   {
     "frame": 329,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2641,7 +2641,7 @@
   },
   {
     "frame": 330,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2649,7 +2649,7 @@
   },
   {
     "frame": 331,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2657,7 +2657,7 @@
   },
   {
     "frame": 332,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2665,7 +2665,7 @@
   },
   {
     "frame": 333,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2673,7 +2673,7 @@
   },
   {
     "frame": 334,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2681,7 +2681,7 @@
   },
   {
     "frame": 335,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2689,7 +2689,7 @@
   },
   {
     "frame": 336,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2697,7 +2697,7 @@
   },
   {
     "frame": 337,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2705,7 +2705,7 @@
   },
   {
     "frame": 338,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2713,7 +2713,7 @@
   },
   {
     "frame": 339,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2721,7 +2721,7 @@
   },
   {
     "frame": 340,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2729,7 +2729,7 @@
   },
   {
     "frame": 341,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2737,7 +2737,7 @@
   },
   {
     "frame": 342,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2745,7 +2745,7 @@
   },
   {
     "frame": 343,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2753,7 +2753,7 @@
   },
   {
     "frame": 344,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2761,7 +2761,7 @@
   },
   {
     "frame": 345,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2769,7 +2769,7 @@
   },
   {
     "frame": 346,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2777,7 +2777,7 @@
   },
   {
     "frame": 347,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -2785,7 +2785,7 @@
   },
   {
     "frame": 348,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -2793,15 +2793,15 @@
   },
   {
     "frame": 349,
-    "level": "DANGER",
-    "n": 3,
-    "density": 0.6666666666666666,
-    "r_gcc": 1.0,
-    "fiedler": 0.9999999999999998
+    "level": "WARNING",
+    "n": 2,
+    "density": 0.0,
+    "r_gcc": 0.5,
+    "fiedler": 0.0
   },
   {
     "frame": 350,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 3,
     "density": 0.6666666666666666,
     "r_gcc": 1.0,
@@ -2809,7 +2809,7 @@
   },
   {
     "frame": 351,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 3,
     "density": 0.6666666666666666,
     "r_gcc": 1.0,
@@ -2817,7 +2817,7 @@
   },
   {
     "frame": 352,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 3,
     "density": 0.6666666666666666,
     "r_gcc": 1.0,
@@ -2825,7 +2825,7 @@
   },
   {
     "frame": 353,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 3,
     "density": 0.6666666666666666,
     "r_gcc": 1.0,
@@ -2833,7 +2833,7 @@
   },
   {
     "frame": 354,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 3,
     "density": 0.6666666666666666,
     "r_gcc": 1.0,
@@ -2841,7 +2841,7 @@
   },
   {
     "frame": 355,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 3,
     "density": 0.6666666666666666,
     "r_gcc": 1.0,
@@ -2849,15 +2849,15 @@
   },
   {
     "frame": 356,
-    "level": "DANGER",
-    "n": 3,
-    "density": 0.6666666666666666,
-    "r_gcc": 1.0,
-    "fiedler": 0.9999999999999998
+    "level": "WARNING",
+    "n": 2,
+    "density": 0.0,
+    "r_gcc": 0.5,
+    "fiedler": 0.0
   },
   {
     "frame": 357,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -2865,7 +2865,7 @@
   },
   {
     "frame": 358,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -2873,7 +2873,7 @@
   },
   {
     "frame": 359,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -2881,7 +2881,7 @@
   },
   {
     "frame": 360,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 3,
     "density": 0.6666666666666666,
     "r_gcc": 1.0,
@@ -2889,7 +2889,7 @@
   },
   {
     "frame": 361,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 3,
     "density": 0.6666666666666666,
     "r_gcc": 1.0,
@@ -2897,7 +2897,7 @@
   },
   {
     "frame": 362,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 3,
     "density": 0.6666666666666666,
     "r_gcc": 1.0,
@@ -2905,7 +2905,7 @@
   },
   {
     "frame": 363,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 3,
     "density": 0.6666666666666666,
     "r_gcc": 1.0,
@@ -2913,7 +2913,7 @@
   },
   {
     "frame": 364,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 3,
     "density": 0.6666666666666666,
     "r_gcc": 1.0,
@@ -2921,7 +2921,7 @@
   },
   {
     "frame": 365,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 3,
     "density": 0.6666666666666666,
     "r_gcc": 1.0,
@@ -2929,7 +2929,7 @@
   },
   {
     "frame": 366,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 3,
     "density": 0.6666666666666666,
     "r_gcc": 1.0,
@@ -2937,7 +2937,7 @@
   },
   {
     "frame": 367,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 3,
     "density": 0.6666666666666666,
     "r_gcc": 1.0,
@@ -2945,7 +2945,7 @@
   },
   {
     "frame": 368,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 3,
     "density": 0.6666666666666666,
     "r_gcc": 1.0,
@@ -2953,7 +2953,7 @@
   },
   {
     "frame": 369,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 3,
     "density": 0.6666666666666666,
     "r_gcc": 1.0,
@@ -2961,7 +2961,7 @@
   },
   {
     "frame": 370,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 3,
     "density": 0.6666666666666666,
     "r_gcc": 1.0,
@@ -2969,7 +2969,7 @@
   },
   {
     "frame": 371,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 3,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -2977,7 +2977,7 @@
   },
   {
     "frame": 372,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 3,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -3122,26 +3122,26 @@
   {
     "frame": 390,
     "level": "DANGER",
-    "n": 4,
+    "n": 3,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.9999999999999982
+    "fiedler": 3.0
   },
   {
     "frame": 391,
     "level": "DANGER",
-    "n": 4,
+    "n": 3,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.9999999999999982
+    "fiedler": 3.0
   },
   {
     "frame": 392,
     "level": "DANGER",
-    "n": 4,
+    "n": 3,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.9999999999999982
+    "fiedler": 3.0
   },
   {
     "frame": 393,
@@ -3210,10 +3210,10 @@
   {
     "frame": 401,
     "level": "DANGER",
-    "n": 4,
+    "n": 3,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.9999999999999982
+    "fiedler": 3.0
   },
   {
     "frame": 402,
@@ -3282,126 +3282,126 @@
   {
     "frame": 410,
     "level": "DANGER",
-    "n": 3,
+    "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.0
+    "fiedler": 2.0
   },
   {
     "frame": 411,
     "level": "DANGER",
-    "n": 4,
-    "density": 0.6666666666666666,
+    "n": 2,
+    "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 1.0000000000000002
+    "fiedler": 2.0
   },
   {
     "frame": 412,
     "level": "DANGER",
-    "n": 4,
-    "density": 0.6666666666666666,
+    "n": 2,
+    "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 1.0000000000000002
+    "fiedler": 2.0
   },
   {
     "frame": 413,
     "level": "DANGER",
-    "n": 4,
-    "density": 0.6666666666666666,
+    "n": 2,
+    "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 1.0000000000000002
+    "fiedler": 2.0
   },
   {
     "frame": 414,
-    "level": "DANGER",
-    "n": 4,
-    "density": 0.6666666666666666,
+    "level": "WARNING",
+    "n": 2,
+    "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 1.0000000000000002
+    "fiedler": 2.0
   },
   {
     "frame": 415,
-    "level": "DANGER",
-    "n": 4,
-    "density": 0.6666666666666666,
+    "level": "WARNING",
+    "n": 2,
+    "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 1.0000000000000002
+    "fiedler": 2.0
   },
   {
     "frame": 416,
-    "level": "DANGER",
-    "n": 4,
+    "level": "WARNING",
+    "n": 3,
     "density": 0.6666666666666666,
     "r_gcc": 1.0,
-    "fiedler": 1.0000000000000002
+    "fiedler": 1.0
   },
   {
     "frame": 417,
-    "level": "DANGER",
-    "n": 5,
-    "density": 0.6,
+    "level": "WARNING",
+    "n": 3,
+    "density": 0.6666666666666666,
     "r_gcc": 1.0,
-    "fiedler": 0.999999999999999
+    "fiedler": 1.0
   },
   {
     "frame": 418,
-    "level": "DANGER",
-    "n": 5,
-    "density": 0.6,
+    "level": "WARNING",
+    "n": 3,
+    "density": 0.6666666666666666,
     "r_gcc": 1.0,
-    "fiedler": 0.999999999999999
+    "fiedler": 1.0
   },
   {
     "frame": 419,
-    "level": "DANGER",
-    "n": 4,
+    "level": "WARNING",
+    "n": 3,
     "density": 0.6666666666666666,
     "r_gcc": 1.0,
     "fiedler": 1.0
   },
   {
     "frame": 420,
-    "level": "DANGER",
-    "n": 4,
+    "level": "WARNING",
+    "n": 3,
     "density": 0.6666666666666666,
     "r_gcc": 1.0,
     "fiedler": 1.0
   },
   {
     "frame": 421,
-    "level": "DANGER",
-    "n": 4,
+    "level": "WARNING",
+    "n": 3,
     "density": 0.6666666666666666,
     "r_gcc": 1.0,
     "fiedler": 1.0
   },
   {
     "frame": 422,
-    "level": "DANGER",
-    "n": 3,
+    "level": "WARNING",
+    "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.0
+    "fiedler": 2.0
   },
   {
     "frame": 423,
-    "level": "DANGER",
-    "n": 3,
+    "level": "WARNING",
+    "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.0
+    "fiedler": 2.0
   },
   {
     "frame": 424,
-    "level": "DANGER",
-    "n": 3,
+    "level": "WARNING",
+    "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
-    "fiedler": 3.0
+    "fiedler": 2.0
   },
   {
     "frame": 425,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -3409,7 +3409,7 @@
   },
   {
     "frame": 426,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -3417,7 +3417,7 @@
   },
   {
     "frame": 427,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -3425,7 +3425,7 @@
   },
   {
     "frame": 428,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -3433,7 +3433,7 @@
   },
   {
     "frame": 429,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -3441,7 +3441,7 @@
   },
   {
     "frame": 430,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -3449,7 +3449,7 @@
   },
   {
     "frame": 431,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -3457,7 +3457,7 @@
   },
   {
     "frame": 432,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -3465,7 +3465,7 @@
   },
   {
     "frame": 433,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -3473,7 +3473,7 @@
   },
   {
     "frame": 434,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -3481,7 +3481,7 @@
   },
   {
     "frame": 435,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -3489,7 +3489,7 @@
   },
   {
     "frame": 436,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -3497,7 +3497,7 @@
   },
   {
     "frame": 437,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -3505,7 +3505,7 @@
   },
   {
     "frame": 438,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -3513,7 +3513,7 @@
   },
   {
     "frame": 439,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -3521,7 +3521,7 @@
   },
   {
     "frame": 440,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -3529,7 +3529,7 @@
   },
   {
     "frame": 441,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -3537,7 +3537,7 @@
   },
   {
     "frame": 442,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -3545,7 +3545,7 @@
   },
   {
     "frame": 443,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 1.0,
     "r_gcc": 1.0,
@@ -3553,7 +3553,7 @@
   },
   {
     "frame": 444,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -3561,7 +3561,7 @@
   },
   {
     "frame": 445,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -3569,7 +3569,7 @@
   },
   {
     "frame": 446,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -3577,7 +3577,7 @@
   },
   {
     "frame": 447,
-    "level": "DANGER",
+    "level": "WARNING",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -3585,7 +3585,7 @@
   },
   {
     "frame": 448,
-    "level": "WARNING",
+    "level": "SAFE",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -3593,7 +3593,7 @@
   },
   {
     "frame": 449,
-    "level": "WARNING",
+    "level": "SAFE",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -3601,7 +3601,7 @@
   },
   {
     "frame": 450,
-    "level": "WARNING",
+    "level": "SAFE",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -3609,7 +3609,7 @@
   },
   {
     "frame": 451,
-    "level": "WARNING",
+    "level": "SAFE",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -3617,7 +3617,7 @@
   },
   {
     "frame": 452,
-    "level": "WARNING",
+    "level": "SAFE",
     "n": 2,
     "density": 0.0,
     "r_gcc": 0.5,
@@ -3890,41 +3890,41 @@
   {
     "frame": 486,
     "level": "SAFE",
-    "n": 3,
-    "density": 0.3333333333333333,
-    "r_gcc": 0.6666666666666666,
+    "n": 2,
+    "density": 0.0,
+    "r_gcc": 0.5,
     "fiedler": 0.0
   },
   {
     "frame": 487,
     "level": "SAFE",
-    "n": 3,
-    "density": 0.3333333333333333,
-    "r_gcc": 0.6666666666666666,
+    "n": 2,
+    "density": 0.0,
+    "r_gcc": 0.5,
     "fiedler": 0.0
   },
   {
     "frame": 488,
     "level": "SAFE",
-    "n": 3,
-    "density": 0.3333333333333333,
-    "r_gcc": 0.6666666666666666,
+    "n": 2,
+    "density": 0.0,
+    "r_gcc": 0.5,
     "fiedler": 0.0
   },
   {
     "frame": 489,
     "level": "SAFE",
-    "n": 3,
-    "density": 0.3333333333333333,
-    "r_gcc": 0.6666666666666666,
+    "n": 2,
+    "density": 0.0,
+    "r_gcc": 0.5,
     "fiedler": 0.0
   },
   {
     "frame": 490,
     "level": "SAFE",
-    "n": 3,
-    "density": 0.3333333333333333,
-    "r_gcc": 0.6666666666666666,
+    "n": 2,
+    "density": 0.0,
+    "r_gcc": 0.5,
     "fiedler": 0.0
   },
   {
@@ -4002,25 +4002,25 @@
   {
     "frame": 500,
     "level": "SAFE",
-    "n": 3,
-    "density": 0.3333333333333333,
-    "r_gcc": 0.6666666666666666,
+    "n": 2,
+    "density": 0.0,
+    "r_gcc": 0.5,
     "fiedler": 0.0
   },
   {
     "frame": 501,
     "level": "SAFE",
-    "n": 3,
-    "density": 0.3333333333333333,
-    "r_gcc": 0.6666666666666666,
+    "n": 2,
+    "density": 0.0,
+    "r_gcc": 0.5,
     "fiedler": 0.0
   },
   {
     "frame": 502,
     "level": "SAFE",
-    "n": 3,
-    "density": 0.3333333333333333,
-    "r_gcc": 0.6666666666666666,
+    "n": 2,
+    "density": 0.0,
+    "r_gcc": 0.5,
     "fiedler": 0.0
   },
   {
@@ -4586,97 +4586,97 @@
   {
     "frame": 573,
     "level": "SAFE",
-    "n": 2,
+    "n": 1,
     "density": 0.0,
-    "r_gcc": 0.5,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
     "frame": 574,
     "level": "SAFE",
-    "n": 2,
+    "n": 1,
     "density": 0.0,
-    "r_gcc": 0.5,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
     "frame": 575,
     "level": "SAFE",
-    "n": 2,
+    "n": 1,
     "density": 0.0,
-    "r_gcc": 0.5,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
     "frame": 576,
     "level": "SAFE",
-    "n": 2,
+    "n": 1,
     "density": 0.0,
-    "r_gcc": 0.5,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
     "frame": 577,
     "level": "SAFE",
-    "n": 2,
+    "n": 1,
     "density": 0.0,
-    "r_gcc": 0.5,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
     "frame": 578,
     "level": "SAFE",
-    "n": 2,
+    "n": 1,
     "density": 0.0,
-    "r_gcc": 0.5,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
     "frame": 579,
     "level": "SAFE",
-    "n": 2,
+    "n": 1,
     "density": 0.0,
-    "r_gcc": 0.5,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
     "frame": 580,
     "level": "SAFE",
-    "n": 2,
+    "n": 1,
     "density": 0.0,
-    "r_gcc": 0.5,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
     "frame": 581,
     "level": "SAFE",
-    "n": 2,
+    "n": 1,
     "density": 0.0,
-    "r_gcc": 0.5,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
     "frame": 582,
     "level": "SAFE",
-    "n": 2,
+    "n": 1,
     "density": 0.0,
-    "r_gcc": 0.5,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
     "frame": 583,
     "level": "SAFE",
-    "n": 2,
+    "n": 1,
     "density": 0.0,
-    "r_gcc": 0.5,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
     "frame": 584,
     "level": "SAFE",
-    "n": 2,
+    "n": 1,
     "density": 0.0,
-    "r_gcc": 0.5,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
@@ -4698,105 +4698,105 @@
   {
     "frame": 587,
     "level": "SAFE",
-    "n": 2,
+    "n": 1,
     "density": 0.0,
-    "r_gcc": 0.5,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
     "frame": 588,
     "level": "SAFE",
-    "n": 2,
+    "n": 1,
     "density": 0.0,
-    "r_gcc": 0.5,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
     "frame": 589,
     "level": "SAFE",
-    "n": 2,
+    "n": 1,
     "density": 0.0,
-    "r_gcc": 0.5,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
     "frame": 590,
     "level": "SAFE",
-    "n": 2,
+    "n": 1,
     "density": 0.0,
-    "r_gcc": 0.5,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
     "frame": 591,
     "level": "SAFE",
-    "n": 2,
+    "n": 1,
     "density": 0.0,
-    "r_gcc": 0.5,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
     "frame": 592,
     "level": "SAFE",
-    "n": 2,
+    "n": 1,
     "density": 0.0,
-    "r_gcc": 0.5,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
     "frame": 593,
     "level": "SAFE",
-    "n": 2,
+    "n": 1,
     "density": 0.0,
-    "r_gcc": 0.5,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
     "frame": 594,
     "level": "SAFE",
-    "n": 2,
+    "n": 1,
     "density": 0.0,
-    "r_gcc": 0.5,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
     "frame": 595,
     "level": "SAFE",
-    "n": 2,
+    "n": 1,
     "density": 0.0,
-    "r_gcc": 0.5,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
     "frame": 596,
     "level": "SAFE",
-    "n": 2,
+    "n": 1,
     "density": 0.0,
-    "r_gcc": 0.5,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
     "frame": 597,
     "level": "SAFE",
-    "n": 2,
+    "n": 1,
     "density": 0.0,
-    "r_gcc": 0.5,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
     "frame": 598,
     "level": "SAFE",
-    "n": 2,
+    "n": 1,
     "density": 0.0,
-    "r_gcc": 0.5,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   },
   {
     "frame": 599,
     "level": "SAFE",
-    "n": 2,
+    "n": 1,
     "density": 0.0,
-    "r_gcc": 0.5,
+    "r_gcc": 0.0,
     "fiedler": 0.0
   }
 ]
