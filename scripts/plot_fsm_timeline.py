@@ -171,7 +171,8 @@ def main():
     out_png = os.path.join(fig_dir, out_name)
 
     data = json.load(open(tl_path, encoding="utf-8"))
-    title = "FSM risk-level timeline (mixkit-13192, dense crowd)"
+    vid = os.path.splitext(os.path.basename(tl_path))[0].replace("_timeline", "")
+    title = f"FSM risk-level timeline ({vid})"
     switches, total = plot_timeline(data, out_png, title=title)
 
     dist = {}
